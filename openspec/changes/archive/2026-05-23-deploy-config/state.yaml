@@ -1,0 +1,3 @@
+status: archived
+completed: 2026-05-23
+summary: Deployment configuration — Dockerfile (3-stage, standalone), vercel.json, env template, GitHub Actions CI/CD, DEPLOY.md

@@ -1,0 +1,186 @@
+// =============================================================================
+// Branded Types — catch parameter confusion at compile time
+// =============================================================================
+
+/**
+ * Generic brand type. Use to create nominal (branded) subtypes:
+ *
+ *   type Wei = Brand<bigint, 'Wei'>;
+ *   type Address = Brand<\`0x${string}\`, 'Address'>;
+ *
+ * Branded types prevent passing e.g. an Address where a TxHash is expected.
+ */
+export type Brand<K, T> = K & { __brand: T };
+
+/** cUSD amount in wei (smallest unit, 18 decimals) */
+export type Wei = Brand<bigint, 'Wei'>;
+
+/** Celo wallet address (0x-prefixed hex string) */
+export type Address = Brand<`0x${string}`, 'Address'>;
+
+/** Transaction hash on Celo (0x-prefixed hex string) */
+export type TxHash = Brand<`0x${string}`, 'TxHash'>;
+
+// =============================================================================
+// Database Enums (union types matching SQL enums)
+// =============================================================================
+
+export type RolParticipante = 'prestamista' | 'prestatario' | 'aval' | 'admin';
+
+export type EstadoCredito =
+  | 'pendiente'
+  | 'avalado'
+  | 'aprobado'
+  | 'desembolsado'
+  | 'pagado'
+  | 'default';
+
+/**
+ * Possible audit log action values.
+ * Matches the `tipo_accion` Postgres enum.
+ */
+export type TipoAccion =
+  | 'credito_creado'
+  | 'credito_aprobado'
+  | 'desembolso'
+  | 'desembolso_fallo'
+  | 'pago_recibido'
+  | 'default_registrado'
+  | 'aval_agregado'
+  | 'aval_revocado';
+
+// =============================================================================
+// Database Row Types (matches supabase/migrations/001_schema.sql)
+// =============================================================================
+
+export interface ParticipanteRow {
+  id: string;
+  created_at: string;
+  wallet_address: string;
+  nombre: string;
+  rol: RolParticipante;
+  user_id: string;       // FK to auth.users(id) — added in migration 003
+  score_reputacion: number;
+  activo: boolean;
+  auth_password?: string | null; // Auto-generated SIWE password — added in migration 007
+}
+
+/** SIWE nonce row — matches supabase/migrations/007_siwe.sql */
+export interface SiweNonceRow {
+  id: string;
+  nonce: string;
+  wallet_address: string;
+  expires_at: string;    // timestamptz ISO string
+  created_at: string;    // timestamptz ISO string
+}
+
+export interface CreditoRow {
+  id: string;
+  prestatario_id: string;
+  monto: string; // NUMERIC from Postgres — returned as string
+  descripcion: string | null;
+  estado: EstadoCredito;
+  interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
+  plazo_dias: number;
+  fecha_vencimiento: string | null;
+  tx_hash: string | null;
+  tx_hash_pago: string | null;
+  fecha_solicitud: string;
+  fecha_actualizacion: string;
+  fecha_pago: string | null;
+}
+
+export interface AvalRow {
+  id: string;
+  aval_id: string;
+  prestatario_id: string;
+  credito_id: string;
+  monto_maximo: string; // NUMERIC from Postgres
+  fecha_creacion: string;
+  activo: boolean;
+}
+
+export interface AuditLogRow {
+  id: number;
+  accion: TipoAccion;
+  entidad_tipo: string;
+  entidad_id: string;
+  participante_id: string | null;
+  detalles: Record<string, unknown>;
+  fecha: string;
+}
+
+// =============================================================================
+// UI-specific Types
+// =============================================================================
+
+/** Credit record for the PanelAprobacion component */
+export interface CreditoPendiente {
+  id: string;
+  monto: number; // cUSD decimal
+  solicitante: string; // nombre del prestatario
+  score: number; // reputation 0-100
+  fecha: string; // ISO date string
+  estado?: EstadoCredito; // current credit state (for aval badge)
+  prestatarioId?: string; // prestatario UUID (for GestorAvales)
+  avalCount?: number; // count of active avales
+}
+
+/** Input for POST /api/creditos */
+export interface SolicitarCreditoInput {
+  monto: number;
+  descripcion?: string;
+  plazo_dias: number;
+}
+
+/** Input for POST /api/avales */
+export interface AsignarAvalInput {
+  credito_id: string;
+  avalador_id: string;
+}
+
+/** Aval row joined with avalador participant data */
+export interface AvalConParticipante extends AvalRow {
+  avalador_nombre: string;
+  avalador_wallet: string;
+}
+
+// =============================================================================
+// API Response Types
+// =============================================================================
+
+/** Generic wrapper for typed API responses */
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  detail?: string;
+}
+
+/** Successful credit approval response */
+export interface AprobarCreditoResponse {
+  status: 'aprobado';
+  credito_id: string;
+}
+
+/** Successful disbursement response */
+export interface DesembolsoResponse {
+  status: 'desembolsado';
+  tx_hash: string;
+}
+
+/** Error response body */
+export interface ErrorResponse {
+  error: string;
+  detail?: string;
+}
+
+/** Successful payment registration response */
+export interface PagoResponse {
+  status: 'pagado';
+  credito_id: string;
+}
+
+/** Result of on-chain payment verification */
+export type VerificationResult =
+  | { valid: true }
+  | { valid: false; reason: string };

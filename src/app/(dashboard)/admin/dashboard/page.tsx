@@ -1,0 +1,258 @@
+'use client';
+
+// =============================================================================
+// Admin Dashboard Page — KPI Cards + Audit Log + Quick Links
+// =============================================================================
+//
+// Client component that fetches metrics and audit log on mount via the
+// admin API boundary. Renders MetricGrid and AuditLogTable with per-section
+// error handling (no blanket crash on API failure).
+//
+// Route: /admin/dashboard
+//
+// States:
+//   loading    — Skeleton/spinner while fetching both APIs
+//   loaded     — Normal display with KPIs + audit table + quick links
+//   error      — Section-level error messages if one API fails
+// =============================================================================
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import MetricGrid from '@/components/admin/MetricGrid';
+import AuditLogTable from '@/components/admin/AuditLogTable';
+import type { AuditLogAdmin } from '@/app/api/admin/audit-log/route';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface MetricsResponse {
+  totalParticipantes: number;
+  totalCreditos: number;
+  totalDesembolsado: string;
+  totalPagado: string;
+  enCirculacion: string;
+  defaultRate: number;
+  scorePromedio: number;
+}
+
+interface AuditLogResponse {
+  data: AuditLogAdmin[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+type LoadingState = 'loading' | 'loaded' | 'error';
+
+interface SectionError {
+  metrics: string | null;
+  audit: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+export default function AdminDashboardPage() {
+  const [state, setState] = useState<LoadingState>('loading');
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [auditEntries, setAuditEntries] = useState<AuditLogAdmin[]>([]);
+  const [sectionErrors, setSectionErrors] = useState<SectionError>({
+    metrics: null,
+    audit: null,
+  });
+
+  const fetchData = useCallback(async () => {
+    setState('loading');
+    setSectionErrors({ metrics: null, audit: null });
+
+    // Fetch metrics and audit log in parallel — per-section error handling
+    const [metricsResult, auditResult] = await Promise.allSettled([
+      fetch('/api/admin/metrics').then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error((body as { detail?: string }).detail ?? 'Error al cargar métricas');
+        }
+        return res.json() as Promise<MetricsResponse>;
+      }),
+      fetch('/api/admin/audit-log?limit=20').then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error((body as { detail?: string }).detail ?? 'Error al cargar auditoría');
+        }
+        return res.json() as Promise<AuditLogResponse>;
+      }),
+    ]);
+
+    const newErrors: SectionError = { metrics: null, audit: null };
+
+    if (metricsResult.status === 'fulfilled') {
+      setMetrics(metricsResult.value);
+    } else {
+      newErrors.metrics = metricsResult.reason instanceof Error
+        ? metricsResult.reason.message
+        : 'Error al cargar métricas';
+    }
+
+    if (auditResult.status === 'fulfilled') {
+      setAuditEntries(auditResult.value.data);
+    } else {
+      newErrors.audit = auditResult.reason instanceof Error
+        ? auditResult.reason.message
+        : 'Error al cargar auditoría';
+    }
+
+    setSectionErrors(newErrors);
+    setState('loaded');
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // ==========================================================================
+  // Render: loading state
+  // ==========================================================================
+  if (state === 'loading') {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
+          <p className="mt-1 text-sm text-gray-500">Cargando indicadores…</p>
+        </div>
+
+        {/* Skeleton grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-md bg-white border border-gray-200 p-5 animate-pulse"
+              aria-hidden="true"
+            >
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-3" />
+              <div className="h-7 bg-gray-200 rounded w-3/4" />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton table */}
+        <div className="rounded-md bg-white border border-gray-200 p-4 animate-pulse" aria-hidden="true">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-3 bg-gray-200 rounded w-full mb-2" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // Prepare display KPIs from metrics data
+  // ==========================================================================
+  const displayMetrics = metrics
+    ? [
+        {
+          label: 'Total Participantes',
+          value: metrics.totalParticipantes,
+          icon: (
+            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ),
+        },
+        {
+          label: 'Desembolsado (cUSD)',
+          value: Number(metrics.totalDesembolsado).toLocaleString('es-CO'),
+          icon: (
+            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+        },
+        {
+          label: 'En Circulación (cUSD)',
+          value: Number(metrics.enCirculacion).toLocaleString('es-CO'),
+          icon: (
+            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          ),
+        },
+        {
+          label: 'Tasa de Default',
+          value: `${metrics.defaultRate.toFixed(1)}%`,
+          icon: (
+            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          ),
+        },
+      ]
+    : [];
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Indicadores generales y actividad de la plataforma
+        </p>
+      </div>
+
+      {/* Metrics section */}
+      <section className="mb-8" aria-label="Indicadores generales">
+        <h2 className="sr-only">Métricas</h2>
+        {sectionErrors.metrics ? (
+          <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-4" role="alert">
+            <p className="text-red-800 font-medium text-sm">Error al cargar métricas</p>
+            <p className="text-red-600 text-xs mt-1">{sectionErrors.metrics}</p>
+          </div>
+        ) : metrics ? (
+          <MetricGrid metrics={displayMetrics} />
+        ) : null}
+      </section>
+
+      {/* Audit log section */}
+      <section className="mb-8" aria-label="Últimos movimientos">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+          Últimos movimientos
+        </h2>
+        {sectionErrors.audit ? (
+          <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
+            <p className="text-red-800 font-medium text-sm">Error al cargar auditoría</p>
+            <p className="text-red-600 text-xs mt-1">{sectionErrors.audit}</p>
+          </div>
+        ) : (
+          <AuditLogTable entries={auditEntries} />
+        )}
+      </section>
+
+      {/* Quick links */}
+      <nav aria-label="Accesos rápidos de administración">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+          Accesos rápidos
+        </h2>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/participantes"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Gestión de Participantes
+          </Link>
+          <Link
+            href="/admin/creditos"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Gestión de Créditos
+          </Link>
+        </div>
+      </nav>
+    </div>
+  );
+}

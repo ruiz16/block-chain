@@ -1,0 +1,3 @@
+status: archived
+completed: 2026-05-23
+summary: SIWE authentication (EIP-4361) with nonce generation, signature verification via viem, deterministic email mapping to Supabase Auth, and 6-state login UI
