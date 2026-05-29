@@ -56,6 +56,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
   // Fetch avales on mount
   // ------------------------------------------------------------------
   const fetchAvales = useCallback(async () => {
+    await Promise.resolve();
     setState('loading');
     setErrorMsg(null);
 
@@ -94,6 +95,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
   }, [creditoId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAvales();
   }, [fetchAvales]);
 

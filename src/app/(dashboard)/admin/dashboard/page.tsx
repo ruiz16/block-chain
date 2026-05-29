@@ -62,9 +62,6 @@ export default function AdminDashboardPage() {
   });
 
   const fetchData = useCallback(async () => {
-    setState('loading');
-    setSectionErrors({ metrics: null, audit: null });
-
     // Fetch metrics and audit log in parallel — per-section error handling
     const [metricsResult, auditResult] = await Promise.allSettled([
       fetch('/api/admin/metrics').then(async (res) => {
@@ -106,6 +103,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 

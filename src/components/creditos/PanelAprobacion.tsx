@@ -52,8 +52,10 @@ export default function PanelAprobacion({
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
-  // Initialize state and track credit states from initial data
+  // Sync creditos when creditosIniciales changes (e.g. client-side fetch)
   useEffect(() => {
+    setCreditos(creditosIniciales);
+
     if (creditosIniciales.length === 0) {
       setState('empty');
     } else {

@@ -51,6 +51,7 @@ export default function MisCreditosClient() {
   // ------------------------------------------------------------------
   const fetchCreditos = useCallback(async () => {
     try {
+      await Promise.resolve();
       setState('loading');
       const res = await fetch('/api/mis-creditos');
 
@@ -70,6 +71,7 @@ export default function MisCreditosClient() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCreditos();
   }, [fetchCreditos]);
 

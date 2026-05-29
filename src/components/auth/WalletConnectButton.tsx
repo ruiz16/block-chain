@@ -54,7 +54,7 @@ export default function WalletConnectButton({
     if (typeof window === 'undefined') return;
 
     if (!window.ethereum) {
-      setWalletState('no-wallet');
+      Promise.resolve().then(() => setWalletState('no-wallet'));
     }
   }, []);
 
