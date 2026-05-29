@@ -164,9 +164,23 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 6. Execute blockchain transfer
+    // 6. Validate borrower has a wallet configured
     // ------------------------------------------------------------------
-    const walletAddress = prestatario.wallet_address as `0x${string}`;
+    const walletAddress = prestatario.wallet_address?.trim() as `0x${string}` | '';
+
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return NextResponse.json(
+        {
+          error: 'WALLET_NO_CONFIGURADA',
+          detail: `El prestatario "${prestatario.nombre}" no tiene una wallet conectada. Debe configurarla desde su perfil antes del desembolso.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 7. Execute blockchain transfer
+    // ------------------------------------------------------------------
     const monto = typedCredito.monto;
 
     let txHash: string;
@@ -206,7 +220,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 7. Update credit record
+    // 8. Update credit record
     // ------------------------------------------------------------------
     const { error: updateError } = await supabase
       .from('creditos')
@@ -226,7 +240,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 8. Audit log for successful disbursement
+    // 9. Audit log for successful disbursement
     // ------------------------------------------------------------------
     await registrarAuditLog({
       accion: 'desembolso',
@@ -241,7 +255,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
 
     // ------------------------------------------------------------------
-    // 9. Return success
+    // 10. Return success
     // ------------------------------------------------------------------
     return NextResponse.json(
       {

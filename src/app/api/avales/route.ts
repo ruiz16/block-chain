@@ -132,11 +132,11 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const typedAvalador = avalador as unknown as ParticipanteRowSimple;
 
-    if (typedAvalador.rol !== 'aval' && typedAvalador.rol !== 'prestamista') {
+    if (typedAvalador.rol !== 'aval') {
       return NextResponse.json(
         {
           error: 'AVALADOR_INVALIDO',
-          detail: `El participante tiene rol "${typedAvalador.rol}", debe ser "aval" o "prestamista"`,
+          detail: `El participante tiene rol "${typedAvalador.rol}", debe ser "aval"`,
         },
         { status: 403 },
       );
@@ -268,7 +268,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 0. Security guard: Must be authenticated (any role for GET for now)
     // ------------------------------------------------------------------
-    const auth = await requireRoles(request, ['admin', 'aval', 'prestamista', 'prestatario']);
+    const auth = await requireRoles(request, ['admin', 'aval', 'prestatario']);
     if (auth instanceof Response) return auth;
 
     const url = new URL(request.url);

@@ -9,24 +9,39 @@
 //   loading   — Button spinner, inputs disabled
 //   error     — Red inline error message
 //
+// Auth guard:
+//   If the user already has an active session (e.g., they navigated back to
+//   /login after logging in), they are immediately redirected to the dashboard
+//   or the original requested route.
+//
 // On success: fetches existing row via GET /api/participantes?check_existing=true
 //   - Has row  → redirect to original requested route or /aprobacion
 //   - No row   → redirect to /onboarding
 // =============================================================================
 
-import { useState, useCallback, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/supabase/auth-client';
-import SiweLogin from '@/components/auth/SiweLogin';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 type PageState = 'idle' | 'loading' | 'error';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const redirectTo = searchParams.get('redirect') ?? '/aprobacion';
+  const redirectTo = searchParams?.get('redirect') ?? '/mis-creditos';
+
+  // --------------------------------------------------------------------------
+  // Auth guard: if already logged in, redirect immediately
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push(redirectTo);
+    }
+  }, [authLoading, isAuthenticated, redirectTo, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -165,22 +180,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* ============================================================ */}
-        {/* SIWE Section — Sign-In with Celo Wallet                       */}
-        {/* ============================================================ */}
-        <div className="relative my-8" aria-hidden="true">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-gray-500">
-              O inicia con tu wallet Celo
-            </span>
-          </div>
-        </div>
-
-        <SiweLogin />
 
         <p className="mt-6 text-center text-sm text-gray-500">
           ¿No tienes cuenta?{' '}

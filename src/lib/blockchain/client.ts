@@ -1,16 +1,16 @@
 // =============================================================================
-// Viem Singleton Clients — Celo Alfajores
+// Viem Singleton Clients — Celo Sepolia
 // =============================================================================
 //
 // This module creates and exports singleton viem clients for interacting
-// with the Celo Alfajores testnet.
+// with the Celo Sepolia testnet (replaces deprecated Celo Alfajores).
 //
 // The private key (CELO_PRIVATE_KEY) is loaded from environment variables
 // and is NEVER logged, stringified, or exposed outside this module.
 // =============================================================================
 
 import { createPublicClient, createWalletClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celoSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { getCeloRpcUrl } from '@/config/celo';
 
@@ -23,13 +23,13 @@ let walletClient: any = null;
 let account: any = null;
 
 /**
- * Returns a singleton public (read-only) viem client for Celo Alfajores.
+ * Returns a singleton public (read-only) viem client for Celo Sepolia.
  */
 export function getPublicClient() {
   if (publicClient) return publicClient as ReturnType<typeof createPublicClient>;
 
   publicClient = createPublicClient({
-    chain: celoAlfajores,
+    chain: celoSepolia,
     transport: http(getCeloRpcUrl()),
   });
 
@@ -37,7 +37,7 @@ export function getPublicClient() {
 }
 
 /**
- * Returns a singleton wallet (write-capable) viem client for Celo Alfajores.
+ * Returns a singleton wallet (write-capable) viem client for Celo Sepolia.
  * The private key is derived from CELO_PRIVATE_KEY env var.
  *
  * Throws if CELO_PRIVATE_KEY is not set.
@@ -45,20 +45,23 @@ export function getPublicClient() {
 export function getWalletClient() {
   if (walletClient) return walletClient as ReturnType<typeof createWalletClient>;
 
-  const privateKey = process.env.CELO_PRIVATE_KEY;
+  const rawKey = process.env.CELO_PRIVATE_KEY;
 
-  if (!privateKey) {
+  if (!rawKey) {
     throw new Error(
       'Falta CELO_PRIVATE_KEY en las variables de entorno. ' +
         'Configúrala en .env.local',
     );
   }
 
+  // Normalize: add 0x prefix if missing (MetaMask exports without it)
+  const privateKey = rawKey.startsWith('0x') ? rawKey : (`0x${rawKey}` as const);
+
   const acc = privateKeyToAccount(privateKey as `0x${string}`);
   account = acc;
 
   walletClient = createWalletClient({
-    chain: celoAlfajores,
+    chain: celoSepolia,
     transport: http(getCeloRpcUrl()),
     account: acc,
   });

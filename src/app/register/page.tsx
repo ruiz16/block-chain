@@ -23,6 +23,7 @@ import { useState, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/supabase/auth-client';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 type PageState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -34,6 +35,7 @@ interface FieldErrors {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

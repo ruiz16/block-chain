@@ -91,5 +91,5 @@ export async function requireAdmin(request: NextRequest | Request): Promise<Auth
  * Usually for approval-related actions.
  */
 export async function requireReviewer(request: NextRequest | Request): Promise<AuthGuardResult> {
-  return requireRoles(request, ['admin', 'aval', 'prestamista']);
+  return requireRoles(request, ['admin']);
 }

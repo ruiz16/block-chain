@@ -31,8 +31,8 @@ export const CrearParticipanteSchema = z.object({
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida. Debe ser una dirección Ethereum (0x...)')
     .optional()
     .or(z.literal('')),
-  rol: z.enum(['prestamista', 'prestatario', 'aval'], {
-    message: 'El rol debe ser prestamista, prestatario o aval',
+  rol: z.enum(['prestatario'], {
+    message: 'El rol debe ser prestatario',
   }),
 }).strict();
 
@@ -69,4 +69,37 @@ export function validateCheckParticipanteQuery(
   input: unknown,
 ): { success: true; data: CheckParticipanteQueryInput } | { success: false; error: z.ZodError } {
   return CheckParticipanteQuerySchema.safeParse(input);
+}
+
+// ---------------------------------------------------------------------------
+// PATCH /api/participantes/me — Actualizar Perfil
+// ---------------------------------------------------------------------------
+
+/**
+ * Schema for updating the current user's profile (wallet, name, etc.).
+ * All fields are optional — only send what changed.
+ */
+export const ActualizarParticipanteSchema = z.object({
+  nombre: z
+    .string()
+    .min(1, 'El nombre es requerido')
+    .max(255, 'El nombre no puede exceder 255 caracteres')
+    .optional(),
+  wallet_address: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida')
+    .optional()
+    .or(z.literal('')),
+}).strict();
+
+/** Inferred TypeScript type from the schema */
+export type ActualizarParticipanteInput = z.infer<typeof ActualizarParticipanteSchema>;
+
+/**
+ * Convenience wrapper that validates update input.
+ */
+export function validateActualizarParticipante(
+  input: unknown,
+): { success: true; data: ActualizarParticipanteInput } | { success: false; error: z.ZodError } {
+  return ActualizarParticipanteSchema.safeParse(input);
 }

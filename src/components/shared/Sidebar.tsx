@@ -65,6 +65,11 @@ const ROLE_COLORS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 const Icons = {
+  user: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+    </svg>
+  ),
   list: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
@@ -115,21 +120,27 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Créditos',
     items: [
-      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
-      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario', 'aval', 'prestamista'] },
-      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
+      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'admin'] },
+      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario'] },
+      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['prestatario', 'admin'] },
     ],
   },
   {
     title: 'Gestión',
     items: [
-      { label: 'Panel de Aprobación', href: '/aprobacion', icon: Icons.shield, roles: ['aval', 'prestamista', 'admin'] },
+      { label: 'Panel de Aprobación', href: '/aprobacion', icon: Icons.shield, roles: ['admin'] },
     ],
   },
   {
     title: 'Administración',
     items: [
       { label: 'Dashboard', href: '/admin/dashboard', icon: Icons.chart, roles: ['admin'] },
+    ],
+  },
+  {
+    title: 'Configuración',
+    items: [
+      { label: 'Mi Perfil', href: '/perfil', icon: Icons.user, roles: ['prestatario', 'admin'] },
     ],
   },
 ];

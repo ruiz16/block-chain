@@ -25,6 +25,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SiweMessage } from 'siwe';
+import { getAddress } from 'viem';
+import { useAuth } from './AuthProvider';
 
 // =============================================================================
 // Types
@@ -52,6 +54,7 @@ interface SiweApiResponse {
 export default function SiweLogin() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated } = useAuth();
   const redirectTo = searchParams?.get('redirect') ?? '/aprobacion';
 
   const [state, setState] = useState<SiweState>('idle');
@@ -61,6 +64,13 @@ export default function SiweLogin() {
   // Main sign-in handler
   // --------------------------------------------------------------------------
   const handleSignIn = useCallback(async () => {
+    // If already authenticated in Supabase, just redirect immediately
+    if (isAuthenticated) {
+      setState('success');
+      router.push(redirectTo);
+      return;
+    }
+
     // Reset error
     setErrorMsg(null);
 
@@ -89,7 +99,10 @@ export default function SiweLogin() {
         });
       }
 
-      const address = accounts[0] as string;
+      const rawAddress = accounts[0] as string;
+
+      // Normalize to EIP-55 checksummed format (MetaMask may return lowercase)
+      const address = getAddress(rawAddress);
 
       // ----------------------------------------------------------------------
       // Step 2: Fetch nonce from server
@@ -123,10 +136,10 @@ export default function SiweLogin() {
       const siweMessage = new SiweMessage({
         domain: window.location.host,
         address,
-        statement: 'Inicia sesión en Block-Chain con tu wallet Celo',
+        statement: 'Inicia sesion en Block-Chain con tu wallet Celo',
         uri: window.location.origin,
         version: '1',
-        chainId: 44787,
+        chainId: 11142220,
         nonce,
         issuedAt: new Date().toISOString(),
       });
@@ -187,12 +200,13 @@ export default function SiweLogin() {
       } else if (error.code === 'NO_ACCOUNTS') {
         setErrorMsg('No se pudieron obtener cuentas de la wallet');
       } else {
-        setErrorMsg(error.message ?? 'Error al iniciar sesión con wallet');
+        console.error(error);
+        setErrorMsg('Error al iniciar sesión con wallet');
       }
 
       setState('error');
     }
-  }, [router, redirectTo]);
+  }, [router, redirectTo, isAuthenticated]);
 
   // --------------------------------------------------------------------------
   // Reset handler

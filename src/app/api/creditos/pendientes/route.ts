@@ -62,10 +62,10 @@ export async function GET(): Promise<Response> {
 
     if (
       !typedParticipante ||
-      !['admin', 'aval', 'prestamista'].includes(typedParticipante.rol)
+      !['admin'].includes(typedParticipante.rol)
     ) {
       return NextResponse.json(
-        { error: 'ACCESO_DENEGADO', detail: 'Solo administradores, avales y prestamistas pueden ver créditos pendientes' },
+        { error: 'ACCESO_DENEGADO', detail: 'Solo administradores pueden ver créditos pendientes' },
         { status: 403 },
       );
     }
