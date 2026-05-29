@@ -16,7 +16,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { formatCusd, parseWeiFromDb } from '@/config/celo';
+import { formatCusd, parseCusd } from '@/config/celo';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import type { CreditoRow } from '@/types/database';
 
@@ -430,7 +430,7 @@ export default function PanelPagos() {
             const isFormOpen = currentCreditoId === credito.id;
             const montoCusd = (() => {
               try {
-                return formatCusd(parseWeiFromDb(credito.monto));
+                return formatCusd(parseCusd(credito.monto));
               } catch {
                 return 0;
               }

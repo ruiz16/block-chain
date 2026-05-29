@@ -37,6 +37,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# hardhat
+artifacts/
+cache/
+
 # vercel
 .vercel
 

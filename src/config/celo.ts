@@ -16,13 +16,48 @@ import type { Address, TxHash, Wei } from '@/types/database';
 /** Celo Sepolia chain ID (replaces deprecated Alfajores) */
 export const CELO_CHAIN_ID = 11142220;
 
+// =============================================================================
+// Exchange Rate Configuration
+// =============================================================================
+//
+// All credit amounts are stored in cUSD (18-decimal Wei) for blockchain
+// compatibility, but the UI shows COP because the app targets Colombian users.
+//
+// The exchange rate is HARDCODED (not live) to avoid external API dependencies
+// and to keep amounts deterministic. In a production app this would be a daily
+// cron that fetches from a TRM or exchange rate API.
+// =============================================================================
+
+/** 1 cUSD = 3633.45 COP (hardcoded, not live) */
+export const COP_USD_RATE = 3633.45;
+
+/**
+ * Converts COP (Colombian Pesos) to cUSD (Celo Dollars).
+ *
+ * @param cop - Amount in COP (e.g., 1_000_000 for $1.000.000 COP)
+ * @returns Amount in cUSD (as a plain number, not Wei)
+ */
+export function copToCusd(cop: number): number {
+  return Math.round((cop / COP_USD_RATE) * 100) / 100; // 2 decimales
+}
+
+/**
+ * Converts cUSD to COP for display.
+ *
+ * @param cusd - Amount in cUSD
+ * @returns Amount in COP (as a plain number)
+ */
+export function cusdToCop(cusd: number): number {
+  return Math.round(cusd * COP_USD_RATE);
+}
+
 /** Default RPC URL for Celo Sepolia */
 export const DEFAULT_CELO_RPC_URL =
   'https://forno.celo-sepolia.celo-testnet.org';
 
-/** Default cUSD contract address on Celo Sepolia */
+/** Default cUSD contract address on Celo Sepolia (MockCusd, deploy propio) */
 export const DEFAULT_CUSD_CONTRACT =
-  '0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80';
+  '0xb42aD227800bf1082A766Af8D2D221f43aE1e710';
 
 /**
  * Returns the configured Celo RPC URL from environment or default.

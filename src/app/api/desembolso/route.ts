@@ -20,7 +20,7 @@ import { requireReviewer } from '@/lib/auth-guards';
 import { DesembolsoSchema } from '@/lib/validations/desembolso';
 import { desembolsarCredito, BlockchainError } from '@/lib/blockchain/desembolsar';
 import { registrarAuditLog } from '@/lib/audit/logger';
-import { parseWeiFromDb } from '@/config/celo';
+import { parseCusd } from '@/config/celo';
 import type { Address, Wei } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(walletAddress as Address, parseWeiFromDb(monto));
+      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(monto));
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({

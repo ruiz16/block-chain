@@ -15,6 +15,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
+import { copToCusd } from '@/config/celo';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -88,7 +89,10 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { monto, descripcion, plazo_dias } = validation.data;
+    const { monto: montoCop, descripcion, plazo_dias } = validation.data;
+
+    // Convert COP → cUSD before storing (blockchain works in cUSD)
+    const monto = copToCusd(montoCop);
 
     // ------------------------------------------------------------------
     // 4. INSERT credito with estado='pendiente' and loan terms

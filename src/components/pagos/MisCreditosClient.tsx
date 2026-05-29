@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { formatCusd, parseWeiFromDb, getCeloScanUrl } from '@/config/celo';
+import { cusdToCop, getCeloScanUrl } from '@/config/celo';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import type { CreditoRow, EstadoCredito } from '@/types/database';
 
@@ -194,7 +194,7 @@ export default function MisCreditosClient() {
             {creditos.map((credito) => {
               const montoCusd = (() => {
                 try {
-                  return formatCusd(parseWeiFromDb(credito.monto));
+                  return formatCusd(parseCusd(credito.monto));
                 } catch {
                   return 0;
                 }

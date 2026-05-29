@@ -24,7 +24,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
-import { parseWeiFromDb } from '@/config/celo';
+import { parseCusd } from '@/config/celo';
 import type { PagoResponse } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const verification = await verificarPago(
       tx_hash as `0x${string}`,
-      parseWeiFromDb(typedCredito.monto),
+      parseCusd(typedCredito.monto),
     );
 
     if (!verification.valid) {
