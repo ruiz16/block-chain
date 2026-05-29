@@ -35,6 +35,8 @@ interface SidebarProps {
 
 interface NavItemDef {
   label: string;
+  /** Label shown to admin users (e.g. "Todos los Créditos" vs "Mis Créditos") */
+  adminLabel?: string;
   href: string;
   icon: ReactNode;
   roles: RolParticipante[];
@@ -113,8 +115,8 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Créditos',
     items: [
-      { label: 'Mis Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
-      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
+      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
+      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario', 'aval', 'prestamista'] },
       { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['prestatario', 'aval', 'prestamista', 'admin'] },
     ],
   },
@@ -185,7 +187,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
         <span className={`shrink-0 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
           {item.icon}
         </span>
-        <span>{item.label}</span>
+        <span>{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
       </Link>
     );
   };

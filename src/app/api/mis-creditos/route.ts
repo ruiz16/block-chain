@@ -1,15 +1,15 @@
 // =============================================================================
-// GET /api/mis-creditos — List Borrower's Credits
+// GET /api/mis-creditos — List Credits
 // =============================================================================
 //
-// Returns all credits where the authenticated user is the prestatario.
-// Uses Supabase Auth session to identify the user and joins via
-// participantes.user_id.
+// Returns credits depending on the user's role:
+//   - Admin:    Returns ALL credits in the system (no filter)
+//   - Others:   Returns only credits where the user is the prestatario
 //
 // Auth flow:
 // 1. Read session cookie via getServerUser()
-// 2. Look up participante row by auth user_id
-// 3. Query creditos WHERE prestatario_id = participante.id
+// 2. Look up participante row by auth user_id (includes role)
+// 3. If admin → query all creditos; otherwise filter by prestatario_id
 // 4. Return { creditos: CreditoRow[] }
 // =============================================================================
 
@@ -23,6 +23,7 @@ import { getServerUser } from '@/lib/supabase/auth-server';
 // ---------------------------------------------------------------------------
 interface ParticipanteRow {
   id: string;
+  rol: string;
 }
 
 export async function GET(): Promise<Response> {
@@ -35,7 +36,7 @@ export async function GET(): Promise<Response> {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para ver tus créditos' },
+        { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para ver los créditos' },
         { status: 401 },
       );
     }
@@ -43,29 +44,35 @@ export async function GET(): Promise<Response> {
     const supabase = getSupabaseClient();
 
     // ------------------------------------------------------------------
-    // 2. Look up participante by auth user_id
+    // 2. Look up participante by auth user_id (include role)
     // ------------------------------------------------------------------
     const { data: participante } = await supabase
       .from('participantes')
-      .select('id')
+      .select('id, rol')
       .eq('user_id', user.id)
       .single();
 
     const typedParticipante = participante as unknown as ParticipanteRow | null;
 
     if (!typedParticipante) {
-      // User has no participante row — return empty array
       return NextResponse.json({ creditos: [] }, { status: 200 });
     }
 
     // ------------------------------------------------------------------
-    // 3. Query all credits for this participante
+    // 3. Query credits — admin sees ALL, others see only their own
     // ------------------------------------------------------------------
-    const { data: creditos, error } = await supabase
+    const isAdmin = typedParticipante.rol === 'admin';
+
+    let query = supabase
       .from('creditos')
       .select('*')
-      .eq('prestatario_id', typedParticipante.id)
       .order('fecha_solicitud', { ascending: false });
+
+    if (!isAdmin) {
+      query = query.eq('prestatario_id', typedParticipante.id);
+    }
+
+    const { data: creditos, error } = await query;
 
     if (error) {
       console.error('[mis-creditos] Error al consultar créditos:', error.message);
