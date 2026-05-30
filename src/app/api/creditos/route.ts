@@ -15,7 +15,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
-import { copToCusd } from '@/config/celo';
+import { copToCusd } from '@/config/currency';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------

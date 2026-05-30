@@ -32,10 +32,10 @@ export interface MetricCardProps {
 // ---------------------------------------------------------------------------
 export default function MetricCard({ label, value, icon, trend }: MetricCardProps) {
   return (
-    <div className="rounded-md bg-white border border-gray-200 p-5 shadow-sm">
+    <div className="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
       <div className="flex items-start justify-between">
         {icon && (
-          <div className="flex-shrink-0 text-gray-400" aria-hidden="true">
+          <div className="flex-shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">
             {icon}
           </div>
         )}
@@ -43,8 +43,8 @@ export default function MetricCard({ label, value, icon, trend }: MetricCardProp
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-medium ${
               trend.direction === 'up'
-                ? 'text-green-600'
-                : 'text-red-600'
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400'
             }`}
           >
             {trend.direction === 'up' ? (
@@ -69,10 +69,10 @@ export default function MetricCard({ label, value, icon, trend }: MetricCardProp
         )}
       </div>
 
-      <p className="mt-2 text-sm font-medium text-gray-500 truncate" title={label}>
+      <p className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400 truncate" title={label}>
         {label}
       </p>
-      <p className="mt-1 text-2xl font-bold text-gray-900 tabular-nums">
+      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
         {value}
       </p>
     </div>

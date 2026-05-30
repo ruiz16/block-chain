@@ -52,9 +52,9 @@ export interface AuditLogTableProps {
 export default function AuditLogTable({ entries }: AuditLogTableProps) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center shadow-lg shadow-slate-100/50">
+      <div className="rounded-2xl bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 p-12 text-center shadow-lg shadow-slate-100/50 dark:shadow-black/20">
         <svg
-          className="h-16 w-16 text-slate-300 mx-auto mb-4"
+          className="h-16 w-16 text-slate-300 dark:text-gray-600 mx-auto mb-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -68,8 +68,8 @@ export default function AuditLogTable({ entries }: AuditLogTableProps) {
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="text-lg font-medium text-slate-800 mb-1">Sin movimientos</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className="text-lg font-medium text-slate-800 dark:text-gray-200 mb-1">Sin movimientos</h3>
+        <p className="text-slate-400 dark:text-gray-500 text-sm">
           No se encontraron entradas en el registro de auditoría.
         </p>
       </div>
@@ -77,9 +77,9 @@ export default function AuditLogTable({ entries }: AuditLogTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-100/40">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-100" aria-label="Registro de auditoría">
+        <table className="min-w-full divide-y divide-slate-100 dark:divide-gray-700" aria-label="Registro de auditoría">
           <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
             <tr>
               <th
@@ -114,25 +114,25 @@ export default function AuditLogTable({ entries }: AuditLogTableProps) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {entries.map((entry) => {
               // Custom action badges
               const actionColors: Record<string, string> = {
-                credito_creado: 'bg-blue-50 text-blue-700 border border-blue-200/60',
-                credito_aprobado: 'bg-indigo-50 text-indigo-700 border border-indigo-200/60',
-                desembolso: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
-                desembolso_fallo: 'bg-rose-50 text-rose-700 border border-rose-200/60',
-                pago_recibido: 'bg-teal-50 text-teal-700 border border-teal-200/60',
-                default_registrado: 'bg-red-50 text-red-700 border border-red-200/60',
-                aval_agregado: 'bg-purple-50 text-purple-700 border border-purple-200/60',
-                aval_revocado: 'bg-amber-50 text-amber-700 border border-amber-200/60',
+                credito_creado: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-700',
+                credito_aprobado: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-700',
+                desembolso: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700',
+                desembolso_fallo: 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-700',
+                pago_recibido: 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-700',
+                default_registrado: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200/60 dark:border-red-700',
+                aval_agregado: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-700',
+                aval_revocado: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700',
               };
 
-              const badgeStyle = actionColors[entry.accion] ?? 'bg-slate-50 text-slate-700 border border-slate-200';
+              const badgeStyle = actionColors[entry.accion] ?? 'bg-slate-50 dark:bg-gray-700 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-600';
 
               return (
-                <tr key={entry.id} className="transition-colors duration-150 hover:bg-slate-50/70">
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 font-medium">
+                <tr key={entry.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
                     {new Date(entry.fecha).toLocaleString('es-CO', {
                       year: 'numeric',
                       month: 'short',
@@ -146,15 +146,15 @@ export default function AuditLogTable({ entries }: AuditLogTableProps) {
                       {actionLabel(entry.accion)}
                     </span>
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-700 font-semibold">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-700 dark:text-gray-200 font-semibold">
                     {entry.participante_nombre ?? '—'}
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 font-mono">
-                    <span className="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-mono">
+                    <span className="bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 rounded px-1.5 py-0.5 text-xs">
                       {formatEntity(entry.entidad_tipo, entry.entidad_id)}
                     </span>
                   </td>
-                  <td className="px-6 py-4.5 text-sm text-slate-600 max-w-xs truncate font-mono text-xs">
+                  <td className="px-6 py-4.5 text-sm text-slate-600 dark:text-gray-300 max-w-xs truncate font-mono text-xs">
                     {JSON.stringify(entry.detalles)}
                   </td>
                 </tr>

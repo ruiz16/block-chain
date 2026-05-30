@@ -199,7 +199,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <span className="text-gray-500 text-sm">Cargando avales…</span>
+        <span className="text-gray-500 dark:text-gray-400 text-sm">Cargando avales…</span>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
   if (state === 'error') {
     return (
       <div className="space-y-3">
-        <div className="rounded-md bg-red-50 border border-red-200 p-3" role="alert">
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3" role="alert">
           <div className="flex items-start">
             <svg
               className="h-4 w-4 text-red-500 mt-0.5 mr-2 shrink-0"
@@ -226,15 +226,15 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
               />
             </svg>
             <div className="flex-1">
-              <p className="text-red-800 font-medium text-sm">Error en avales</p>
-              {errorMsg && <p className="text-red-600 text-xs mt-1">{errorMsg}</p>}
+              <p className="text-red-800 dark:text-red-200 font-medium text-sm">Error en avales</p>
+              {errorMsg && <p className="text-red-600 dark:text-red-300 text-xs mt-1">{errorMsg}</p>}
             </div>
           </div>
         </div>
 
         <button
           onClick={handleRetry}
-          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500"
           aria-label="Reintentar cargar avales"
         >
           Reintentar
@@ -252,8 +252,8 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
     <div className="space-y-3">
       {/* Assign form (collapsible) */}
       {showAssignForm ? (
-        <div className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-2" role="form" aria-label="Formulario para agregar aval">
-          <label htmlFor="avalador-id-input-list" className="block text-xs font-medium text-gray-700">
+        <div className="rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-2" role="form" aria-label="Formulario para agregar aval">
+          <label htmlFor="avalador-id-input-list" className="block text-xs font-medium text-gray-700 dark:text-gray-300">
             ID del avalador
           </label>
           <input
@@ -263,13 +263,13 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
             value={avaladorIdInput}
             onChange={(e) => setAvaladorIdInput(e.target.value)}
             disabled={isMutating}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <div className="flex gap-2">
             <button
               onClick={handleAssign}
               disabled={isMutating || !avaladorIdInput.trim()}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Confirmar asignación de aval"
             >
               {state === 'assigning' ? (
@@ -287,7 +287,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
             <button
               onClick={() => { setShowAssignForm(false); setAvaladorIdInput(''); }}
               disabled={isMutating}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50"
               aria-label="Cancelar asignación"
             >
               Cancelar
@@ -298,7 +298,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
         <button
           onClick={() => { setShowAssignForm(true); setErrorMsg(null); }}
           disabled={isMutating}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Agregar aval"
         >
           <svg
@@ -332,7 +332,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
               d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
             />
           </svg>
-          <p className="text-gray-500 text-sm">Sin avales asignados</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Sin avales asignados</p>
         </div>
       )}
 
@@ -341,19 +341,19 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
         {avales.filter((a) => a.activo).map((aval) => (
           <div
             key={aval.id}
-            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition-all duration-150 hover:shadow-md hover:border-slate-300"
+            className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm shadow-sm transition-all duration-150 hover:shadow-md hover:border-slate-300 dark:hover:border-gray-600"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-800 truncate">
+                <span className="font-semibold text-slate-800 dark:text-gray-200 truncate">
                   {aval.avalador_nombre}
                 </span>
-                <span className="text-slate-400 text-xs font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60" title={aval.avalador_wallet}>
+                <span className="text-slate-400 dark:text-gray-500 text-xs font-mono bg-slate-50 dark:bg-gray-700 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-gray-600" title={aval.avalador_wallet}>
                   {truncateWallet(aval.avalador_wallet)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-medium">
-                <span className="text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded">{formatMonto(aval.monto_maximo)}</span>
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 dark:text-gray-400 font-medium">
+                <span className="text-slate-700 dark:text-gray-200 font-bold bg-slate-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{formatMonto(aval.monto_maximo)}</span>
                 <span>•</span>
                 <span>Asignado el {new Date(aval.fecha_creacion).toLocaleDateString('es-CO')}</span>
               </div>

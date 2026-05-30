@@ -16,7 +16,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { formatCusd, parseCusd } from '@/config/celo';
+import { cusdToCop } from '@/config/currency';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import type { CreditoRow } from '@/types/database';
 
@@ -244,7 +244,7 @@ export default function PanelPagos() {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <span className="text-gray-600">Cargando tus créditos…</span>
+        <span className="text-gray-600 dark:text-gray-300">Cargando tus créditos…</span>
       </div>
     );
   }
@@ -256,7 +256,7 @@ export default function PanelPagos() {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <svg
-          className="h-16 w-16 text-gray-300 mb-4"
+          className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -270,7 +270,7 @@ export default function PanelPagos() {
             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <p className="text-gray-500 text-lg">No tienes créditos activos</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes créditos activos</p>
       </div>
     );
   }
@@ -282,7 +282,7 @@ export default function PanelPagos() {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <svg
-          className="h-16 w-16 text-green-300 mb-4"
+          className="h-16 w-16 text-green-300 dark:text-green-600 mb-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -296,8 +296,8 @@ export default function PanelPagos() {
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <p className="text-gray-500 text-lg">No tienes pagos pendientes</p>
-        <p className="text-gray-400 text-sm mt-1">Todos tus créditos están al día</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes pagos pendientes</p>
+        <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Todos tus créditos están al día</p>
       </div>
     );
   }
@@ -308,7 +308,7 @@ export default function PanelPagos() {
   if (state === 'success') {
     return (
       <div
-        className="rounded-md bg-green-50 border border-green-200 p-4"
+        className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4"
         role="alert"
       >
         <div className="flex items-start">
@@ -326,7 +326,7 @@ export default function PanelPagos() {
             />
           </svg>
           <div className="flex-1">
-            <p className="text-green-800 font-medium">Pago registrado exitosamente</p>
+            <p className="text-green-800 dark:text-green-200 font-medium">Pago registrado exitosamente</p>
           </div>
         </div>
       </div>
@@ -340,7 +340,7 @@ export default function PanelPagos() {
     return (
       <div className="space-y-4">
         <div
-          className="rounded-md bg-red-50 border border-red-200 p-4"
+          className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4"
           role="alert"
         >
           <div className="flex items-start">
@@ -358,8 +358,8 @@ export default function PanelPagos() {
               />
             </svg>
             <div className="flex-1">
-              <p className="text-red-800 font-medium">Error al registrar el pago</p>
-              {errorMsg && <p className="text-red-600 text-sm mt-1">{errorMsg}</p>}
+              <p className="text-red-800 dark:text-red-200 font-medium">Error al registrar el pago</p>
+              {errorMsg && <p className="text-red-600 dark:text-red-300 text-sm mt-1">{errorMsg}</p>}
             </div>
           </div>
         </div>
@@ -367,7 +367,7 @@ export default function PanelPagos() {
         <div className="flex gap-2">
           <button
             onClick={handleRetry}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500"
           >
             <svg
               className="h-3.5 w-3.5 mr-1"
@@ -398,135 +398,139 @@ export default function PanelPagos() {
     // Fallback — transition to no-pending if list is empty
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
-        <p className="text-gray-500 text-lg">No tienes pagos pendientes</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes pagos pendientes</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <table
-        className="min-w-full divide-y divide-gray-200"
-        aria-label="Créditos pendientes de pago"
-      >
-        <thead className="bg-gray-50">
-          <tr>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Monto
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Fecha desembolso
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tx Hash
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {creditosPendientes.map((credito) => {
-            const isFormOpen = currentCreditoId === credito.id;
-            const montoCusd = (() => {
-              try {
-                return formatCusd(parseCusd(credito.monto));
-              } catch {
-                return 0;
-              }
-            })();
-
-            return (
-              <tr key={credito.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {montoCusd.toLocaleString('es-CO', { minimumFractionDigits: 2 })} cUSD
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(credito.fecha_actualizacion).toLocaleDateString('es-CO', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                  {credito.tx_hash ? (
-                    <CeloScanLink txHash={credito.tx_hash} />
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                  {!isFormOpen ? (
-                    <button
-                      onClick={() => openForm(credito.id)}
-                      disabled={isSubmitting}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label={`Registrar pago para crédito de ${montoCusd} cUSD`}
-                    >
-                      Registrar Pago
-                    </button>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={txHashInput}
-                          onChange={(e) => handleTxHashChange(e.target.value)}
-                          placeholder="0x..."
-                          disabled={isSubmitting}
-                          className={`block w-64 px-2.5 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                            txHashError
-                              ? 'border-red-300 text-red-900 placeholder-red-300'
-                              : 'border-gray-300 text-gray-900'
-                          }`}
-                          aria-label="Hash de la transacción de pago"
-                          aria-invalid={!!txHashError}
-                          aria-describedby={txHashError ? 'tx-hash-error' : undefined}
-                        />
-                        <button
-                          onClick={() => handleSubmit(credito.id)}
-                          disabled={isSubmitting || !txHashInput.trim()}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <svg
-                                className="animate-spin h-3.5 w-3.5 mr-1"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                              >
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                              Confirmando…
-                            </>
-                          ) : (
-                            'Confirmar Pago'
-                          )}
-                        </button>
-                        <button
-                          onClick={closeForm}
-                          disabled={isSubmitting}
-                          className="inline-flex items-center px-2 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                      {txHashError && (
-                        <p id="tx-hash-error" className="text-xs text-red-600" role="alert">
-                          {txHashError}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </td>
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
+        <div className="overflow-x-auto">
+          <table
+            className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
+            aria-label="Créditos pendientes de pago"
+          >
+            <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+              <tr>
+                <th scope="col" className="px-6 py-4.5 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Monto
+                </th>
+                <th scope="col" className="px-6 py-4.5 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Fecha desembolso
+                </th>
+                <th scope="col" className="px-6 py-4.5 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Tx Hash
+                </th>
+                <th scope="col" className="px-6 py-4.5 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Acciones
+                </th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+              {creditosPendientes.map((credito) => {
+                const isFormOpen = currentCreditoId === credito.id;
+                const montoCop = (() => {
+                  try {
+                    return cusdToCop(Number(credito.monto));
+                  } catch {
+                    return 0;
+                  }
+                })();
+
+                return (
+                  <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
+                    <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
+                      $ {montoCop.toLocaleString('es-CO')} COP
+                    </td>
+                    <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
+                      {new Date(credito.fecha_actualizacion).toLocaleDateString('es-CO', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </td>
+                    <td className="px-6 py-4.5 whitespace-nowrap text-sm">
+                      {credito.tx_hash ? (
+                        <CeloScanLink txHash={credito.tx_hash} />
+                      ) : (
+                        <span className="text-slate-400 dark:text-gray-500 font-medium">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4.5 whitespace-nowrap text-sm">
+                      {!isFormOpen ? (
+                        <button
+                          onClick={() => openForm(credito.id)}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                          aria-label={`Registrar pago para crédito de $${montoCop} COP`}
+                        >
+                          Registrar Pago
+                        </button>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={txHashInput}
+                              onChange={(e) => handleTxHashChange(e.target.value)}
+                              placeholder="0x..."
+                              disabled={isSubmitting}
+                              className={`block w-64 px-2.5 py-1.5 text-xs border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed ${
+                                txHashError
+                                  ? 'border-red-300 dark:border-red-600 text-red-900 dark:text-red-200 placeholder-red-300 dark:placeholder-red-400'
+                                  : 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700'
+                              }`}
+                              aria-label="Hash de la transacción de pago"
+                              aria-invalid={!!txHashError}
+                              aria-describedby={txHashError ? 'tx-hash-error' : undefined}
+                            />
+                            <button
+                              onClick={() => handleSubmit(credito.id)}
+                              disabled={isSubmitting || !txHashInput.trim()}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <svg
+                                    className="animate-spin h-3.5 w-3.5 mr-1"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                  >
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                  </svg>
+                                  Confirmando…
+                                </>
+                              ) : (
+                                'Confirmar Pago'
+                              )}
+                            </button>
+                            <button
+                              onClick={closeForm}
+                              disabled={isSubmitting}
+                              className="inline-flex items-center px-2 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 transition-all duration-150 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                          {txHashError && (
+                            <p id="tx-hash-error" className="text-xs text-red-600 dark:text-red-400" role="alert">
+                              {txHashError}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

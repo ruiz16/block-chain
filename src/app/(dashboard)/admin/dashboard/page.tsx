@@ -114,8 +114,8 @@ export default function AdminDashboardPage() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
-          <p className="mt-1 text-sm text-gray-500">Cargando indicadores…</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Panel de Administración</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Cargando indicadores…</p>
         </div>
 
         {/* Skeleton grid */}
@@ -123,20 +123,20 @@ export default function AdminDashboardPage() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-md bg-white border border-gray-200 p-5 animate-pulse"
+              className="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 animate-pulse"
               aria-hidden="true"
             >
-              <div className="h-3 bg-gray-200 rounded w-1/2 mb-3" />
-              <div className="h-7 bg-gray-200 rounded w-3/4" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-3" />
+              <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
             </div>
           ))}
         </div>
 
         {/* Skeleton table */}
-        <div className="rounded-md bg-white border border-gray-200 p-4 animate-pulse" aria-hidden="true">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4" />
+        <div className="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 animate-pulse" aria-hidden="true">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4" />
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-3 bg-gray-200 rounded w-full mb-2" />
+            <div key={i} className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
           ))}
         </div>
       </div>
@@ -191,8 +191,8 @@ export default function AdminDashboardPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Panel de Administración</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Indicadores generales y actividad de la plataforma
         </p>
       </div>
@@ -201,9 +201,9 @@ export default function AdminDashboardPage() {
       <section className="mb-8" aria-label="Indicadores generales">
         <h2 className="sr-only">Métricas</h2>
         {sectionErrors.metrics ? (
-          <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-4" role="alert">
-            <p className="text-red-800 font-medium text-sm">Error al cargar métricas</p>
-            <p className="text-red-600 text-xs mt-1">{sectionErrors.metrics}</p>
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 mb-4" role="alert">
+            <p className="text-red-800 dark:text-red-200 font-medium text-sm">Error al cargar métricas</p>
+            <p className="text-red-600 dark:text-red-300 text-xs mt-1">{sectionErrors.metrics}</p>
           </div>
         ) : metrics ? (
           <MetricGrid metrics={displayMetrics} />
@@ -212,13 +212,13 @@ export default function AdminDashboardPage() {
 
       {/* Audit log section */}
       <section className="mb-8" aria-label="Últimos movimientos">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           Últimos movimientos
         </h2>
         {sectionErrors.audit ? (
-          <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
-            <p className="text-red-800 font-medium text-sm">Error al cargar auditoría</p>
-            <p className="text-red-600 text-xs mt-1">{sectionErrors.audit}</p>
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4" role="alert">
+            <p className="text-red-800 dark:text-red-200 font-medium text-sm">Error al cargar auditoría</p>
+            <p className="text-red-600 dark:text-red-300 text-xs mt-1">{sectionErrors.audit}</p>
           </div>
         ) : (
           <AuditLogTable entries={auditEntries} />
@@ -227,13 +227,13 @@ export default function AdminDashboardPage() {
 
       {/* Quick links */}
       <nav aria-label="Accesos rápidos de administración">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           Accesos rápidos
         </h2>
         <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/participantes"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
           >
             <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -242,7 +242,7 @@ export default function AdminDashboardPage() {
           </Link>
           <Link
             href="/admin/creditos"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
           >
             <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

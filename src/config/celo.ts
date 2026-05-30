@@ -2,90 +2,52 @@
 // Celo Network Configuration
 // =============================================================================
 //
-// Celo Alfajores (testnet, chain 44787) has been DEPRECATED as of 2025.
-// The new testnet is Celo Sepolia (chain 11142220).
+// ALL environment variables are REQUIRED — there are NO defaults.
+// If a variable is missing, the app will throw an error at startup.
 //
-// References:
-//   - https://docs.celo.org/build-on-celo/network-overview
-//   - https://faucet.celo.org/celo-sepolia  (CELO test tokens)
-//   - https://celo-sepolia.blockscout.com  (block explorer)
+// Required vars (see .env.example):
+//   CELO_RPC_URL                 — Celo RPC endpoint
+//   CELO_CUSD_CONTRACT           — cUSD token contract address
+//   NEXT_PUBLIC_CELOSCAN_BASE_URL — Block explorer base URL
+//   NEXT_PUBLIC_COP_USD_RATE     — Exchange rate (COP per 1 cUSD)
 // =============================================================================
 
 import type { Address, TxHash, Wei } from '@/types/database';
 
-/** Celo Sepolia chain ID (replaces deprecated Alfajores) */
-export const CELO_CHAIN_ID = 11142220;
-
-// =============================================================================
-// Exchange Rate Configuration
-// =============================================================================
-//
-// All credit amounts are stored in cUSD (18-decimal Wei) for blockchain
-// compatibility, but the UI shows COP because the app targets Colombian users.
-//
-// The exchange rate is HARDCODED (not live) to avoid external API dependencies
-// and to keep amounts deterministic. In a production app this would be a daily
-// cron that fetches from a TRM or exchange rate API.
-// =============================================================================
-
-/** 1 cUSD = 3633.45 COP (hardcoded, not live) */
-export const COP_USD_RATE = 3633.45;
-
 /**
- * Converts COP (Colombian Pesos) to cUSD (Celo Dollars).
- *
- * @param cop - Amount in COP (e.g., 1_000_000 for $1.000.000 COP)
- * @returns Amount in cUSD (as a plain number, not Wei)
- */
-export function copToCusd(cop: number): number {
-  return Math.round((cop / COP_USD_RATE) * 100) / 100; // 2 decimales
-}
-
-/**
- * Converts cUSD to COP for display.
- *
- * @param cusd - Amount in cUSD
- * @returns Amount in COP (as a plain number)
- */
-export function cusdToCop(cusd: number): number {
-  return Math.round(cusd * COP_USD_RATE);
-}
-
-/** Default RPC URL for Celo Sepolia */
-export const DEFAULT_CELO_RPC_URL =
-  'https://forno.celo-sepolia.celo-testnet.org';
-
-/** Default cUSD contract address on Celo Sepolia (MockCusd, deploy propio) */
-export const DEFAULT_CUSD_CONTRACT =
-  '0xb42aD227800bf1082A766Af8D2D221f43aE1e710';
-
-/**
- * Returns the configured Celo RPC URL from environment or default.
+ * Returns the configured Celo RPC URL.
+ * Throws if CELO_RPC_URL is not set.
  */
 export function getCeloRpcUrl(): string {
-  return process.env.CELO_RPC_URL ?? DEFAULT_CELO_RPC_URL;
+  const url = process.env.CELO_RPC_URL;
+  if (!url) throw new Error('Falta CELO_RPC_URL en las variables de entorno');
+  return url;
 }
 
 /**
- * Returns the configured cUSD contract address from environment or default.
+ * Returns the configured cUSD contract address.
+ * Throws if CELO_CUSD_CONTRACT is not set.
  */
 export function getCusdContractAddress(): `0x${string}` {
-  return (
-    (process.env.CELO_CUSD_CONTRACT as `0x${string}` | undefined) ??
-    DEFAULT_CUSD_CONTRACT
-  );
+  const address = process.env.CELO_CUSD_CONTRACT;
+  if (!address) {
+    throw new Error('Falta CELO_CUSD_CONTRACT en las variables de entorno');
+  }
+  return address as `0x${string}`;
 }
 
 /**
- * Returns the block-explorer base URL from environment or default.
- *
- * Defaults to Celo Sepolia Blockscout (replaces deprecated Celoscan).
+ * Returns the block-explorer base URL.
+ * Throws if NEXT_PUBLIC_CELOSCAN_BASE_URL is not set.
  */
 export function getCeloScanBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_CELOSCAN_BASE_URL ??
-    'https://celo-sepolia.blockscout.com'
-  );
+  const url = process.env.NEXT_PUBLIC_CELOSCAN_BASE_URL;
+  if (!url) {
+    throw new Error(
+      'Falta NEXT_PUBLIC_CELOSCAN_BASE_URL en las variables de entorno',
+    );
+  }
+  return url;
 }
 
 /**

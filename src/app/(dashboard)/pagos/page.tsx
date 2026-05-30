@@ -19,8 +19,8 @@ export default function PagosPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Mis Pagos</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mis Pagos</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Registra el pago de tus créditos activos usando el hash de la transacción en Celo
         </p>
       </div>

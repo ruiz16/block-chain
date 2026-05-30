@@ -20,6 +20,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
+import ThemeToggle from '@/components/shared/ThemeToggle';
 import type { RolParticipante } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -54,10 +55,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  prestatario: 'bg-blue-100 text-blue-700',
-  aval: 'bg-purple-100 text-purple-700',
-  prestamista: 'bg-indigo-100 text-indigo-700',
-  admin: 'bg-amber-100 text-amber-700',
+  prestatario: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
+  aval: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
+  prestamista: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300',
+  admin: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
 };
 
 // ---------------------------------------------------------------------------
@@ -189,13 +190,13 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
           transition-all duration-150
           ${
             active
-              ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 pl-[10px]'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-l-4 border-transparent pl-3'
+              ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-l-4 border-blue-600 dark:border-blue-400 pl-[10px]'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 border-l-4 border-transparent pl-3'
           }
         `}
         aria-current={active ? 'page' : undefined}
       >
-        <span className={`shrink-0 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
+        <span className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
           {item.icon}
         </span>
         <span>{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
@@ -208,9 +209,9 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
   // -----------------------------------------------------------------------
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Logo / Brand */}
-      <div className="px-5 pt-5 pb-4 border-b border-gray-200">
+      <div className="px-5 pt-5 pb-4 border-b border-gray-200 dark:border-gray-700">
         <Link href="/" className="flex items-center gap-2.5" onClick={closeMobile}>
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -218,21 +219,21 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
             </svg>
           </div>
           <div>
-            <h1 className="text-base font-semibold text-gray-900 leading-tight">BlockChain</h1>
-            <p className="text-[11px] text-gray-500 leading-tight">Micro-Créditos</p>
+            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">BlockChain</h1>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">Micro-Créditos</p>
           </div>
         </Link>
       </div>
 
       {/* User Info */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{userName}</p>
         <div className="flex items-center gap-2 mt-1">
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleColor}`}>
             {roleLabel}
           </span>
           {userEmail && (
-            <span className="text-[11px] text-gray-400 truncate">{userEmail}</span>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{userEmail}</span>
           )}
         </div>
       </div>
@@ -241,7 +242,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6" aria-label="Navegación principal">
         {visibleSections.map((section) => (
           <div key={section.title}>
-            <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
               {section.title}
             </p>
             <div className="space-y-0.5">
@@ -251,13 +252,18 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
         ))}
       </nav>
 
+      {/* Theme Toggle */}
+      <div className="px-3">
+        <ThemeToggle />
+      </div>
+
       {/* Logout */}
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-3">
         <button
           onClick={signOut}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-150 border-l-4 border-transparent"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300 transition-colors duration-150 border-l-4 border-transparent"
         >
-          <span className="shrink-0 text-gray-400">{Icons.logout}</span>
+          <span className="shrink-0 text-gray-400 dark:text-gray-500">{Icons.logout}</span>
           <span>Cerrar Sesión</span>
         </button>
       </div>
@@ -267,10 +273,10 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
   return (
     <>
       {/* ── Mobile top bar ── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14 bg-white border-b border-gray-200">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="p-1.5 -ml-1.5 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-1.5 -ml-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Abrir menú de navegación"
         >
           {Icons.hamburger}
@@ -281,7 +287,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182" />
             </svg>
           </div>
-          <span className="text-sm font-semibold text-gray-900">BlockChain</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">BlockChain</span>
         </div>
       </div>
 
@@ -297,7 +303,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
       {/* ── Mobile drawer ── */}
       <aside
         className={`
-          md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl
+          md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-900 shadow-2xl
           transform transition-transform duration-300 ease-in-out
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
@@ -307,7 +313,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
         <div className="absolute top-3 right-3">
           <button
             onClick={closeMobile}
-            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Cerrar menú"
           >
             {Icons.close}
@@ -318,14 +324,14 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
 
       {/* ── Desktop sidebar ── */}
       <aside
-        className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:bg-white md:border-r md:border-gray-200"
+        className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:bg-white dark:md:bg-gray-900 md:border-r md:border-gray-200 dark:md:border-gray-700"
         aria-label="Navegación principal"
       >
         {sidebarContent}
       </aside>
 
       {/* ── Main content area ── */}
-      <main className="md:ml-64 pt-14 md:pt-0 min-h-screen bg-gray-50">
+      <main className="md:ml-64 pt-14 md:pt-0 min-h-screen bg-gray-50 dark:bg-gray-950">
         {children}
       </main>
     </>

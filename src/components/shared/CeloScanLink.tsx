@@ -33,7 +33,7 @@ export default function CeloScanLink({ txHash, label }: CeloScanLinkProps) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Ver transacción en CeloScan"
-      className="text-blue-600 hover:underline text-sm"
+      className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
     >
       {label ?? 'Ver en CeloScan'}
     </a>

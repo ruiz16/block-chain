@@ -9,7 +9,8 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { cusdToCop, getCeloScanUrl } from '@/config/celo';
+import { getCeloScanUrl } from '@/config/celo';
+import { cusdToCop } from '@/config/currency';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import type { CreditoRow, EstadoCredito } from '@/types/database';
 
@@ -20,12 +21,12 @@ type PageState = 'loading' | 'empty' | 'list' | 'error';
 // =============================================================================
 
 const ESTADO_COLORS: Record<string, string> = {
-  pendiente: 'bg-amber-50 text-amber-700 border border-amber-200/60',
-  avalado: 'bg-purple-50 text-purple-700 border border-purple-200/60',
-  aprobado: 'bg-sky-50 text-sky-700 border border-sky-200/60',
-  desembolsado: 'bg-indigo-50 text-indigo-700 border border-indigo-200/60',
-  pagado: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
-  default: 'bg-rose-50 text-rose-700 border border-rose-200/60',
+  pendiente: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700',
+  avalado: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-700',
+  aprobado: 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700',
+  desembolsado: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-700',
+  pagado: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700',
+  default: 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-700',
 };
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -99,7 +100,7 @@ export default function MisCreditosClient() {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <span className="text-gray-600">Cargando tus créditos…</span>
+        <span className="text-gray-600 dark:text-gray-300">Cargando tus créditos…</span>
       </div>
     );
   }
@@ -111,7 +112,7 @@ export default function MisCreditosClient() {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <svg
-          className="h-16 w-16 text-gray-300 mb-4"
+          className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -125,7 +126,7 @@ export default function MisCreditosClient() {
             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
           />
         </svg>
-        <p className="text-gray-500 text-lg">No tienes créditos registrados</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes créditos registrados</p>
       </div>
     );
   }
@@ -135,7 +136,7 @@ export default function MisCreditosClient() {
   // ==========================================================================
   if (state === 'error') {
     return (
-      <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
+      <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4" role="alert">
         <div className="flex items-start">
           <svg
             className="h-5 w-5 text-red-500 mt-0.5 mr-3 shrink-0"
@@ -151,7 +152,7 @@ export default function MisCreditosClient() {
             />
           </svg>
           <div className="flex-1">
-            <p className="text-red-800 font-medium">{errorMsg}</p>
+            <p className="text-red-800 dark:text-red-200 font-medium">{errorMsg}</p>
           </div>
         </div>
       </div>
@@ -162,10 +163,10 @@ export default function MisCreditosClient() {
   // Render: list state
   // ==========================================================================
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-100/40">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
       <div className="overflow-x-auto">
         <table
-          className="min-w-full divide-y divide-slate-100"
+          className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
           aria-label="Todos tus créditos"
         >
           <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
@@ -190,31 +191,31 @@ export default function MisCreditosClient() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {creditos.map((credito) => {
-              const montoCusd = (() => {
+              const montoCop = (() => {
                 try {
-                  return formatCusd(parseCusd(credito.monto));
+                  return cusdToCop(Number(credito.monto));
                 } catch {
                   return 0;
                 }
               })();
 
               return (
-                <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70">
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 font-bold">
-                    {montoCusd.toLocaleString('es-CO', { minimumFractionDigits: 2 })} cUSD
+                <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
+                    $ {montoCop.toLocaleString('es-CO')} COP
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm">
                     <span
                       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        ESTADO_COLORS[credito.estado] ?? 'bg-slate-50 text-slate-700 border border-slate-200'
+                        ESTADO_COLORS[credito.estado] ?? 'bg-slate-50 dark:bg-gray-700 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-600'
                       }`}
                     >
                       {ESTADO_LABELS[credito.estado] ?? credito.estado}
                     </span>
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 font-medium">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
                     {new Date(credito.fecha_solicitud).toLocaleDateString('es-CO', {
                       year: 'numeric',
                       month: 'short',
@@ -225,24 +226,24 @@ export default function MisCreditosClient() {
                     {credito.tx_hash ? (
                       <CeloScanLink txHash={credito.tx_hash} />
                     ) : (
-                      <span className="text-slate-400 font-medium">—</span>
+                      <span className="text-slate-400 dark:text-gray-500 font-medium">—</span>
                     )}
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm">
                     {credito.tx_hash_pago ? (
                       <CeloScanLink txHash={credito.tx_hash_pago} />
                     ) : (
-                      <span className="text-slate-400 font-medium">—</span>
+                      <span className="text-slate-400 dark:text-gray-500 font-medium">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 font-medium">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
                     {credito.fecha_pago
                       ? new Date(credito.fecha_pago).toLocaleDateString('es-CO', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
                         })
-                      : <span className="text-slate-400 font-medium">—</span>}
+                      : <span className="text-slate-400 dark:text-gray-500 font-medium">—</span>}
                   </td>
                 </tr>
               );

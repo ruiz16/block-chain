@@ -77,7 +77,7 @@ export default function SolicitarCredito() {
   // ==========================================================================
   if (state === 'error') {
     return (
-      <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
+      <div className="rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4" role="alert">
         <div className="flex items-start">
           <svg
             className="h-5 w-5 text-red-500 mt-0.5 mr-3 shrink-0"
@@ -93,8 +93,8 @@ export default function SolicitarCredito() {
             />
           </svg>
           <div className="flex-1">
-            <p className="text-red-800 font-medium">Error al solicitar el crédito</p>
-            {errorMsg && <p className="text-red-600 text-sm mt-1">{errorMsg}</p>}
+            <p className="text-red-800 dark:text-red-200 font-medium">Error al solicitar el crédito</p>
+            {errorMsg && <p className="text-red-600 dark:text-red-300 text-sm mt-1">{errorMsg}</p>}
           </div>
         </div>
         <button
@@ -112,7 +112,7 @@ export default function SolicitarCredito() {
   // ==========================================================================
   if (state === 'success') {
     return (
-      <div className="rounded-md bg-green-50 border border-green-200 p-4" role="alert">
+      <div className="rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4" role="alert">
         <div className="flex items-start">
           <svg
             className="h-5 w-5 text-green-500 mt-0.5 mr-3 shrink-0"
@@ -128,8 +128,8 @@ export default function SolicitarCredito() {
             />
           </svg>
           <div className="flex-1">
-            <p className="text-green-800 font-medium">Solicitud de crédito exitosa</p>
-            <p className="text-green-600 text-sm mt-1">
+            <p className="text-green-800 dark:text-green-200 font-medium">Solicitud de crédito exitosa</p>
+            <p className="text-green-600 dark:text-green-300 text-sm mt-1">
               Serás redirigido a la página de Mis Créditos para dar seguimiento.
             </p>
           </div>
@@ -149,29 +149,37 @@ export default function SolicitarCredito() {
       <div>
         <label
           htmlFor="monto"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
-          Monto solicitado (cUSD)
+          Monto solicitado (COP)
         </label>
-        <input
-          id="monto"
-          type="number"
-          step="0.01"
-          min="1"
-          required
-          value={monto}
-          onChange={(e) => setMonto(e.target.value)}
-          disabled={isSubmitting}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          placeholder="Ej: 1000"
-        />
+        <div className="relative">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400 text-sm font-medium pointer-events-none">
+            $
+          </span>
+          <input
+            id="monto"
+            type="number"
+            step="1"
+            min="1"
+            required
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            disabled={isSubmitting}
+            className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-7 pr-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder="1.000.000"
+          />
+        </div>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Valor en pesos colombianos
+        </p>
       </div>
 
       {/* Plazo */}
       <div>
         <label
           htmlFor="plazo_dias"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
           Plazo de pago
         </label>
@@ -180,7 +188,7 @@ export default function SolicitarCredito() {
           value={plazoDias}
           onChange={(e) => setPlazoDias(Number(e.target.value))}
           disabled={isSubmitting}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {PLAZO_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -194,9 +202,9 @@ export default function SolicitarCredito() {
       <div>
         <label
           htmlFor="descripcion"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
-          Descripción <span className="text-gray-400 font-normal">(opcional)</span>
+          Descripción <span className="text-gray-400 dark:text-gray-500 font-normal">(opcional)</span>
         </label>
         <textarea
           id="descripcion"
@@ -205,10 +213,10 @@ export default function SolicitarCredito() {
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           disabled={isSubmitting}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="Breve descripción del propósito del crédito"
         />
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
           {descripcion.length}/500 caracteres
         </p>
       </div>
@@ -217,7 +225,7 @@ export default function SolicitarCredito() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (
           <>

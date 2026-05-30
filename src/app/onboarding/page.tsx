@@ -232,12 +232,12 @@ export default function OnboardingPage() {
   const isSubmitting = pageState === 'form-submit';
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center px-4 py-8 bg-gray-50 dark:bg-gray-950">
       <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
           Completa tu Perfil
         </h1>
-        <p className="text-sm text-gray-500 text-center mb-8">
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
           Cuéntanos quién eres para empezar a usar la plataforma
         </p>
 
@@ -246,7 +246,7 @@ export default function OnboardingPage() {
           <div>
             <label
               htmlFor="onboarding-nombre"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
               Nombre completo
             </label>
@@ -261,11 +261,11 @@ export default function OnboardingPage() {
               disabled={isSubmitting}
               required
               maxLength={255}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               placeholder="Tu nombre"
             />
             {fieldErrors.nombre && (
-              <p className="mt-1 text-xs text-red-600">{fieldErrors.nombre}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.nombre}</p>
             )}
           </div>
 
@@ -273,7 +273,7 @@ export default function OnboardingPage() {
           <div>
             <label
               htmlFor="onboarding-wallet"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
               Dirección de wallet (opcional)
             </label>
@@ -284,7 +284,7 @@ export default function OnboardingPage() {
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 disabled={isSubmitting}
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 placeholder="0x..."
               />
               <WalletConnectButton onAddressChange={handleAddressChange} />
@@ -295,7 +295,7 @@ export default function OnboardingPage() {
           <div>
             <label
               htmlFor="onboarding-rol"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
               Rol
             </label>
@@ -308,23 +308,23 @@ export default function OnboardingPage() {
               }}
               disabled={isSubmitting}
               required
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             >
               <option value="">Selecciona un rol</option>
               <option value="prestatario">Prestatario</option>
             </select>
             {fieldErrors.rol && (
-              <p className="mt-1 text-xs text-red-600">{fieldErrors.rol}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.rol}</p>
             )}
           </div>
 
           {/* Error message */}
           {pageState === 'error' && errorMsg && (
             <div
-              className="rounded-md bg-red-50 border border-red-200 p-3"
+              className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
               role="alert"
             >
-              <p className="text-sm text-red-700">{errorMsg}</p>
+              <p className="text-sm text-red-700 dark:text-red-200">{errorMsg}</p>
             </div>
           )}
 
@@ -332,7 +332,7 @@ export default function OnboardingPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? (
               <>

@@ -173,7 +173,7 @@ export default function PanelAprobacion({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <span className="text-gray-600">Cargando créditos pendientes…</span>
+        <span className="text-gray-600 dark:text-gray-300">Cargando créditos pendientes…</span>
       </div>
     );
   }
@@ -185,7 +185,7 @@ export default function PanelAprobacion({
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <svg
-          className="h-16 w-16 text-gray-300 mb-4"
+          className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -199,7 +199,7 @@ export default function PanelAprobacion({
             d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
           />
         </svg>
-        <p className="text-gray-500 text-lg">No hay créditos pendientes de aprobación</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">No hay créditos pendientes de aprobación</p>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function PanelAprobacion({
   if (state === 'success') {
     return (
       <div
-        className="rounded-md bg-green-50 border border-green-200 p-4"
+        className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4"
         role="alert"
       >
         <div className="flex items-start">
@@ -228,7 +228,7 @@ export default function PanelAprobacion({
             />
           </svg>
           <div className="flex-1">
-            <p className="text-green-800 font-medium">Desembolso exitoso</p>
+            <p className="text-green-800 dark:text-green-200 font-medium">Desembolso exitoso</p>
             {txHash && <CeloScanLink txHash={txHash} />}
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function PanelAprobacion({
     return (
       <div className="space-y-4">
         <div
-          className="rounded-md bg-red-50 border border-red-200 p-4"
+          className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4"
           role="alert"
         >
           <div className="flex items-start">
@@ -261,17 +261,17 @@ export default function PanelAprobacion({
               />
             </svg>
             <div className="flex-1">
-              <p className="text-red-800 font-medium">Error en el proceso</p>
-              {errorMsg && <p className="text-red-600 text-sm mt-1">{errorMsg}</p>}
+              <p className="text-red-800 dark:text-red-200 font-medium">Error en el proceso</p>
+              {errorMsg && <p className="text-red-600 dark:text-red-300 text-sm mt-1">{errorMsg}</p>}
             </div>
           </div>
         </div>
 
         {creditos.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-100/40">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
             <div className="overflow-x-auto">
               <table
-                className="min-w-full divide-y divide-slate-100"
+                className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
                 aria-label="Créditos pendientes"
               >
                 <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
@@ -298,7 +298,7 @@ export default function PanelAprobacion({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
                   {creditos.map((credito) => (
                     <PanelRow
                       key={credito.id}
@@ -327,10 +327,10 @@ export default function PanelAprobacion({
   // ==========================================================================
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-100/40">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
         <div className="overflow-x-auto">
           <table
-            className="min-w-full divide-y divide-slate-100"
+            className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
             aria-label="Créditos pendientes de aprobación"
           >
             <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
@@ -357,7 +357,7 @@ export default function PanelAprobacion({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {creditos.map((credito) => (
                 <PanelRow
                   key={credito.id}
@@ -383,14 +383,14 @@ export default function PanelAprobacion({
         if (!credito || !credito.prestatarioId) return null;
 
         return (
-          <div className="border border-gray-200 rounded-md bg-gray-50 p-4">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800/50 p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Gestión de avales — {credito.solicitante}
               </h3>
               <button
                 onClick={() => setExpandedAval(null)}
-                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                 aria-label="Cerrar gestión de avales"
               >
                 <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -448,19 +448,19 @@ function PanelRow({
   const buttonLabelLoading = isApprovalAction ? 'Aprobando…' : 'Desembolsando…';
 
   return (
-    <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70">
-      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 font-bold">
+    <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
+      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
         {credito.monto.toLocaleString('es-CO')} cUSD
       </td>
-      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-700 font-semibold">
+      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-700 dark:text-gray-200 font-semibold">
         {credito.solicitante}
       </td>
       <td className="px-6 py-4.5 whitespace-nowrap text-sm">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
             credito.score > 80
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-              : 'bg-amber-50 text-amber-700 border border-amber-200/60'
+              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700'
+              : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700'
           }`}
         >
           {credito.score} pts
@@ -472,19 +472,19 @@ function PanelRow({
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
                 curEstado === 'avalado'
-                  ? 'bg-purple-50 text-purple-700 border border-purple-200/60'
+                  ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-700'
                   : curEstado === 'aprobado'
-                    ? 'bg-sky-50 text-sky-700 border border-sky-200/60'
+                    ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700'
                     : curEstado === 'pendiente'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                      : 'bg-slate-50 text-slate-700 border border-slate-200'
+                      ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700'
+                      : 'bg-slate-50 dark:bg-gray-700 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-600'
               }`}
             >
               {curEstado}
             </span>
             {typeof credito.avalCount === 'number' && (
               <span
-                className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/40"
+                className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/40 dark:border-blue-700"
                 title="Avales activos"
               >
                 {credito.avalCount}
@@ -493,7 +493,7 @@ function PanelRow({
           </div>
         </td>
       )}
-      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 font-medium">
+      <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
         {new Date(credito.fecha).toLocaleDateString('es-CO')}
       </td>
       <td className="px-6 py-4.5 whitespace-nowrap text-sm">
@@ -502,7 +502,7 @@ function PanelRow({
             <button
               onClick={() => onAction(credito.id, curEstado)}
               disabled={isRowLoading}
-              className={`inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer ${
+              className={`inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer ${
                 isApprovalAction
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:ring-blue-500'
                   : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:ring-emerald-500'
@@ -530,7 +530,7 @@ function PanelRow({
             {renderAvalManager && credito.prestatarioId && (
               <button
                 onClick={() => onToggleAval(expandedAval === credito.id ? null : credito.id)}
-                className="inline-flex items-center px-3 py-2 border border-slate-200 text-xs font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-150 cursor-pointer"
+                className="inline-flex items-center px-3 py-2 border border-slate-200 dark:border-gray-600 text-xs font-semibold rounded-lg text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 transition-all duration-150 cursor-pointer"
                 aria-label={expandedAval === credito.id ? 'Ocultar avales' : 'Gestionar avales'}
                 aria-expanded={expandedAval === credito.id}
               >
@@ -549,7 +549,7 @@ function PanelRow({
           </div>
           {/* Per-row inline error */}
           {rowError && (
-            <p className="text-xs text-red-600 mt-1 font-medium" role="alert">
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium" role="alert">
               {rowError}
             </p>
           )}

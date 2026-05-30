@@ -203,16 +203,16 @@ export default function PerfilPage() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       {/* Page title */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mi Perfil</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Administrá tus datos y conectá tu wallet de Celo
         </p>
       </div>
 
       {/* Success toast */}
       {state === 'success' && (
-        <div className="mb-6 rounded-md bg-green-50 border border-green-200 p-3">
-          <p className="text-sm text-green-700 font-medium">
+        <div className="mb-6 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+          <p className="text-sm text-green-700 dark:text-green-200 font-medium">
             Perfil actualizado correctamente
           </p>
         </div>
@@ -220,61 +220,61 @@ export default function PerfilPage() {
 
       {/* Error toast */}
       {state === 'error' && errorMsg && (
-        <div className="mb-6 rounded-md bg-red-50 border border-red-200 p-3">
-          <p className="text-sm text-red-700">{errorMsg}</p>
+        <div className="mb-6 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+          <p className="text-sm text-red-700 dark:text-red-200">{errorMsg}</p>
         </div>
       )}
 
       <div className="space-y-6">
         {/* ── Profile info card ── */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900">Información Personal</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Información Personal</h2>
           </div>
-          <dl className="divide-y divide-gray-100">
+          <dl className="divide-y divide-gray-100 dark:divide-gray-700">
             <div className="px-6 py-4 grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Nombre</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{profile?.nombre ?? '—'}</dd>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Nombre</dt>
+              <dd className="text-sm text-gray-900 dark:text-white col-span-2">{profile?.nombre ?? '—'}</dd>
             </div>
             <div className="px-6 py-4 grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Email</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{user?.email ?? '—'}</dd>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+              <dd className="text-sm text-gray-900 dark:text-white col-span-2">{user?.email ?? '—'}</dd>
             </div>
             <div className="px-6 py-4 grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Rol</dt>
-              <dd className="text-sm text-gray-900 col-span-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Rol</dt>
+              <dd className="text-sm text-gray-900 dark:text-white col-span-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
                   {rolLabel}
                 </span>
               </dd>
             </div>
             {profile && profile.score_reputacion > 0 && (
               <div className="px-6 py-4 grid grid-cols-3 gap-4">
-                <dt className="text-sm font-medium text-gray-500">Score</dt>
-                <dd className="text-sm text-gray-900 col-span-2">{profile.score_reputacion}/100</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Score</dt>
+                <dd className="text-sm text-gray-900 dark:text-white col-span-2">{profile.score_reputacion}/100</dd>
               </div>
             )}
           </dl>
         </div>
 
         {/* ── Wallet card ── */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900">Wallet Celo</h2>
-            <p className="mt-0.5 text-sm text-gray-500">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Wallet Celo</h2>
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               Conectá tu wallet para recibir desembolsos y realizar pagos
             </p>
           </div>
           <div className="px-6 py-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Dirección de wallet</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dirección de wallet</p>
                 {walletAddress ? (
-                  <p className="text-sm font-mono text-gray-900 bg-gray-50 rounded-md px-3 py-2 border border-gray-200 break-all">
+                  <p className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded-md px-3 py-2 border border-gray-200 dark:border-gray-600 break-all">
                     {walletAddress}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-400 italic">Ninguna wallet conectada</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">Ninguna wallet conectada</p>
                 )}
               </div>
               <div className="shrink-0">
