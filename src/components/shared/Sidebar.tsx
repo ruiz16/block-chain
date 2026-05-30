@@ -136,6 +136,9 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
     title: 'Administración',
     items: [
       { label: 'Dashboard', href: '/admin/dashboard', icon: Icons.chart, roles: ['admin'] },
+      { label: 'Participantes', href: '/admin/participantes', icon: Icons.user, roles: ['admin'] },
+      { label: 'Créditos', href: '/admin/creditos', icon: Icons.list, roles: ['admin'] },
+      { label: 'Desembolsos', href: '/admin/desembolsos', icon: Icons.money, roles: ['admin'] },
     ],
   },
   {
@@ -227,14 +230,14 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
 
       {/* User Info */}
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{userName}</p>
-        <div className="flex items-center gap-2 mt-1">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate text-center">{userName}</p>
+        <div className="flex flex-col items-center gap-2 mt-1">
+          {userEmail && (
+            <span className="block text-[11px] text-gray-400 dark:text-gray-500 truncate">{userEmail}</span>
+          )}
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleColor}`}>
             {roleLabel}
           </span>
-          {userEmail && (
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{userEmail}</span>
-          )}
         </div>
       </div>
 
