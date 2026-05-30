@@ -1,21 +1,18 @@
 // =============================================================================
-// POST /api/pago — Register Payment API Route
+// POST /api/pago — Register Payment for a Single Cuota
 // =============================================================================
 //
 // Flow:
 // 1. Parse and validate body via Zod (400 on failure)
 // 2. Verify session via auth-server (401 if no session)
 // 3. Get participante by auth user_id (404 if not found)
-// 4. Fetch credito by id + prestatario_id (404/409)
-// 5. Check estado === 'desembolsado' / !== 'pagado' (409)
-// 6. Check tx_hash_pago uniqueness (409 if duplicate)
-// 7. Call verificarPago() for on-chain verification (422 on client err, 500 on RPC err)
-// 8. UPDATE creditos: estado='pagado', tx_hash_pago, fecha_pago=NOW()
-// 9. Return 200 { status: 'pagado', credito_id }
-//
-// NOTE: The existing DB trigger (audit_credito_estado_change) auto-records
-//       'pago_recibido' in audit_log when estado changes to 'pagado'.
-//       No manual audit insert is needed.
+// 4. Fetch cuota by cuota_id with credito info (404/409)
+// 5. Check cuota estado === 'pendiente' (409 if already paid)
+// 6. Check credito estado === 'desembolsado' (409 if not)
+// 7. Call verificarPago() with cuota.monto_cuota for on-chain verification
+// 8. UPDATE cuota: estado='pagada', tx_hash_pago, fecha_pago=NOW()
+// 9. If all cuotas are now paid → UPDATE credito: estado='pagado', fecha_pago=NOW()
+// 10. Return 200 { status: 'pagado', cuota_id, credito_id }
 // =============================================================================
 
 import { NextResponse } from 'next/server';
@@ -34,11 +31,15 @@ interface ParticipanteRow {
   id: string;
 }
 
-interface CreditoPagoRow {
+interface CuotaConCredito {
   id: string;
-  monto: string;
+  numero_cuota: number;
+  monto_cuota: string;
   estado: string;
-  tx_hash_pago: string | null;
+  credito: {
+    id: string;
+    estado: string;
+  };
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -70,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { credito_id, tx_hash } = validation.data;
+    const { cuota_id, tx_hash } = validation.data;
 
     // ------------------------------------------------------------------
     // 2. Verify session
@@ -100,89 +101,150 @@ export async function POST(request: Request): Promise<Response> {
 
     if (participanteError || !typedParticipante) {
       return NextResponse.json(
-        { error: 'CREDITO_NO_ENCONTRADO', detail: 'No se encontró un participante asociado a tu cuenta' },
+        { error: 'CUOTA_NO_ENCONTRADA', detail: 'No se encontró un participante asociado a tu cuenta' },
         { status: 404 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 4. Fetch credit by id + verify ownership
+    // 4. Fetch cuota by cuota_id + verify ownership via credito
     // ------------------------------------------------------------------
-    const { data: credito, error: creditoError } = await supabase
+    const { data: cuota, error: cuotaError } = await supabase
+      .from('cuotas')
+      .select(`
+        id,
+        numero_cuota,
+        monto_cuota,
+        estado,
+        credito:credito_id (
+          id,
+          estado
+        )
+      `)
+      .eq('id', cuota_id)
+      .single();
+
+    const typedCuota = cuota as unknown as CuotaConCredito | null;
+
+    if (cuotaError || !typedCuota) {
+      return NextResponse.json(
+        { error: 'CUOTA_NO_ENCONTRADA', detail: 'No se encontró la cuota especificada' },
+        { status: 404 },
+      );
+    }
+
+    // Verify this user owns the credit
+    const creditoData = typedCuota.credito;
+
+    if (!creditoData) {
+      return NextResponse.json(
+        { error: 'CUOTA_NO_ENCONTRADA', detail: 'La cuota no tiene un crédito asociado' },
+        { status: 404 },
+      );
+    }
+
+    const { data: creditoOwner } = await supabase
       .from('creditos')
-      .select('id, monto, estado, tx_hash_pago')
-      .eq('id', credito_id)
+      .select('prestatario_id')
+      .eq('id', creditoData.id)
       .eq('prestatario_id', typedParticipante.id)
       .single();
 
-    const typedCredito = credito as unknown as CreditoPagoRow | null;
-
-    if (creditoError || !typedCredito) {
+    if (!creditoOwner) {
       return NextResponse.json(
-        { error: 'CREDITO_NO_ENCONTRADO', detail: 'No se encontró el crédito especificado' },
+        { error: 'CUOTA_NO_ENCONTRADA', detail: 'Este crédito no te pertenece' },
         { status: 404 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 5. Check estado === 'desembolsado'
+    // 5. Check cuota estado === 'pendiente'
     // ------------------------------------------------------------------
-    if (typedCredito.estado === 'pagado') {
+    console.log('[pago] Estados recibidos:', {
+      cuota_id: typedCuota.id,
+      cuota_estado: typedCuota.estado,
+      credito_id: creditoData.id,
+      credito_estado: creditoData.estado,
+    });
+
+    if (typedCuota.estado === 'pagada') {
+      console.warn('[pago] Cuota ya pagada:', { cuota_id: typedCuota.id, estado: typedCuota.estado });
       return NextResponse.json(
         {
-          error: 'YA_PAGADO',
-          detail: 'Este crédito ya fue pagado anteriormente',
+          error: 'YA_PAGADA',
+          detail: `La cuota #${typedCuota.numero_cuota} ya fue pagada anteriormente`,
         },
         { status: 409 },
       );
     }
 
-    if (typedCredito.estado !== 'desembolsado') {
+    if (typedCuota.estado !== 'pendiente') {
+      console.warn('[pago] Cuota en estado inválido:', { cuota_id: typedCuota.id, estado: typedCuota.estado });
       return NextResponse.json(
         {
           error: 'ESTADO_INCORRECTO',
-          detail: `El crédito está en estado "${typedCredito.estado}", debe estar en "desembolsado"`,
+          detail: `La cuota está en estado "${typedCuota.estado}", debe estar en "pendiente"`,
         },
         { status: 409 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 6. Check tx_hash_pago uniqueness (already partially paid check)
+    // 6. Check credito estado === 'desembolsado'
     // ------------------------------------------------------------------
-    if (typedCredito.tx_hash_pago) {
+    if (creditoData.estado === 'pagado') {
+      console.warn('[pago] Crédito ya pagado:', { credito_id: creditoData.id });
       return NextResponse.json(
         {
           error: 'YA_PAGADO',
-          detail: 'Este crédito ya tiene un pago registrado',
+          detail: 'Este crédito ya fue pagado completamente',
         },
         { status: 409 },
       );
     }
 
-    // Check that this tx_hash isn't already used for another credit
-    const { data: existingPago } = await supabase
-      .from('creditos')
+    if (creditoData.estado !== 'desembolsado') {
+      console.warn('[pago] Crédito en estado inválido:', {
+        credito_id: creditoData.id,
+        estado: creditoData.estado,
+      });
+      return NextResponse.json(
+        {
+          error: 'ESTADO_INCORRECTO',
+          detail: `El crédito está en estado "${creditoData.estado}", debe estar en "desembolsado"`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 7. Check tx_hash uniqueness (not used for another cuota)
+    // ------------------------------------------------------------------
+    const { data: existingCuota } = await supabase
+      .from('cuotas')
       .select('id')
       .eq('tx_hash_pago', tx_hash)
       .maybeSingle();
 
-    if (existingPago) {
+    if (existingCuota) {
       return NextResponse.json(
         {
           error: 'TX_HASH_DUPLICADO',
-          detail: 'Este hash de transacción ya fue registrado para otro crédito',
+          detail: 'Este hash de transacción ya fue registrado para otra cuota',
         },
         { status: 409 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 7. On-chain verification via verificarPago()
+    // 8. On-chain verification via verificarPago()
+    //    Verify the amount sent is >= this cuota's amount
     // ------------------------------------------------------------------
+    const montoCuota = parseCusd(typedCuota.monto_cuota);
+
     const verification = await verificarPago(
       tx_hash as `0x${string}`,
-      parseCusd(typedCredito.monto),
+      montoCuota,
     );
 
     if (!verification.valid) {
@@ -200,32 +262,61 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 8. Update credit record
+    // 9. Update cuota record
     // ------------------------------------------------------------------
-    const { error: updateError } = await supabase
-      .from('creditos')
+    const { error: updateCuotaError } = await supabase
+      .from('cuotas')
       .update({
-        estado: 'pagado',
+        estado: 'pagada',
         tx_hash_pago: tx_hash,
         fecha_pago: new Date().toISOString(),
       } as never)
-      .eq('id', typedCredito.id);
+      .eq('id', typedCuota.id);
 
-    if (updateError) {
-      // Log but still return success — the blockchain tx already happened
+    if (updateCuotaError) {
       console.warn(
-        '[pago] Error al actualizar crédito en DB después de verificación exitosa:',
-        updateError.message,
-        { credito_id: typedCredito.id, tx_hash },
+        '[pago] Error al actualizar cuota en DB después de verificación exitosa:',
+        updateCuotaError.message,
+        { cuota_id: typedCuota.id, tx_hash },
       );
     }
 
     // ------------------------------------------------------------------
-    // 9. Return success
+    // 10. Check if ALL cuotas are now paid → close the credit
+    // ------------------------------------------------------------------
+    const { data: pendingCuotas } = await supabase
+      .from('cuotas')
+      .select('id')
+      .eq('credito_id', creditoData.id)
+      .in('estado', ['pendiente', 'vencida']);
+
+    const allPaid = !pendingCuotas || pendingCuotas.length === 0;
+
+    if (allPaid) {
+      const { error: updateCreditoError } = await supabase
+        .from('creditos')
+        .update({
+          estado: 'pagado',
+          fecha_pago: new Date().toISOString(),
+        } as never)
+        .eq('id', creditoData.id);
+
+      if (updateCreditoError) {
+        console.warn(
+          '[pago] Error al marcar crédito como pagado después de pagar todas las cuotas:',
+          updateCreditoError.message,
+          { credito_id: creditoData.id },
+        );
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // 11. Return success
     // ------------------------------------------------------------------
     const response: PagoResponse = {
       status: 'pagado',
-      credito_id: typedCredito.id,
+      cuota_id: typedCuota.id,
+      credito_id: creditoData.id,
     };
 
     return NextResponse.json(response, { status: 200 });
@@ -258,7 +349,7 @@ function mapVerificationError(reason: string): string {
     TX_REVERTIDA: 'La transacción fue revertida en la blockchain',
     TX_DESTINO_INVALIDO: 'La transacción no es al contrato de cUSD',
     TX_BENEFICIARIO_INVALIDO: 'El destinatario no es la wallet de la plataforma',
-    TX_MONTO_INSUFICIENTE: 'El monto enviado es menor al crédito',
+    TX_MONTO_INSUFICIENTE: 'El monto enviado es menor al valor de la cuota',
   };
 
   return messages[reason] ?? 'Error de verificación en la blockchain';

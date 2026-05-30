@@ -26,6 +26,8 @@ interface CreditoRow {
   id: string;
   prestatario_id: string;
   monto: string;
+  monto_cop: string;
+  tasa_cambio: string;
   estado: string;
   interes_porcentaje: number | string;
   plazo_dias: number;
@@ -46,6 +48,8 @@ export interface DesembolsoAdmin {
   prestatario_id: string;
   prestatario_nombre: string;
   monto: string;
+  monto_cop: string;
+  tasa_cambio: string;
   estado: string;
   interes_porcentaje: string;
   plazo_dias: number;
@@ -102,6 +106,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       prestatario_id: c.prestatario_id,
       prestatario_nombre: nombreMap.get(c.prestatario_id) ?? 'Desconocido',
       monto: c.monto,
+      monto_cop: c.monto_cop,
+      tasa_cambio: c.tasa_cambio,
       estado: c.estado,
       interes_porcentaje: String(c.interes_porcentaje),
       plazo_dias: c.plazo_dias,

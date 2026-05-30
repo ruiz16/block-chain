@@ -1,15 +1,20 @@
 // =============================================================================
 // Zod Validation Schema — POST /api/pago
 // =============================================================================
+//
+// Each payment is tied to a single cuota (not the entire credit). The API
+// accepts cuota_id and tx_hash, then verifies the on-chain transfer matches
+// the expected cuota amount.
+// =============================================================================
 
 import { z } from 'zod';
 
 /**
  * Schema for the payment registration request.
- * Validates credito_id as UUID and tx_hash as 0x-prefixed 64-char hex string.
+ * Validates cuota_id as UUID and tx_hash as 0x-prefixed 64-char hex string.
  */
 export const PagoSchema = z.object({
-  credito_id: z.string().uuid('credito_id debe ser un UUID válido'),
+  cuota_id: z.string().uuid('cuota_id debe ser un UUID válido'),
   tx_hash: z
     .string()
     .regex(

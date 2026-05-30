@@ -18,7 +18,7 @@
  * Returns the COP/USD exchange rate from environment variables.
  * Throws if NEXT_PUBLIC_COP_USD_RATE is not set or is not a valid number.
  */
-function getCopUsdRate(): number {
+export function getCopUsdRate(): number {
   const raw = process.env.NEXT_PUBLIC_COP_USD_RATE;
   if (!raw) {
     throw new Error(

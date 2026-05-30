@@ -25,6 +25,13 @@ const PLAZO_OPTIONS = [
   { value: 365, label: '365 días' },
 ] as const;
 
+const CUOTA_OPTIONS = [
+  { value: 1, label: '1 cuota (pago único)' },
+  { value: 3, label: '3 cuotas' },
+  { value: 6, label: '6 cuotas' },
+  { value: 12, label: '12 cuotas' },
+] as const;
+
 export default function SolicitarCredito() {
   const router = useRouter();
   const [state, setState] = useState<FormState>('idle');
@@ -32,6 +39,7 @@ export default function SolicitarCredito() {
   const [monto, setMonto] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [plazoDias, setPlazoDias] = useState(30);
+  const [numeroCuotas, setNumeroCuotas] = useState(1);
 
   const handleSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -47,6 +55,7 @@ export default function SolicitarCredito() {
             monto: Number(monto),
             descripcion: descripcion.trim() || undefined,
             plazo_dias: plazoDias,
+            numero_cuotas: numeroCuotas,
           }),
         });
 
@@ -64,7 +73,7 @@ export default function SolicitarCredito() {
         setState('error');
       }
     },
-    [monto, descripcion, plazoDias, router],
+    [monto, descripcion, plazoDias, numeroCuotas, router],
   );
 
   const handleRetry = useCallback(() => {
@@ -196,6 +205,34 @@ export default function SolicitarCredito() {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Número de Cuotas */}
+      <div>
+        <label
+          htmlFor="numero_cuotas"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Número de cuotas
+        </label>
+        <select
+          id="numero_cuotas"
+          value={numeroCuotas}
+          onChange={(e) => setNumeroCuotas(Number(e.target.value))}
+          disabled={isSubmitting}
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {CUOTA_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          {numeroCuotas > 1
+            ? `Pagarás en ${numeroCuotas} cuotas. Cada cuota incluye capital + intereses.`
+            : 'Pago único al vencimiento del plazo.'}
+        </p>
       </div>
 
       {/* Descripción */}

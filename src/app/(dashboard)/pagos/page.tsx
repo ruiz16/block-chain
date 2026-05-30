@@ -21,7 +21,7 @@ export default function PagosPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mis Pagos</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Registra el pago de tus créditos activos usando el hash de la transacción en Celo
+          Paga tus cuotas directamente con MetaMask. Necesitas cUSD en tu wallet de Celo Sepolia.
         </p>
       </div>
 

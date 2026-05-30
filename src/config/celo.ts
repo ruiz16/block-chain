@@ -6,10 +6,10 @@
 // If a variable is missing, the app will throw an error at startup.
 //
 // Required vars (see .env.example):
-//   CELO_RPC_URL                 — Celo RPC endpoint
-//   CELO_CUSD_CONTRACT           — cUSD token contract address
-//   NEXT_PUBLIC_CELOSCAN_BASE_URL — Block explorer base URL
-//   NEXT_PUBLIC_COP_USD_RATE     — Exchange rate (COP per 1 cUSD)
+//   CELO_RPC_URL                      — Celo RPC endpoint
+//   NEXT_PUBLIC_CELO_CUSD_CONTRACT    — cUSD token contract address
+//   NEXT_PUBLIC_CELOSCAN_BASE_URL     — Block explorer base URL
+//   NEXT_PUBLIC_COP_USD_RATE          — Exchange rate (COP per 1 cUSD)
 // =============================================================================
 
 import type { Address, TxHash, Wei } from '@/types/database';
@@ -26,12 +26,26 @@ export function getCeloRpcUrl(): string {
 
 /**
  * Returns the configured cUSD contract address.
- * Throws if CELO_CUSD_CONTRACT is not set.
+ * Uses NEXT_PUBLIC_ prefix because it's needed in Client Components (PanelPagos).
+ * Throws if NEXT_PUBLIC_CELO_CUSD_CONTRACT is not set.
  */
 export function getCusdContractAddress(): `0x${string}` {
-  const address = process.env.CELO_CUSD_CONTRACT;
+  const address = process.env.NEXT_PUBLIC_CELO_CUSD_CONTRACT;
   if (!address) {
-    throw new Error('Falta CELO_CUSD_CONTRACT en las variables de entorno');
+    throw new Error('Falta NEXT_PUBLIC_CELO_CUSD_CONTRACT en las variables de entorno');
+  }
+  return address as `0x${string}`;
+}
+
+/**
+ * Returns the platform wallet address (public).
+ * This is the address that receives payments — safe to expose to the frontend.
+ * Throws if NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS is not set.
+ */
+export function getPlatformWalletAddressPublic(): `0x${string}` {
+  const address = process.env.NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS;
+  if (!address) {
+    throw new Error('Falta NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS en las variables de entorno');
   }
   return address as `0x${string}`;
 }

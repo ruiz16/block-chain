@@ -36,27 +36,48 @@ declare global {
 
 interface WalletConnectButtonProps {
   onAddressChange: (address: string) => void;
+  /** Dirección guardada en la DB (para sincronizar estado al cargar la página) */
+  savedAddress?: string;
 }
 
 type WalletState = 'no-wallet' | 'idle' | 'connecting' | 'connected' | 'error';
 
 export default function WalletConnectButton({
   onAddressChange,
+  savedAddress,
 }: WalletConnectButtonProps) {
   const [walletState, setWalletState] = useState<WalletState>('idle');
   const [address, setAddress] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // ------------------------------------------------------------------------
-  // Detect wallet on mount
+  // Detect wallet on mount + check if already authorized (no popup)
   // ------------------------------------------------------------------------
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     if (!window.ethereum) {
-      Promise.resolve().then(() => setWalletState('no-wallet'));
+      setWalletState('no-wallet');
+      return;
     }
-  }, []);
+
+    // eth_accounts returns authorized accounts WITHOUT showing a popup.
+    // This is how we detect that the user is already connected on page load.
+    window.ethereum
+      .request({ method: 'eth_accounts' })
+      .then((accounts) => {
+        const accs = accounts as string[];
+        if (accs.length > 0) {
+          const connectedAddress = accs[0] as string;
+          setAddress(connectedAddress);
+          setWalletState('connected');
+          onAddressChange(connectedAddress);
+        }
+      })
+      .catch(() => {
+        // eth_accounts falló silenciosamente — mostramos botón idle
+      });
+  }, [onAddressChange]);
 
   // ------------------------------------------------------------------------
   // Listen for account changes

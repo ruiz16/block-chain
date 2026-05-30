@@ -77,11 +77,14 @@ export interface SiweNonceRow {
 export interface CreditoRow {
   id: string;
   prestatario_id: string;
-  monto: string; // NUMERIC from Postgres — returned as string
+  monto: string; // NUMERIC from Postgres — cUSD (blockchain)
+  monto_cop: string; // NUMERIC(15,2) — original COP amount
+  tasa_cambio: string; // NUMERIC(12,2) — COP/cUSD rate at creation
   descripcion: string | null;
   estado: EstadoCredito;
   interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
   plazo_dias: number;
+  numero_cuotas: number;
   fecha_vencimiento: string | null;
   tx_hash: string | null;
   tx_hash_pago: string | null;
@@ -98,6 +101,21 @@ export interface AvalRow {
   monto_maximo: string; // NUMERIC from Postgres
   fecha_creacion: string;
   activo: boolean;
+}
+
+export interface CuotaRow {
+  id: string;
+  credito_id: string;
+  numero_cuota: number;
+  monto_capital: string; // NUMERIC(40,0) from Postgres — cUSD
+  monto_interes: string; // NUMERIC(40,0) — cUSD
+  monto_cuota: string; // NUMERIC(40,0) — capital + interest, cUSD
+  saldo_restante: string; // NUMERIC(40,0) — cUSD
+  fecha_vencimiento: string;
+  estado: 'pendiente' | 'pagada' | 'vencida';
+  tx_hash_pago: string | null;
+  fecha_pago: string | null;
+  fecha_creacion: string;
 }
 
 export interface AuditLogRow {
@@ -174,9 +192,10 @@ export interface ErrorResponse {
   detail?: string;
 }
 
-/** Successful payment registration response */
+/** Successful payment registration response (per-cuota payment) */
 export interface PagoResponse {
   status: 'pagado';
+  cuota_id: string;
   credito_id: string;
 }
 

@@ -139,6 +139,7 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
       { label: 'Participantes', href: '/admin/participantes', icon: Icons.user, roles: ['admin'] },
       { label: 'Créditos', href: '/admin/creditos', icon: Icons.list, roles: ['admin'] },
       { label: 'Desembolsos', href: '/admin/desembolsos', icon: Icons.money, roles: ['admin'] },
+      { label: 'Cuotas', href: '/admin/cuotas', icon: Icons.chart, roles: ['admin'] },
     ],
   },
   {

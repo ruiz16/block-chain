@@ -52,6 +52,8 @@ export default function PerfilPage() {
   const [profile, setProfile] = useState<ParticipanteProfile | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
 
   // ------------------------------------------------------------------------
   // Auth guard: redirect if not authenticated
@@ -110,6 +112,33 @@ export default function PerfilPage() {
   // ------------------------------------------------------------------------
   const handleWalletChange = useCallback((address: string) => {
     setWalletAddress(address);
+  }, []);
+
+  // ------------------------------------------------------------------------
+  // Handle manual address entry
+  // ------------------------------------------------------------------------
+  const handleManualAddressConfirm = useCallback(() => {
+    const trimmed = manualAddress.trim();
+
+    // Basic validation: must be a valid 0x address
+    if (trimmed && !/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+      setErrorMsg('La dirección debe ser un hex válido de 40 caracteres con prefijo 0x');
+      setState('error');
+      return;
+    }
+
+    setWalletAddress(trimmed);
+    setShowManualInput(false);
+    setManualAddress('');
+    setErrorMsg(null);
+  }, [manualAddress]);
+
+  // ------------------------------------------------------------------------
+  // Clear wallet address
+  // ------------------------------------------------------------------------
+  const handleClearWallet = useCallback(() => {
+    setWalletAddress('');
+    // If there's a change to save, the user needs to click Guardar
   }, []);
 
   // ------------------------------------------------------------------------
@@ -265,22 +294,79 @@ export default function PerfilPage() {
               Conectá tu wallet para recibir desembolsos y realizar pagos
             </p>
           </div>
-          <div className="px-6 py-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dirección de wallet</p>
-                {walletAddress ? (
-                  <p className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded-md px-3 py-2 border border-gray-200 dark:border-gray-600 break-all">
-                    {walletAddress}
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">Ninguna wallet conectada</p>
-                )}
-              </div>
-              <div className="shrink-0">
-                <WalletConnectButton onAddressChange={handleWalletChange} />
-              </div>
+          <div className="px-6 py-5 space-y-4">
+            {/* Address display */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dirección de wallet</p>
+              {walletAddress ? (
+                <p className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded-md px-3 py-2 border border-gray-200 dark:border-gray-600 break-all">
+                  {walletAddress}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Ninguna wallet conectada</p>
+              )}
             </div>
+
+            {/* Action buttons row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* MetaMask button */}
+              <WalletConnectButton
+                onAddressChange={handleWalletChange}
+                savedAddress={walletAddress}
+              />
+
+              {/* Eliminar — solo si hay dirección */}
+              {walletAddress && (
+                <button
+                  type="button"
+                  onClick={handleClearWallet}
+                  className="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-700 rounded-md text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 transition-colors"
+                  title="Eliminar la dirección de wallet guardada"
+                >
+                  <svg className="h-3.5 w-3.5 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c-.84 0-1.673.025-2.5.075V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25v.325C11.673 4.025 10.84 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                  </svg>
+                  Eliminar
+                </button>
+              )}
+
+              {/* Ingresar manualmente — link */}
+              <button
+                type="button"
+                onClick={() => { setShowManualInput(!showManualInput); setManualAddress(''); }}
+                className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none transition-colors"
+              >
+                {showManualInput ? 'Cancelar' : 'Ingresar dirección manualmente'}
+                <svg
+                  className={`h-3.5 w-3.5 ml-1 transition-transform ${showManualInput ? 'rotate-180' : ''}`}
+                  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Manual input — collapsible */}
+            {showManualInput && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={manualAddress}
+                  onChange={(e) => setManualAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="block w-full max-w-md rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  aria-label="Dirección de wallet manual"
+                />
+                <button
+                  type="button"
+                  onClick={handleManualAddressConfirm}
+                  disabled={!manualAddress.trim()}
+                  className="inline-flex items-center px-3 py-2 rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                >
+                  Confirmar
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

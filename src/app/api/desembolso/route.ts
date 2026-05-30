@@ -29,10 +29,15 @@ import type { Address, Wei } from '@/types/database';
 interface CreditoConPrestatario {
   id: string;
   monto: string;
+  monto_cop: string;
+  tasa_cambio: string;
   estado: string;
   tx_hash: string | null;
   descripcion: string | null;
   prestatario_id: string;
+  interes_porcentaje: number | string;
+  plazo_dias: number;
+  numero_cuotas: number;
   participantes: {
     id: string;
     wallet_address: string;
@@ -85,10 +90,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       .select(`
         id,
         monto,
+        monto_cop,
+        tasa_cambio,
         estado,
         tx_hash,
         descripcion,
         prestatario_id,
+        interes_porcentaje,
+        plazo_dias,
+        numero_cuotas,
         participantes!creditos_prestatario_id_fkey (
           id,
           wallet_address,
@@ -181,12 +191,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 7. Execute blockchain transfer
     // ------------------------------------------------------------------
-    const monto = typedCredito.monto;
+    const montoCusd = typedCredito.monto;
 
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(monto));
+      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(montoCusd));
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
@@ -199,6 +209,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           credito_id: typedCredito.id,
           score_reputacion: scoreReputacion,
           monto: typedCredito.monto,
+          monto_cop: typedCredito.monto_cop,
+          tasa_cambio: typedCredito.tasa_cambio,
         },
       });
 
@@ -231,16 +243,88 @@ export async function POST(request: NextRequest): Promise<Response> {
       .eq('id', typedCredito.id);
 
     if (updateError) {
-      // Log but still return success — the blockchain tx already happened
-      console.warn(
-        '[desembolso] Error al actualizar crédito en DB después de tx exitosa:',
+      console.error(
+        '[desembolso] FATAL — Error al actualizar crédito en DB después de tx exitosa:',
         updateError.message,
         { credito_id: typedCredito.id, tx_hash: txHash },
+      );
+
+      return NextResponse.json(
+        {
+          error: 'ERROR_ACTUALIZANDO_CREDITO',
+          detail: `La transacción en blockchain fue exitosa (${txHash}), pero no se pudo actualizar el crédito en la BD. Contacta al administrador. Error: ${updateError.message}`,
+          tx_hash: txHash,
+        },
+        { status: 500 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 9. Audit log for successful disbursement
+    // 9. Generate cuotas (split capital + interest across N periods)
+    // ------------------------------------------------------------------
+    const numCuotas = typedCredito.numero_cuotas ?? 1;
+    const montoBig = BigInt(typedCredito.monto);
+    const interesPct = BigInt(typedCredito.interes_porcentaje ?? 0);
+    const totalInteres = (montoBig * interesPct) / 100n;
+    const plazoDias = typedCredito.plazo_dias ?? 30;
+    const periodoDias = Math.ceil(plazoDias / numCuotas); // days per cuota
+
+    // Helper: split a bigint value into N parts, last gets remainder
+    function splitBigInt(value: bigint, parts: number): bigint[] {
+      const base = value / BigInt(parts);
+      const remainder = value % BigInt(parts);
+      const result: bigint[] = [];
+      for (let i = 0; i < parts; i++) {
+        result.push(i < parts - 1 ? base : base + remainder);
+      }
+      return result;
+    }
+
+    const capitalParts = splitBigInt(montoBig, numCuotas);
+    const interestParts = splitBigInt(totalInteres, numCuotas);
+
+    // Calculate saldo_restante after each cuota (remaining capital)
+    let saldoRestante = montoBig;
+
+    const cuotasToInsert = [];
+    const desembolsoDate = new Date();
+
+    for (let i = 0; i < numCuotas; i++) {
+      const capital = capitalParts[i]!;
+      const interest = interestParts[i]!;
+      saldoRestante -= capital;
+
+      // Vencimiento: last cuota on exact plazo_dias, others evenly spaced
+      const diasOffset = i < numCuotas - 1 ? periodoDias * (i + 1) : plazoDias;
+      const vencimiento = new Date(desembolsoDate.getTime() + diasOffset * 86400000);
+
+      cuotasToInsert.push({
+        credito_id: typedCredito.id,
+        numero_cuota: i + 1,
+        monto_capital: capital.toString(),
+        monto_interes: interest.toString(),
+        monto_cuota: (capital + interest).toString(),
+        saldo_restante: saldoRestante.toString(),
+        fecha_vencimiento: vencimiento.toISOString(),
+        estado: 'pendiente',
+      });
+    }
+
+    const { error: cuotasError } = await supabase
+      .from('cuotas')
+      .insert(cuotasToInsert as never);
+
+    if (cuotasError) {
+      // Non-fatal: log warning, cuotas can be regenerated manually
+      console.warn(
+        '[desembolso] Error al generar cuotas después de desembolso exitoso:',
+        cuotasError.message,
+        { credito_id: typedCredito.id, numero_cuotas: numCuotas },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 10. Audit log for successful disbursement
     // ------------------------------------------------------------------
     await registrarAuditLog({
       accion: 'desembolso',
@@ -249,13 +333,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       participanteId: prestatario.id,
       detalles: {
         monto: typedCredito.monto,
+        monto_cop: typedCredito.monto_cop,
+        tasa_cambio: typedCredito.tasa_cambio,
         tx_hash: txHash,
         score_reputacion: scoreReputacion,
+        numero_cuotas: numCuotas,
       },
     });
 
     // ------------------------------------------------------------------
-    // 10. Return success
+    // 11. Return success
     // ------------------------------------------------------------------
     return NextResponse.json(
       {

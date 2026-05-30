@@ -15,7 +15,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
-import { copToCusd } from '@/config/currency';
+import { copToCusd, getCopUsdRate } from '@/config/currency';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -89,25 +89,27 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { monto: montoCop, descripcion, plazo_dias } = validation.data;
-
-    // Convert COP → cUSD before storing (blockchain works in cUSD)
-    const monto = copToCusd(montoCop);
+    const { monto: montoCop, descripcion, plazo_dias, numero_cuotas } = validation.data;
 
     // ------------------------------------------------------------------
-    // 4. INSERT credito with estado='pendiente' and loan terms
+    // 4. Save BOTH COP (original, for display) and cUSD (blockchain)
     // ------------------------------------------------------------------
+    const tasaCambio = getCopUsdRate();
+    const montoCusd = copToCusd(montoCop);
     const interesPorcentaje = 10; // Fixed 10% interest rate
 
     const { data: nuevoCredito, error: insertError } = await supabase
       .from('creditos')
       .insert({
         prestatario_id: typedParticipante.id,
-        monto: monto,
+        monto: montoCusd,
+        monto_cop: montoCop,
+        tasa_cambio: tasaCambio,
         descripcion: descripcion ?? null,
         estado: 'pendiente',
         interes_porcentaje: interesPorcentaje,
         plazo_dias: plazo_dias,
+        numero_cuotas: numero_cuotas,
       } as never)
       .select()
       .single();
@@ -130,8 +132,11 @@ export async function POST(request: Request): Promise<Response> {
       entidadId: (nuevoCredito as unknown as { id: string }).id,
       participanteId: typedParticipante.id,
       detalles: {
-        monto,
+        monto: montoCusd,
+        monto_cop: montoCop,
+        tasa_cambio: tasaCambio,
         plazo_dias,
+        numero_cuotas,
         interes_porcentaje: interesPorcentaje,
         descripcion: descripcion ?? null,
       },

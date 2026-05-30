@@ -9,8 +9,6 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { getCeloScanUrl } from '@/config/celo';
-import { cusdToCop } from '@/config/currency';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import type { CreditoRow, EstadoCredito } from '@/types/database';
 
@@ -193,13 +191,7 @@ export default function MisCreditosClient() {
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {creditos.map((credito) => {
-              const montoCop = (() => {
-                try {
-                  return cusdToCop(Number(credito.monto));
-                } catch {
-                  return 0;
-                }
-              })();
+              const montoCop = Number(credito.monto_cop);
 
               return (
                 <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">

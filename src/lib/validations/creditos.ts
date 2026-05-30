@@ -21,10 +21,15 @@ import { z } from 'zod';
  *   The API will convert this to cUSD internally using the hardcoded rate.
  * - descripcion: optional, max 500 chars
  * - plazo_dias: required, integer between 30 and 365
+ * - numero_cuotas: optional, integer between 1 and 60 (default: 1).
+ *   Credits with >1 cuota divide the payment into equal installments.
  *
  * @example
  *   { monto: 1_000_000, plazo_dias: 90 }
- *   // → $1.000.000 COP ≈ 275.23 cUSD (internally)
+ *   // → $1.000.000 COP ≈ 275.23 cUSD, single payment
+ *
+ *   { monto: 3_000_000, plazo_dias: 180, numero_cuotas: 6 }
+ *   // → $3.000.000 COP in 6 monthly cuotas of 1/6 each
  */
 export const SolicitarCreditoSchema = z.object({
   monto: z.number().positive('El monto debe ser mayor a 0 (en COP)'),
@@ -34,6 +39,13 @@ export const SolicitarCreditoSchema = z.object({
     .int('El plazo debe ser un número entero')
     .min(30, 'Mínimo 30 días')
     .max(365, 'Máximo 365 días'),
+  numero_cuotas: z
+    .number()
+    .int('El número de cuotas debe ser un número entero')
+    .min(1, 'Mínimo 1 cuota')
+    .max(60, 'Máximo 60 cuotas')
+    .optional()
+    .default(1),
 }).strict();
 
 /** Inferred TypeScript type from the schema */
