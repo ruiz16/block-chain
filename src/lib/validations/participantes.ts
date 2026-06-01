@@ -20,6 +20,7 @@ import { z } from 'zod';
  * - nombre: required, 1-255 chars
  * - wallet_address: optional, must be valid Ethereum address (0x-prefixed, 40 hex chars)
  * - rol: must be one of the valid roles
+ * - codigo_referido: optional, 8-40 chars, código de otro participante para unirse a su red
  */
 export const CrearParticipanteSchema = z.object({
   nombre: z
@@ -34,6 +35,11 @@ export const CrearParticipanteSchema = z.object({
   rol: z.enum(['prestatario'], {
     message: 'El rol debe ser prestatario',
   }),
+  codigo_referido: z
+    .string()
+    .min(8, 'El código de referido debe tener al menos 8 caracteres')
+    .max(40, 'El código de referido no puede exceder 40 caracteres')
+    .optional(),
 }).strict();
 
 /** Inferred TypeScript type from the schema */

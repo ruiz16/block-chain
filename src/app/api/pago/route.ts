@@ -23,6 +23,8 @@ import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
 import { parseCusd } from '@/config/celo';
 import { recalcularScore } from '@/lib/score/calculator';
+import { recalcularScoreRed } from '@/lib/referidos/score-red';
+import { verificarAtrasosRed } from '@/lib/referidos/semaforo';
 import type { PagoResponse } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -298,6 +300,17 @@ export async function POST(request: Request): Promise<Response> {
       referenciaId: typedCuota.id,
     }).catch((err) => {
       console.warn('[pago] Error al recalcular score (no bloqueante):', err);
+    });
+
+    // ------------------------------------------------------------------
+    // 9c. Recalcular score de red + verificar semáforo comunitario
+    // ------------------------------------------------------------------
+    recalcularScoreRed(typedParticipante.id).catch((err) => {
+      console.warn('[pago] Error al recalcular score de red:', err);
+    });
+
+    verificarAtrasosRed(typedParticipante.id).catch((err) => {
+      console.warn('[pago] Error al verificar atrasos de red:', err);
     });
 
     // ------------------------------------------------------------------
