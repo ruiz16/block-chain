@@ -36,12 +36,12 @@ Ejecutor: Fundación Libélulas Doradas (FLD)
      - Soporte Territorial: Acompañamiento de "Embajadoras Digitales", mujeres líderes de la misma comunidad formadas para brindar soporte de par a par, empático, sin tecnicismos y libre de juicios de valor.
 
 3. Innovación Funcional: Sistema de Referidos y Aval Social de Red
-   Para trasladar digitalmente el éxito de la banca comunal tradicional, MANGLE integra un modelo de reputación y cumplimiento colectivo en su capa de gestión de datos (Airtable):
+   Para trasladar digitalmente el éxito de la banca comunal tradicional, MANGLE integra un modelo de reputación y cumplimiento colectivo en su capa de gestión de datos:
 
    Construcción de Nodos de Confianza: Las usuarias pueden referir a otras emprendedoras de su comunidad para ingresar a MANGLE. Las participantes quedan agrupadas digitalmente en "Redes de Apoyo".
 
-   Incentivo por Cumplimiento de Red (Efecto Multiplicador): Los pagos puntuales registrados en la blockchain de Celo disparan alertas positivas vía Zapier. Esto suma puntos a la reputación grupal de la Red, desbloqueando de forma colectiva tasas de interés más competitivas o acceso prioritario a capital semilla para todas sus integrantes.
-   Gestión de Alertas con Enfoque de Género (Semáforo Comunitario): Si el sistema detecta un atraso de 48 horas en la cuota de una participante, el protocolo no penaliza ni castiga de inmediato. En su lugar, el tablero de Airtable cambia a "🟢 Semáforo Amarillo: Alerta de Apoyo" y envía una notificación automatizada a la referidora:
+   Incentivo por Cumplimiento de Red (Efecto Multiplicador): Los pagos puntuales registrados en la blockchain de Celo disparan alertas positivas vía medio digital . Esto suma puntos a la reputación grupal de la Red, desbloqueando de forma colectiva tasas de interés más competitivas o acceso prioritario a capital semilla para todas sus integrantes.
+   Gestión de Alertas con Enfoque de Género (Semáforo Comunitario): Si el sistema detecta un atraso de 48 horas en la cuota de una participante, el protocolo no penaliza ni castiga de inmediato. En su lugar, el tablero de MANGLE cambia a "🟢 Semáforo Amarillo: Alerta de Apoyo" y envía una notificación automatizada a la referidora:
 
    "Tu compañera presenta un retraso. Como su red de apoyo, te invitamos a activar los lazos comunitarios. Si la ayudas a ponerse al día o a contactar a su Embajadora Digital en las próximas 48 horas para refinanciar por motivos de fuerza mayor (salud/cuidado), el puntaje de reputación de tu red se mantendrá intacto. ¡Juntas nos cuidamos!"
 

@@ -185,7 +185,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const supabase = getSupabaseClient();
     const { data: participante } = await supabase
       .from('participantes')
-      .select('id, nombre, rol, wallet_address')
+      .select('id, nombre, rol, wallet_address, gacc_id, validado_gacc')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -200,10 +200,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       {
         exists: true,
         participante: {
-          id: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string }).id,
-          nombre: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string }).nombre,
-          rol: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string }).rol,
-          wallet_address: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string }).wallet_address,
+          id: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).id,
+          nombre: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).nombre,
+          rol: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).rol,
+          wallet_address: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).wallet_address,
+          gacc_id: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).gacc_id,
+          validado_gacc: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).validado_gacc,
         },
       },
       { status: 200 },

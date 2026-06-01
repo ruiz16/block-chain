@@ -47,7 +47,10 @@ export type TipoAccion =
   | 'pago_recibido'
   | 'default_registrado'
   | 'aval_agregado'
-  | 'aval_revocado';
+  | 'aval_revocado'
+  | 'gacc_creado'
+  | 'gacc_miembro_validado'
+  | 'gacc_miembro_unido';
 
 // =============================================================================
 // Database Row Types (matches supabase/migrations/001_schema.sql)
@@ -63,6 +66,8 @@ export interface ParticipanteRow {
   score_reputacion: number;
   activo: boolean;
   auth_password?: string | null; // Auto-generated SIWE password — added in migration 007
+  gacc_id?: string | null;       // GACC al que pertenece — added in migration 010
+  validado_gacc?: boolean;       // Validado por el GACC — added in migration 010
 }
 
 /** SIWE nonce row — matches supabase/migrations/007_siwe.sql */
@@ -118,6 +123,26 @@ export interface CuotaRow {
   fecha_creacion: string;
 }
 
+export interface GrupoGaccRow {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  codigo: string;
+  creador_id: string;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface GaccMiembroRow {
+  id: string;
+  grupo_id: string;
+  participante_id: string;
+  validado_por: string | null;
+  validado_en: string | null;
+  activo: boolean;
+  created_at: string;
+}
+
 export interface AuditLogRow {
   id: number;
   accion: TipoAccion;
@@ -161,6 +186,19 @@ export interface AsignarAvalInput {
 export interface AvalConParticipante extends AvalRow {
   avalador_nombre: string;
   avalador_wallet: string;
+}
+
+/** GACC miembro row joined with participant data */
+export interface GaccMiembroConParticipante extends GaccMiembroRow {
+  participante_nombre: string;
+  participante_wallet: string;
+  score_reputacion: number;
+}
+
+/** GACC row with member count */
+export interface GrupoGaccConMiembros extends GrupoGaccRow {
+  miembro_count: number;
+  validado_count: number;
 }
 
 // =============================================================================

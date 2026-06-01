@@ -123,6 +123,7 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
     items: [
       { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'admin'] },
       { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario'] },
+      { label: 'Mi GACC', href: '/gacc', icon: Icons.shield, roles: ['prestatario'] },
       { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['prestatario', 'admin'] },
     ],
   },

@@ -42,7 +42,12 @@ export default function Home() {
         if (!cancelled) {
           setStatus('redirecting');
           if (data.exists && data.participante?.rol === 'prestatario') {
-            router.replace('/mis-creditos');
+            // Prestatarios without a GACC need to create/join one first
+            if (!data.participante.gacc_id) {
+              router.replace('/gacc');
+            } else {
+              router.replace('/mis-creditos');
+            }
           } else {
             // Admins, Avals, and Lenders go to the approval panel
             router.replace('/aprobacion');

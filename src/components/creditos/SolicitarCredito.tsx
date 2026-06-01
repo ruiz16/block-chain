@@ -4,18 +4,22 @@
 // SolicitarCredito — Credit Request Form
 // =============================================================================
 //
-// A client component with 4 explicit states:
+// A client component with 5 explicit states:
 //
+//   checking   — Verifying GACC membership on mount
 //   idle       — Form with monto, descripcion, plazo_dias fields
 //   submitting — Form disabled with spinner on the submit button
 //   success    — Confirmation message with link to /mis-creditos
 //   error      — Error message with retry button
+//
+// On mount, checks that the user has a validated GACC membership.
+// If not, redirects to /gacc so they can create or join a group first.
 // =============================================================================
 
-import { useState, useCallback, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
-type FormState = 'idle' | 'submitting' | 'success' | 'error';
+type FormState = 'checking' | 'idle' | 'submitting' | 'success' | 'error';
 
 const PLAZO_OPTIONS = [
   { value: 30, label: '30 días' },
@@ -34,12 +38,52 @@ const CUOTA_OPTIONS = [
 
 export default function SolicitarCredito() {
   const router = useRouter();
-  const [state, setState] = useState<FormState>('idle');
+  const [state, setState] = useState<FormState>('checking');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [monto, setMonto] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [plazoDias, setPlazoDias] = useState(30);
   const [numeroCuotas, setNumeroCuotas] = useState(1);
+
+  // ------------------------------------------------------------------
+  // GACC guard: redirect to /gacc if not validated
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkGacc() {
+      try {
+        const res = await fetch('/api/participantes?check_existing=true');
+
+        if (!res.ok) {
+          if (!cancelled) setState('idle');
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          if (data.exists && data.participante?.rol === 'prestatario') {
+            const gaccId = data.participante.gacc_id;
+            const validado = data.participante.validado_gacc;
+
+            if (!gaccId || !validado) {
+              // Redirect to GACC page to create or complete membership
+              router.replace('/gacc');
+              return;
+            }
+          }
+          setState('idle');
+        }
+      } catch {
+        if (!cancelled) setState('idle');
+      }
+    }
+
+    checkGacc();
+
+    return () => { cancelled = true; };
+  }, [router]);
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove all non-digits
@@ -94,6 +138,31 @@ export default function SolicitarCredito() {
     setState('idle');
     setErrorMsg(null);
   }, []);
+
+  // ==========================================================================
+  // Render: checking state
+  // ==========================================================================
+  if (state === 'checking') {
+    return (
+      <div
+        className="flex items-center justify-center p-8"
+        aria-busy="true"
+        role="status"
+      >
+        <svg
+          className="animate-spin h-8 w-8 text-blue-600 mr-3"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <span className="text-gray-600 dark:text-gray-300">Verificando membresía GACC…</span>
+      </div>
+    );
+  }
 
   // ==========================================================================
   // Render: error state

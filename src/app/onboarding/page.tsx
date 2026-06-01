@@ -136,9 +136,9 @@ export default function OnboardingPage() {
 
         if (res.status === 201) {
           setPageState('redirecting');
-          // Redirect based on role
+          // Redirect based on role — prestatarios go to GACC first
           if (rol === 'prestatario') {
-            router.push('/mis-creditos');
+            router.push('/gacc');
           } else {
             router.push('/aprobacion');
           }

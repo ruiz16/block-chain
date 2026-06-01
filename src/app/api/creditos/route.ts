@@ -21,8 +21,11 @@ import { registrarAuditLog } from '@/lib/audit/logger';
 // ---------------------------------------------------------------------------
 // Types for Supabase query results (no generated types available)
 // ---------------------------------------------------------------------------
+
 interface ParticipanteRow {
   id: string;
+  gacc_id?: string | null;
+  validado_gacc?: boolean;
 }
 
 // =============================================================================
@@ -52,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: participante } = await supabase
       .from('participantes')
-      .select('id')
+      .select('id, gacc_id, validado_gacc')
       .eq('user_id', user.id)
       .single();
 
@@ -62,6 +65,19 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json(
         { error: 'PARTICIPANTE_NO_ENCONTRADO', detail: 'No tienes un perfil de participante registrado' },
         { status: 404 },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 2b. GACC validation check
+    // ------------------------------------------------------------------
+    if (typedParticipante.gacc_id && !typedParticipante.validado_gacc) {
+      return NextResponse.json(
+        {
+          error: 'GACC_NO_VALIDADO',
+          detail: 'Debes ser validado por tu GACC antes de solicitar un crédito. Pide a otro miembro del grupo que te valide.',
+        },
+        { status: 403 },
       );
     }
 
