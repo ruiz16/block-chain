@@ -41,6 +41,20 @@ export default function SolicitarCredito() {
   const [plazoDias, setPlazoDias] = useState(30);
   const [numeroCuotas, setNumeroCuotas] = useState(1);
 
+  const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove all non-digits
+    const rawValue = e.target.value.replace(/\D/g, '');
+    
+    if (!rawValue) {
+      setMonto('');
+      return;
+    }
+
+    // Format with dots for thousands (COP)
+    const formattedValue = new Intl.NumberFormat('es-CO').format(Number(rawValue));
+    setMonto(formattedValue);
+  };
+
   const handleSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -52,7 +66,7 @@ export default function SolicitarCredito() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            monto: Number(monto),
+            monto: Number(monto.replace(/\D/g, '')),
             descripcion: descripcion.trim() || undefined,
             plazo_dias: plazoDias,
             numero_cuotas: numeroCuotas,
@@ -168,12 +182,11 @@ export default function SolicitarCredito() {
           </span>
           <input
             id="monto"
-            type="number"
-            step="1"
-            min="1"
+            type="text"
+            inputMode="numeric"
             required
             value={monto}
-            onChange={(e) => setMonto(e.target.value)}
+            onChange={handleMontoChange}
             disabled={isSubmitting}
             className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-7 pr-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="1.000.000"

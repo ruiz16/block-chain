@@ -47,3 +47,6 @@ cache/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#GRAPHIFY
+graphify-out/*

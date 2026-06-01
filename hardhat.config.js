@@ -20,7 +20,7 @@ module.exports = {
 
   networks: {
     celoSepolia: {
-      url: process.env.CELO_RPC_URL ?? 'https://forno.celo-sepolia.celo-testnet.org',
+      url: process.env.CELO_RPC_URL,
       chainId: 11142220,
       accounts: process.env.CELO_PRIVATE_KEY
         ? [process.env.CELO_PRIVATE_KEY.startsWith('0x')
