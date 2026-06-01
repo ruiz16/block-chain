@@ -22,6 +22,7 @@ import { getServerUser } from '@/lib/supabase/auth-server';
 import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
 import { parseCusd } from '@/config/celo';
+import { recalcularScore } from '@/lib/score/calculator';
 import type { PagoResponse } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ interface CuotaConCredito {
   numero_cuota: number;
   monto_cuota: string;
   estado: string;
+  fecha_vencimiento: string;
   credito: {
     id: string;
     estado: string;
@@ -116,6 +118,7 @@ export async function POST(request: Request): Promise<Response> {
         numero_cuota,
         monto_cuota,
         estado,
+        fecha_vencimiento,
         credito:credito_id (
           id,
           estado
@@ -280,6 +283,22 @@ export async function POST(request: Request): Promise<Response> {
         { cuota_id: typedCuota.id, tx_hash },
       );
     }
+
+    // ------------------------------------------------------------------
+    // 9b. Recalcular score (pago puntual o atrasado)
+    // ------------------------------------------------------------------
+    const ahora = new Date();
+    const fechaVencimiento = new Date(typedCuota.fecha_vencimiento);
+    const esPuntual = ahora <= fechaVencimiento;
+
+    recalcularScore({
+      participanteId: typedParticipante.id,
+      tipo: esPuntual ? 'pago_puntual' : 'pago_atrasado',
+      referenciaTipo: 'cuota',
+      referenciaId: typedCuota.id,
+    }).catch((err) => {
+      console.warn('[pago] Error al recalcular score (no bloqueante):', err);
+    });
 
     // ------------------------------------------------------------------
     // 10. Check if ALL cuotas are now paid → close the credit
