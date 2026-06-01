@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
 import { scoreEfectivo } from '@/lib/score/calculator';
+import RedCard from '@/components/redes/RedCard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -374,6 +375,9 @@ export default function PerfilPage() {
             )}
           </dl>
         </div>
+
+        {/* ── Red de Apoyo ── */}
+        <RedCard />
 
         {/* ── Wallet card ── */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">

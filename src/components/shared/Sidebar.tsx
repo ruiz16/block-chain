@@ -16,7 +16,7 @@
 //   userEmail  — Email from Supabase Auth (optional, for display)
 // =============================================================================
 
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -111,6 +111,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
   ),
+  bell: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+    </svg>
+  ),
 };
 
 // ---------------------------------------------------------------------------
@@ -146,6 +151,7 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Configuración',
     items: [
+      { label: 'Notificaciones', href: '/notificaciones', icon: Icons.bell, roles: ['prestatario', 'admin'] },
       { label: 'Mi Perfil', href: '/perfil', icon: Icons.user, roles: ['prestatario', 'admin'] },
     ],
   },
@@ -159,6 +165,18 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
   const pathname = usePathname();
   const { signOut } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/notificaciones?limit=1')
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.total > 0) setNotifCount(data.total);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const role = userRole as RolParticipante;
   const roleLabel = ROLE_LABELS[userRole] ?? userRole;
@@ -184,6 +202,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
 
   const renderNavLink = (item: NavItemDef) => {
     const active = isActive(item.href);
+    const isNotificaciones = item.href === '/notificaciones';
 
     return (
       <Link
@@ -204,7 +223,12 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
         <span className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
           {item.icon}
         </span>
-        <span>{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
+        <span className="flex-1">{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
+        {isNotificaciones && notifCount > 0 && (
+          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+            {notifCount > 9 ? '9+' : notifCount}
+          </span>
+        )}
       </Link>
     );
   };

@@ -21,6 +21,7 @@ import {
   CheckParticipanteQuerySchema,
 } from '@/lib/validations/participantes';
 import type { ParticipanteRow } from '@/types/database';
+import { registrarReferido } from '@/lib/referidos/registry';
 
 // =============================================================================
 // POST /api/participantes — Crear Participante (Onboarding)
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { nombre, wallet_address, rol } = validation.data;
+    const { nombre, wallet_address, rol, codigo_referido } = validation.data;
 
     // ------------------------------------------------------------------
     // 2. Verify session server-side
@@ -109,17 +110,47 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    const typedParticipante = newParticipante as unknown as ParticipanteRow;
+
     // ------------------------------------------------------------------
-    // 5. Return 201 with created row
+    // 5. Generate unique código de referido
+    // ------------------------------------------------------------------
+    const codigoSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const codigoReferido = `MANGLE-${nombre.replace(/\s+/g, '').substring(0, 8).toUpperCase()}-${codigoSuffix}`;
+
+    const { error: codigoError } = await supabase
+      .from('participantes')
+      .update({ codigo_referido: codigoReferido } as never)
+      .eq('id', typedParticipante.id);
+
+    if (codigoError) {
+      console.warn('[participantes] Error al asignar código de referido:', codigoError.message);
+    }
+
+    // ------------------------------------------------------------------
+    // 5b. If came with referrer code, register the referido (non-blocking)
+    // ------------------------------------------------------------------
+    if (codigo_referido) {
+      registrarReferido({
+        referidoId: typedParticipante.id,
+        codigoReferido: codigo_referido,
+      }).catch((err) => {
+        console.warn('[participantes] Error al registrar referido:', err);
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // 6. Return 201 with created row
     // ------------------------------------------------------------------
     return NextResponse.json(
       {
-        id: (newParticipante as unknown as ParticipanteRow).id,
-        nombre: (newParticipante as unknown as ParticipanteRow).nombre,
-        wallet_address: (newParticipante as unknown as ParticipanteRow).wallet_address,
-        rol: (newParticipante as unknown as ParticipanteRow).rol,
-        user_id: (newParticipante as unknown as ParticipanteRow).user_id,
-        activo: (newParticipante as unknown as ParticipanteRow).activo,
+        id: typedParticipante.id,
+        nombre: typedParticipante.nombre,
+        wallet_address: typedParticipante.wallet_address,
+        rol: typedParticipante.rol,
+        user_id: typedParticipante.user_id,
+        activo: typedParticipante.activo,
+        codigo_referido: codigoReferido,
       },
       { status: 201 },
     );
