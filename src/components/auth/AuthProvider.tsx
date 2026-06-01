@@ -104,7 +104,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const signOut = useCallback(async () => {
     const client = getAuthClient();
     await client.auth.signOut();
-    // State is cleared by onAuthStateChange callback
+    // Force full-page redirect to clear ALL stale React state and caches.
+    // The onAuthStateChange callback clears user/session in context, but
+    // page content (fetched data, router cache) can linger without a hard nav.
+    window.location.href = '/login';
   }, []);
 
   // ------------------------------------------------------------------------

@@ -54,7 +54,7 @@ export default function RedCard() {
     : 'Restringido';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-100/40 dark:shadow-black/20 overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">Mi Red de Apoyo</h2>
       </div>

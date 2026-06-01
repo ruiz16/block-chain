@@ -21,9 +21,10 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import CeloScanLink from '@/components/shared/CeloScanLink';
+import { EmptyState } from '@/components/ui';
 import type { CreditoPendiente } from '@/types/database';
 
-type PanelState = 'loading' | 'empty' | 'list' | 'success' | 'error';
+type PanelState = 'empty' | 'list' | 'success' | 'error';
 
 interface PanelAprobacionProps {
   creditosIniciales: CreditoPendiente[];
@@ -43,7 +44,7 @@ export default function PanelAprobacion({
   creditosIniciales,
   renderAvalManager,
 }: PanelAprobacionProps) {
-  const [state, setState] = useState<PanelState>('loading');
+  const [state, setState] = useState<PanelState>(creditosIniciales.length === 0 ? 'empty' : 'list');
   const [creditos, setCreditos] = useState<CreditoPendiente[]>(creditosIniciales);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -150,57 +151,19 @@ export default function PanelAprobacion({
   }, [creditos.length]);
 
   // ==========================================================================
-  // Render: loading state
-  // ==========================================================================
-  if (state === 'loading') {
-    return (
-      <div
-        className="flex items-center justify-center p-8"
-        aria-busy="true"
-        role="status"
-      >
-        <svg
-          className="animate-spin h-8 w-8 text-blue-600 mr-3"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
-        <span className="text-gray-600 dark:text-gray-300">Cargando créditos pendientes…</span>
-      </div>
-    );
-  }
-
-  // ==========================================================================
   // Render: empty state
   // ==========================================================================
   if (state === 'empty') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <svg
-          className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-          />
-        </svg>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">No hay créditos pendientes de aprobación</p>
-      </div>
+      <EmptyState
+        title="Sin créditos pendientes"
+        description="No hay créditos pendientes de aprobación en este momento."
+        icon={
+          <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        }
+      />
     );
   }
 

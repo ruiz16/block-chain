@@ -19,6 +19,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
+import { ErrorAlert, LoadingSkeleton } from '@/components/ui';
 
 type PageState = 'loading' | 'form-idle' | 'form-submit' | 'error' | 'redirecting';
 
@@ -181,22 +182,8 @@ export default function OnboardingPage() {
   // ==========================================================================
   if (pageState === 'loading') {
     return (
-      <div
-        className="flex items-center justify-center min-h-screen"
-        aria-busy="true"
-        role="status"
-      >
-        <svg
-          className="animate-spin h-10 w-10 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <span className="sr-only">Verificando perfil…</span>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <LoadingSkeleton variant="text" />
       </div>
     );
   }
@@ -206,22 +193,8 @@ export default function OnboardingPage() {
   // ==========================================================================
   if (pageState === 'redirecting') {
     return (
-      <div
-        className="flex items-center justify-center min-h-screen"
-        aria-busy="true"
-        role="status"
-      >
-        <svg
-          className="animate-spin h-10 w-10 text-blue-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <span className="sr-only">Redirigiendo…</span>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <LoadingSkeleton variant="text" />
       </div>
     );
   }
@@ -233,15 +206,16 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8 bg-gray-50 dark:bg-gray-950">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
-          Completa tu Perfil
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-          Cuéntanos quién eres para empezar a usar la plataforma
-        </p>
+      <div className="w-full max-w-md space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-100/40 dark:shadow-black/20 p-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
+            Completa tu Perfil
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
+            Cuéntanos quién eres para empezar a usar la plataforma
+          </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {/* Nombre */}
           <div>
             <label
@@ -320,12 +294,7 @@ export default function OnboardingPage() {
 
           {/* Error message */}
           {pageState === 'error' && errorMsg && (
-            <div
-              className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
-              role="alert"
-            >
-              <p className="text-sm text-red-700 dark:text-red-200">{errorMsg}</p>
-            </div>
+            <ErrorAlert message={errorMsg} />
           )}
 
           {/* Submit button */}
@@ -353,6 +322,7 @@ export default function OnboardingPage() {
             )}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );
