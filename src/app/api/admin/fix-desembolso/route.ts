@@ -17,11 +17,13 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const supabase = getSupabaseClient();
 
-  const { data: participante } = await supabase
+  const { data: rawParticipante } = await supabase
     .from('participantes')
     .select('id')
     .eq('user_id', user.id)
     .single();
+
+  const participante = rawParticipante as unknown as { id: string } | null;
 
   if (!participante) {
     return NextResponse.json(
@@ -42,11 +44,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   let creditoId = body.credito_id;
 
   if (!creditoId && body.cuota_id) {
-    const { data: cuota } = await supabase
+    const { data: rawCuota } = await supabase
       .from('cuotas')
       .select('credito_id')
       .eq('id', body.cuota_id)
       .single();
+
+    const cuota = rawCuota as unknown as { credito_id: string } | null;
 
     if (!cuota) {
       return NextResponse.json(
@@ -65,12 +69,14 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // Verify the credit belongs to this user
-  const { data: credito, error: fetchError } = await supabase
+  const { data: rawCredito, error: fetchError } = await supabase
     .from('creditos')
     .select('id, estado, monto, prestatario_id')
     .eq('id', creditoId)
     .eq('prestatario_id', participante.id)
     .single();
+
+  const credito = rawCredito as unknown as { id: string; estado: string; monto: string; prestatario_id: string } | null;
 
   if (fetchError || !credito) {
     return NextResponse.json(
