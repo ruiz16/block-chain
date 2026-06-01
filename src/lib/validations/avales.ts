@@ -11,24 +11,20 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// POST /api/avales — Asignar Aval
+// POST /api/avales — Asignar Aval (desde el GACC)
 // ---------------------------------------------------------------------------
 
 /**
- * Schema for assigning a guarantor (aval) to a credit.
+ * Schema for avaling a credit from within a GACC.
  *
- * Both `credito_id` and `avalador_id` must be valid UUIDs.
- * Unknown keys are rejected via `.strict()`.
+ * Only `credito_id` is required — the `avalador_id` is derived from the
+ * authenticated user's session (you can only aval for yourself).
  */
 export const AsignarAvalSchema = z.object({
   credito_id: z
     .string()
     .min(1, 'credito_id es requerido')
     .uuid('credito_id debe ser un UUID válido'),
-  avalador_id: z
-    .string()
-    .min(1, 'avalador_id es requerido')
-    .uuid('avalador_id debe ser un UUID válido'),
 }).strict();
 
 /** Inferred TypeScript type from the schema */

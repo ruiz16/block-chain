@@ -19,7 +19,6 @@ const STATE_COLORS: Record<string, string> = {
   // Roles
   admin: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
   prestatario: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700',
-  aval: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700',
   prestamista: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700',
 };
 
@@ -36,7 +35,6 @@ const STATE_LABELS: Record<string, string> = {
   inactivo: 'Inactivo',
   admin: 'Administrador',
   prestatario: 'Prestatario',
-  aval: 'Aval',
   prestamista: 'Prestamista',
 };
 
