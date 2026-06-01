@@ -20,6 +20,7 @@ import { requireReviewer } from '@/lib/auth-guards';
 import { DesembolsoSchema } from '@/lib/validations/desembolso';
 import { desembolsarCredito, BlockchainError } from '@/lib/blockchain/desembolsar';
 import { registrarAuditLog } from '@/lib/audit/logger';
+import { scoreEfectivo } from '@/lib/score/calculator';
 import { parseCusd } from '@/config/celo';
 import type { Address, Wei } from '@/types/database';
 
@@ -43,7 +44,8 @@ interface CreditoConPrestatario {
     wallet_address: string;
     nombre: string;
     score_reputacion: number;
-  } | { id: string; wallet_address: string; nombre: string; score_reputacion: number }[];
+    created_at: string;
+  } | { id: string; wallet_address: string; nombre: string; score_reputacion: number; created_at: string }[];
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -103,7 +105,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           id,
           wallet_address,
           nombre,
-          score_reputacion
+          score_reputacion,
+          created_at
         )
       `)
       .eq('id', credito_id)
@@ -159,9 +162,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 5. Check reputation score > 80
+    // 5. Check reputation score > 80 (using scoreEfectivo)
     // ------------------------------------------------------------------
-    const scoreReputacion = prestatario.score_reputacion;
+    const scoreReputacion = scoreEfectivo(
+      prestatario.score_reputacion,
+      prestatario.created_at,
+    );
 
     if (scoreReputacion <= 80) {
       return NextResponse.json(

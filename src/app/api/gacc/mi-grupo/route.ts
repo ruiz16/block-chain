@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
+import { scoreEfectivo } from '@/lib/score/calculator';
 
 export async function GET(): Promise<Response> {
   try {
@@ -87,7 +88,8 @@ export async function GET(): Promise<Response> {
         participante:participantes!gacc_miembros_participante_id_fkey(
           nombre,
           wallet_address,
-          score_reputacion
+          score_reputacion,
+          created_at
         ),
         validador:participantes!gacc_miembros_validado_por_fkey(
           nombre
@@ -98,7 +100,23 @@ export async function GET(): Promise<Response> {
       .order('validado_en', { ascending: false, nullsFirst: false });
 
     // ------------------------------------------------------------------
-    // 5. Return
+    // 5. Add score_efectivo to each member
+    // ------------------------------------------------------------------
+    const miembrosConScore = (miembros ?? []).map((m: Record<string, unknown>) => {
+      const participante = m.participante as Record<string, unknown> | null;
+      return {
+        ...m,
+        score_efectivo: participante
+          ? scoreEfectivo(
+              participante.score_reputacion as number,
+              participante.created_at as string,
+            )
+          : null,
+      };
+    });
+
+    // ------------------------------------------------------------------
+    // 6. Return
     // ------------------------------------------------------------------
     return NextResponse.json(
       {
@@ -108,7 +126,7 @@ export async function GET(): Promise<Response> {
           nombre: typedParticipante.nombre,
           validado: typedParticipante.validado_gacc,
         },
-        miembros: miembros ?? [],
+        miembros: miembrosConScore,
       },
       { status: 200 },
     );

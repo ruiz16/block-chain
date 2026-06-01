@@ -24,6 +24,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
+import { scoreEfectivo } from '@/lib/score/calculator';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,15 @@ interface ParticipanteProfile {
   rol: string;
   activo: boolean;
   score_reputacion: number;
+  created_at: string;
+}
+
+interface HistorialEvent {
+  tipo_evento: string;
+  delta: number;
+  score_anterior: number;
+  score_nuevo: number;
+  created_at: string;
 }
 
 type PageState = 'loading' | 'loaded' | 'saving' | 'error' | 'success';
@@ -54,6 +64,10 @@ export default function PerfilPage() {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
+  const [showHistorial, setShowHistorial] = useState(false);
+  const [historial, setHistorial] = useState<HistorialEvent[] | null>(null);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
+  const [historialError, setHistorialError] = useState<string | null>(null);
 
   // ------------------------------------------------------------------------
   // Auth guard: redirect if not authenticated
@@ -140,6 +154,35 @@ export default function PerfilPage() {
     setWalletAddress('');
     // If there's a change to save, the user needs to click Guardar
   }, []);
+
+  // ------------------------------------------------------------------------
+  // Toggle historial (lazy load on expand)
+  // ------------------------------------------------------------------------
+  const handleToggleHistorial = useCallback(async () => {
+    if (showHistorial) {
+      setShowHistorial(false);
+      return;
+    }
+
+    setShowHistorial(true);
+
+    if (historial) return;
+
+    setLoadingHistorial(true);
+    setHistorialError(null);
+    try {
+      const res = await fetch('/api/participantes/score/historial?limit=10');
+      if (!res.ok) throw new Error('Error al cargar historial');
+      const data = await res.json();
+      setHistorial(data.historial?.eventos ?? []);
+    } catch (err) {
+      console.error('Error al cargar historial:', err);
+      setHistorialError('No se pudo cargar el historial');
+      setHistorial([]);
+    } finally {
+      setLoadingHistorial(false);
+    }
+  }, [showHistorial, historial]);
 
   // ------------------------------------------------------------------------
   // Save profile
@@ -277,11 +320,57 @@ export default function PerfilPage() {
                 </span>
               </dd>
             </div>
-            {profile && profile.score_reputacion > 0 && (
-              <div className="px-6 py-4 grid grid-cols-3 gap-4">
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Score</dt>
-                <dd className="text-sm text-gray-900 dark:text-white col-span-2">{profile.score_reputacion}/100</dd>
-              </div>
+            {profile && (
+              <>
+                <div className="px-6 py-4 grid grid-cols-3 gap-4">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Score de Reputación</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white col-span-2">
+                    <span className="font-semibold">{scoreEfectivo(profile.score_reputacion, profile.created_at)}/100</span>
+                    <button
+                      type="button"
+                      onClick={handleToggleHistorial}
+                      className="ml-3 text-xs text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+                    >
+                      {showHistorial ? 'Ocultar historial' : 'Ver historial'}
+                    </button>
+                  </dd>
+                </div>
+
+                {showHistorial && (
+                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Historial de cambios</h3>
+
+                    {loadingHistorial ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500">Cargando historial…</p>
+                    ) : historialError ? (
+                      <p className="text-sm text-red-500 dark:text-red-400">{historialError}</p>
+                    ) : historial && historial.length > 0 ? (
+                      <ul className="space-y-2">
+                        {historial.map((event, idx) => (
+                          <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                            <span>
+                              <span className={
+                                event.delta > 0
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-red-600 dark:text-red-400'
+                              }>
+                                {event.delta > 0 ? `+${event.delta}` : event.delta}
+                              </span>
+                              {' '}
+                              <span className="capitalize">{event.tipo_evento.replace(/_/g, ' ')}</span>
+                            </span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              {event.score_anterior} → {event.score_nuevo}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-400 dark:text-gray-500">Sin eventos registrados</p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </dl>
         </div>
