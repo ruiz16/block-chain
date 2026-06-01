@@ -24,6 +24,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
+import { PageHeader, StatusBadge, CardSection } from '@/components/ui';
 import { scoreEfectivo } from '@/lib/score/calculator';
 import RedCard from '@/components/redes/RedCard';
 
@@ -251,7 +252,8 @@ export default function PerfilPage() {
   // ------------------------------------------------------------------------
   if (state === 'error' && !profile) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader title="Mi Perfil" />
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
           <p className="text-sm text-red-700">{errorMsg}</p>
           <button
@@ -273,14 +275,11 @@ export default function PerfilPage() {
     : profile?.rol ?? '—';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Page title */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mi Perfil</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Administrá tus datos y conectá tu wallet de Celo
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <PageHeader
+        title="Mi Perfil"
+        subtitle="Administrá tus datos y conectá tu wallet de Celo"
+      />
 
       {/* Success toast */}
       {state === 'success' && (
@@ -300,7 +299,7 @@ export default function PerfilPage() {
 
       <div className="space-y-6">
         {/* ── Profile info card ── */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-100/40 dark:shadow-black/20 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">Información Personal</h2>
           </div>
@@ -316,9 +315,7 @@ export default function PerfilPage() {
             <div className="px-6 py-4 grid grid-cols-3 gap-4">
               <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Rol</dt>
               <dd className="text-sm text-gray-900 dark:text-white col-span-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                  {rolLabel}
-                </span>
+                <StatusBadge status={profile?.rol ?? ''} label={rolLabel} />
               </dd>
             </div>
             {profile && (
@@ -380,7 +377,7 @@ export default function PerfilPage() {
         <RedCard />
 
         {/* ── Wallet card ── */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-100/40 dark:shadow-black/20 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">Wallet Celo</h2>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">

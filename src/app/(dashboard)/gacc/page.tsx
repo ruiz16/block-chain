@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { PageHeader, LoadingSkeleton, ErrorAlert, StatusBadge, CardSection } from '@/components/ui';
 import CrearGaccForm from '@/components/gacc/CrearGaccForm';
 import UnirseGaccForm from '@/components/gacc/UnirseGaccForm';
 import MiembroList from '@/components/gacc/MiembroList';
@@ -138,24 +139,9 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'loading') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div
-          className="flex items-center justify-center p-12"
-          aria-busy="true"
-          role="status"
-        >
-          <svg
-            className="animate-spin h-8 w-8 text-blue-600 mr-3"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <span className="text-gray-600 dark:text-gray-300">Cargando tu GACC…</span>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader title="Grupo de Ahorro y Crédito Comunitario" subtitle="Cargando tu GACC…" />
+        <LoadingSkeleton variant="text" />
       </div>
     );
   }
@@ -165,34 +151,9 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'error') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4" role="alert">
-          <div className="flex items-start">
-            <svg
-              className="h-5 w-5 text-red-500 mt-0.5 mr-3 shrink-0"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div className="flex-1">
-              <p className="text-red-800 dark:text-red-200 font-medium">Error al cargar tu GACC</p>
-              {errorMsg && <p className="text-red-600 dark:text-red-300 text-sm mt-1">{errorMsg}</p>}
-            </div>
-          </div>
-          <button
-            onClick={fetchMiGrupo}
-            className="mt-3 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-          >
-            Reintentar
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader title="Grupo de Ahorro y Crédito Comunitario" />
+        <ErrorAlert message={errorMsg ?? 'Error al cargar tu GACC'} onRetry={fetchMiGrupo} />
       </div>
     );
   }
@@ -202,15 +163,11 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'no-gacc') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Grupo de Ahorro y Crédito Comunitario
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Crea o únete a un GACC para empezar a solicitar créditos
-          </p>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader
+          title="Grupo de Ahorro y Crédito Comunitario"
+          subtitle="Crea o únete a un GACC para empezar a solicitar créditos"
+        />
 
         {/* Tab selector */}
         <div className="flex gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
@@ -237,23 +194,19 @@ export default function GaccPage() {
         </div>
 
         {/* Tab content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          {tab === 'crear' ? (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Crear un nuevo GACC
-              </h2>
+        {tab === 'crear' ? (
+          <CardSection title="Crear un nuevo GACC">
+            <div className="p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Al crear un GACC, automáticamente serás el creador y quedarás validado.
                 Luego podrás compartir el código con otros participantes para que se unan.
               </p>
               <CrearGaccForm onSuccess={handleCrearSuccess} />
             </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Unirse a un GACC existente
-              </h2>
+          </CardSection>
+        ) : (
+          <CardSection title="Unirse a un GACC existente">
+            <div className="p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Ingresa el código que te compartió el creador del GACC.
                 Una vez que te unas, un miembro validado del grupo deberá aceptar tu membresía
@@ -261,8 +214,8 @@ export default function GaccPage() {
               </p>
               <UnirseGaccForm onSuccess={handleUnirseSuccess} />
             </div>
-          )}
-        </div>
+          </CardSection>
+        )}
       </div>
     );
   }
@@ -273,9 +226,9 @@ export default function GaccPage() {
   const isCreator = miembroSelf?.id === grupo?.creador_id;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {grupo?.nombre ?? 'Mi GACC'}
@@ -284,9 +237,7 @@ export default function GaccPage() {
             <ValidationBadge validado={miembroSelf.validado} />
           )}
           {isCreator && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-700">
-              Creador
-            </span>
+            <StatusBadge status="admin" label="Creador" />
           )}
         </div>
         {grupo?.descripcion && (
@@ -359,10 +310,7 @@ export default function GaccPage() {
       )}
 
       {/* Members section */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Miembros ({miembros.length})
-        </h2>
+      <CardSection title={`Miembros (${miembros.length})`}>
         {grupo && miembroSelf && (
           <MiembroList
             grupoId={grupo.id}
@@ -372,7 +320,7 @@ export default function GaccPage() {
             onMiembroValidado={handleMiembroValidado}
           />
         )}
-      </div>
+      </CardSection>
     </div>
   );
 }

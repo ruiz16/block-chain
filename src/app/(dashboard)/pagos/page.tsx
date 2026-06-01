@@ -9,6 +9,7 @@
 // =============================================================================
 
 import PanelPagos from '@/components/pagos/PanelPagos';
+import { PageHeader } from '@/components/ui';
 
 export const metadata = {
   title: 'Mis Pagos — BlockChain',
@@ -17,13 +18,11 @@ export const metadata = {
 
 export default function PagosPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mis Pagos</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Paga tus cuotas directamente con MetaMask. Necesitas cUSD en tu wallet de Celo Sepolia.
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <PageHeader
+        title="Mis Pagos"
+        subtitle="Paga tus cuotas directamente con MetaMask. Necesitas cUSD en tu wallet de Celo Sepolia."
+      />
 
       <PanelPagos />
     </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import NotificacionItem from '@/components/notificaciones/NotificacionItem';
+import { PageHeader, LoadingSkeleton, ErrorAlert, EmptyState, Pagination, CardSection } from '@/components/ui';
 
 interface Notificacion {
   id: string;
@@ -19,12 +20,17 @@ export default function NotificacionesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
+  const page = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(total / limit);
+
   const fetchNotificaciones = useCallback(async (newOffset: number) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/notificaciones?limit=${limit}&offset=${newOffset}`);
       if (!res.ok) throw new Error('Error al cargar');
@@ -32,7 +38,7 @@ export default function NotificacionesPage() {
       setNotificaciones(data.notificaciones ?? []);
       setTotal(data.total ?? 0);
     } catch (err) {
-      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar notificaciones');
     } finally {
       setLoading(false);
     }
@@ -59,10 +65,16 @@ export default function NotificacionesPage() {
     }
   };
 
+  const handlePageChange = (newPage: number) => {
+    const newOffset = (newPage - 1) * limit;
+    setOffset(newOffset);
+    fetchNotificaciones(newOffset);
+  };
+
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]" aria-busy="true">
-        <span className="text-gray-500">Cargando...</span>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <LoadingSkeleton variant="text" />
       </div>
     );
   }
@@ -70,18 +82,21 @@ export default function NotificacionesPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Notificaciones</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{total} notificaciones</p>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <PageHeader title="Notificaciones" subtitle={`${total} notificaciones`} />
+
+      {error && (
+        <div className="mb-4">
+          <ErrorAlert message={error} onRetry={() => fetchNotificaciones(offset)} />
+        </div>
+      )}
 
       {loading ? (
-        <p className="text-gray-400">Cargando notificaciones...</p>
+        <LoadingSkeleton variant="text" />
       ) : notificaciones.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-400 dark:text-gray-500">No tienes notificaciones</p>
-        </div>
+        <EmptyState title="Sin notificaciones" description="No tienes notificaciones" />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <CardSection title="Notificaciones">
           {notificaciones.map(n => (
             <NotificacionItem
               key={n.id}
@@ -89,28 +104,16 @@ export default function NotificacionesPage() {
               onMarcarLeida={handleMarcarLeida}
             />
           ))}
-        </div>
+        </CardSection>
       )}
 
-      {/* Paginación simple */}
-      {total > limit && (
-        <div className="flex justify-center gap-4 mt-6">
-          <button
-            onClick={() => { const newOffset = Math.max(0, offset - limit); setOffset(newOffset); fetchNotificaciones(newOffset); }}
-            disabled={offset === 0}
-            className="text-sm text-blue-600 disabled:text-gray-400"
-          >
-            ← Anterior
-          </button>
-          <button
-            onClick={() => { const newOffset = offset + limit; setOffset(newOffset); fetchNotificaciones(newOffset); }}
-            disabled={offset + limit >= total}
-            className="text-sm text-blue-600 disabled:text-gray-400"
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        label="notificaciones"
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }
