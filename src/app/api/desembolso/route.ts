@@ -23,6 +23,7 @@ import { registrarAuditLog } from '@/lib/audit/logger';
 import { scoreEfectivo } from '@/lib/score/calculator';
 import { parseCusd } from '@/config/celo';
 import type { Address, Wei } from '@/types/database';
+import type { Database } from '@/types/supabase';
 
 // ---------------------------------------------------------------------------
 // Types for Supabase query results (no generated types available)
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const typedCredito = credito as unknown as CreditoConPrestatario;
+    const typedCredito = credito as CreditoConPrestatario;
 
     // Extract prestatario info from the join
     const rawPrestatario = typedCredito.participantes;
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .update({
         estado: 'desembolsado',
         tx_hash: txHash,
-      } as never)
+      })
       .eq('id', typedCredito.id);
 
     if (updateError) {
@@ -292,7 +293,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // Calculate saldo_restante after each cuota (remaining capital)
     let saldoRestante = montoBig;
 
-    const cuotasToInsert = [];
+    const cuotasToInsert: Database['public']['Tables']['cuotas']['Insert'][] = [];
     const desembolsoDate = new Date();
 
     for (let i = 0; i < numCuotas; i++) {
@@ -318,7 +319,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const { error: cuotasError } = await supabase
       .from('cuotas')
-      .insert(cuotasToInsert as never);
+      .insert(cuotasToInsert);
 
     if (cuotasError) {
       // Non-fatal: log warning, cuotas can be regenerated manually

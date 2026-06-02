@@ -107,7 +107,7 @@ export async function GET(): Promise<Response> {
     // ------------------------------------------------------------------
     // 3. Fetch aval counts in batch
     // ------------------------------------------------------------------
-    const rawRows = data as unknown as CreditoRowWithPrestatario[];
+    const rawRows = data as CreditoRowWithPrestatario[];
     const creditIds = rawRows.map((r) => r.id);
 
     const { data: avalCounts } = await supabase

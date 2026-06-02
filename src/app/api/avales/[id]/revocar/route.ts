@@ -83,7 +83,7 @@ export async function PATCH(
       );
     }
 
-    const aval = avalRow as unknown as AvalRowSimple;
+    const aval = avalRow;
 
     if (!aval.activo) {
       return NextResponse.json(
@@ -108,7 +108,7 @@ export async function PATCH(
       );
     }
 
-    const credito = creditoRow as unknown as CreditoRowSimple;
+    const credito = creditoRow;
 
     if (credito.estado === 'desembolsado' || credito.estado === 'pagado' || credito.estado === 'default') {
       return NextResponse.json(
@@ -125,7 +125,7 @@ export async function PATCH(
     // ------------------------------------------------------------------
     const { error: updateAvalError } = await supabase
       .from('avales')
-      .update({ activo: false } as never)
+      .update({ activo: false })
       .eq('id', aval.id);
 
     if (updateAvalError) {
@@ -162,7 +162,7 @@ export async function PATCH(
     if (remaining === 0) {
       const { error: updateCreditoError } = await supabase
         .from('creditos')
-        .update({ estado: 'pendiente' } as never)
+        .update({ estado: 'pendiente' })
         .eq('id', credito.id);
 
       if (updateCreditoError) {

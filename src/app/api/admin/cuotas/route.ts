@@ -18,6 +18,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { requireAdmin } from '@/lib/auth-guards';
+import type { DbEstadoCuota } from '@/types/supabase';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .range(from, to);
 
     if (estadoFilter && ['pendiente', 'pagada', 'vencida'].includes(estadoFilter)) {
-      query = query.eq('estado', estadoFilter);
+      query = query.eq('estado', estadoFilter as DbEstadoCuota);
     }
     if (creditoFilter) {
       query = query.eq('credito_id', creditoFilter);

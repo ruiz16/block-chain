@@ -71,7 +71,7 @@ export async function requireRoles(
     );
   }
 
-  const typed = participante as unknown as ParticipanteRolRow;
+  const typed = participante;
 
   return {
     user,

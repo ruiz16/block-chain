@@ -19,6 +19,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerClient } from '@/lib/supabase/auth-server';
+import type { Database } from '@/types/supabase';
 import { ActualizarParticipanteSchema } from '@/lib/validations/participantes';
 
 // =============================================================================
@@ -137,7 +138,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 3. Build update payload (only provided fields)
     // ------------------------------------------------------------------
-    const updateData: Record<string, unknown> = {};
+    const updateData: Partial<Database['public']['Tables']['participantes']['Update']> = {};
     if (nombre !== undefined) updateData.nombre = nombre;
     if (wallet_address !== undefined) updateData.wallet_address = wallet_address;
 
@@ -147,7 +148,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     const supabase = getSupabaseClient();
     const { data: updated, error: updateError } = await supabase
       .from('participantes')
-      .update(updateData as never)
+      .update(updateData)
       .eq('user_id', user.id)
       .select()
       .maybeSingle();

@@ -40,9 +40,7 @@ export async function GET(): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = rawParticipante as unknown as {
-      id: string; gacc_id: string | null; validado_gacc: boolean; nombre: string;
-    } | null;
+    const typedParticipante = rawParticipante;
 
     if (!typedParticipante) {
       return NextResponse.json(

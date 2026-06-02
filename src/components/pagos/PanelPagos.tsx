@@ -209,7 +209,7 @@ export default function PanelPagos() {
       const cusdAddress = getCusdContractAddress();
       // CRITICAL: monto_cuota is in cUSD, must convert to wei (10^18)
       // before sending to the ERC-20 contract via MetaMask.
-      const amountWei = parseCusd(cuota.monto_cuota) as unknown as bigint;
+      const amountWei = parseCusd(cuota.monto_cuota) as bigint;
 
       // 6. Execute transfer via MetaMask
       setState('submitting');

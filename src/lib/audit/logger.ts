@@ -10,9 +10,10 @@
 // =============================================================================
 
 import { getSupabaseClient } from '@/lib/supabase/client';
+import type { TipoAccion } from '@/types/database';
 
 export interface AuditLogParams {
-  accion: string;
+  accion: TipoAccion;
   entidadTipo: string;
   entidadId: string;
   participanteId?: string;
@@ -39,7 +40,7 @@ export async function registrarAuditLog(params: AuditLogParams): Promise<void> {
         entidad_id: params.entidadId,
         participante_id: params.participanteId ?? null,
         detalles: params.detalles,
-      } as never);
+      });
 
     if (error) {
       console.warn(

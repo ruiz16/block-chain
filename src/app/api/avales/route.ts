@@ -102,7 +102,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const typedCredito = credito as unknown as CreditoRowSimple;
+    const typedCredito = credito;
 
     if (typedCredito.estado !== 'pendiente') {
       return NextResponse.json(
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const typedAvalador = avalador as unknown as ParticipanteRowSimple;
+    const typedAvalador = avalador;
 
     if (typedAvalador.rol !== 'aval') {
       return NextResponse.json(
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         credito_id: typedCredito.id,
         monto_maximo: montoMaximo,
         activo: true,
-      } as never)
+      })
       .select()
       .single();
 
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const { error: updateError } = await supabase
       .from('creditos')
-      .update({ estado: 'avalado' } as never)
+      .update({ estado: 'avalado' })
       .eq('id', typedCredito.id);
 
     if (updateError) {
@@ -326,7 +326,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // Map to response format with avalador info
-    const rawRows = (data ?? []) as unknown as AvalJoinRow[];
+    const rawRows = (data ?? []) as AvalJoinRow[];
 
     const avales = rawRows.map((row) => {
       const rawParticipante = row.participantes;

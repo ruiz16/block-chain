@@ -96,7 +96,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         user_id: user.id,
         activo: true,
         score_reputacion: 50,  // Default starting score
-      } as never)
+      })
       .select()
       .single();
 
@@ -114,12 +114,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     return NextResponse.json(
       {
-        id: (newParticipante as unknown as ParticipanteRow).id,
-        nombre: (newParticipante as unknown as ParticipanteRow).nombre,
-        wallet_address: (newParticipante as unknown as ParticipanteRow).wallet_address,
-        rol: (newParticipante as unknown as ParticipanteRow).rol,
-        user_id: (newParticipante as unknown as ParticipanteRow).user_id,
-        activo: (newParticipante as unknown as ParticipanteRow).activo,
+        id: newParticipante.id,
+        nombre: newParticipante.nombre,
+        wallet_address: newParticipante.wallet_address,
+        rol: newParticipante.rol,
+        user_id: newParticipante.user_id,
+        activo: newParticipante.activo,
       },
       { status: 201 },
     );
@@ -200,12 +200,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       {
         exists: true,
         participante: {
-          id: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).id,
-          nombre: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).nombre,
-          rol: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).rol,
-          wallet_address: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).wallet_address,
-          gacc_id: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).gacc_id,
-          validado_gacc: (participante as unknown as { id: string; nombre: string; rol: string; wallet_address: string; gacc_id: string | null; validado_gacc: boolean }).validado_gacc,
+          id: participante.id,
+          nombre: participante.nombre,
+          rol: participante.rol,
+          wallet_address: participante.wallet_address,
+          gacc_id: participante.gacc_id,
+          validado_gacc: participante.validado_gacc,
         },
       },
       { status: 200 },

@@ -12,15 +12,16 @@
 // For browser-side queries, use client-browser.ts instead.
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let supabaseClient: ReturnType<typeof createClient> | null = null;
+let supabaseClient: SupabaseClient<Database> | null = null;
 
 /**
  * Returns a singleton Supabase client configured with the service_role key.
  * Throws a descriptive error if environment variables are missing.
  */
-export function getSupabaseClient(): ReturnType<typeof createClient> {
+export function getSupabaseClient(): SupabaseClient<Database> {
   if (supabaseClient) return supabaseClient;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,7 +41,7 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
     );
   }
 
-  supabaseClient = createClient(supabaseUrl, serviceKey, {
+  supabaseClient = createClient<Database>(supabaseUrl, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

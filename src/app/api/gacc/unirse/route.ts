@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as { id: string; gacc_id: string | null } | null;
+    const typedParticipante = participante;
 
     if (!typedParticipante) {
       return NextResponse.json(
@@ -94,7 +94,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('codigo', codigo.toUpperCase().trim())
       .single();
 
-    const typedGrupo = grupo as unknown as { id: string; nombre: string; activo: boolean } | null;
+    const typedGrupo = grupo;
 
     if (!typedGrupo) {
       return NextResponse.json(
@@ -120,14 +120,14 @@ export async function POST(request: Request): Promise<Response> {
       .eq('participante_id', typedParticipante.id)
       .maybeSingle();
 
-    const typedMember = existingMember as unknown as { id: string; validado_en: string | null } | null;
+    const typedMember = existingMember;
 
     if (typedMember) {
       if (typedMember.validado_en) {
         // Already a validated member — just update participante
         await supabase
           .from('participantes')
-          .update({ gacc_id: typedGrupo.id, validado_gacc: true } as never)
+          .update({ gacc_id: typedGrupo.id, validado_gacc: true })
           .eq('id', typedParticipante.id);
 
         return NextResponse.json(
@@ -158,7 +158,7 @@ export async function POST(request: Request): Promise<Response> {
       .insert({
         grupo_id: typedGrupo.id,
         participante_id: typedParticipante.id,
-      } as never);
+      });
 
     if (insertError) {
       console.error('[gacc/unirse] Error al insertar membresía:', insertError.message);

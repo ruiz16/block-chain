@@ -63,9 +63,12 @@ export default function AppShell({ children }: AppShellProps) {
 
   const isPublic = isPublicRoute(pathname);
 
-  if ((isPublic || !user) && profile !== null) {
-    setProfile(null);
-  }
+  // Reset profile when on public routes or not authenticated
+  useEffect(() => {
+    if (isPublic || !user) {
+      setProfile(null);
+    }
+  }, [isPublic, user]);
 
   // Fetch participant profile when on a dashboard route and authenticated
   useEffect(() => {

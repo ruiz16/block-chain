@@ -63,7 +63,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const participante = rawParticipante as unknown as { id: string } | null;
+    const participante = rawParticipante;
 
     if (!participante) {
       return NextResponse.json(

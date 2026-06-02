@@ -64,7 +64,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as { id: string; gacc_id: string | null } | null;
+    const typedParticipante = participante;
 
     if (!typedParticipante) {
       return NextResponse.json(
@@ -134,11 +134,11 @@ export async function POST(request: Request): Promise<Response> {
         descripcion: descripcion || null,
         codigo,
         creador_id: typedParticipante.id,
-      } as never)
+      })
       .select()
       .single();
 
-    const typedGrupo = grupo as unknown as { id: string; nombre: string; codigo: string; descripcion: string | null } | null;
+    const typedGrupo = grupo;
 
     if (insertError || !typedGrupo) {
       console.error('[gacc] Error al crear GACC:', insertError?.message);
@@ -154,7 +154,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     await supabase
       .from('participantes')
-      .update({ gacc_id: typedGrupo.id, validado_gacc: true } as never)
+      .update({ gacc_id: typedGrupo.id, validado_gacc: true })
       .eq('id', typedParticipante.id);
 
     // ------------------------------------------------------------------

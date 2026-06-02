@@ -57,7 +57,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .from('participantes')
       .select('score_reputacion');
 
-    const typedScores = (scores ?? []) as unknown as ScoreRow[];
+    const typedScores = scores ?? [];
     const scorePromedio =
       typedScores.length > 0
         ? typedScores.reduce((sum, s) => sum + s.score_reputacion, 0) / typedScores.length
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .from('creditos')
       .select('monto, estado');
 
-    const typedCreditos = (creditos ?? []) as unknown as CreditoMontoRow[];
+    const typedCreditos = creditos ?? [];
     const totalCreditos = typedCreditos.length;
 
     // Step 5: Aggregate by estado

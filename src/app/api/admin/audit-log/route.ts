@@ -19,6 +19,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { requireAdmin } from '@/lib/auth-guards';
+import type { TipoAccion } from '@/types/database';
 
 // ---------------------------------------------------------------------------
 // Types for Supabase query results (no generated types available)
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     // Apply filters
     if (accion) {
-      query = query.eq('accion', accion);
+      query = query.eq('accion', accion as TipoAccion);
     }
     if (fechaDesde) {
       query = query.gte('fecha', fechaDesde);
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const { data: entries, count: total } = await query;
 
-    const typedEntries = (entries ?? []) as unknown as AuditLogRow[];
+    const typedEntries = entries ?? [];
 
     // Step 4: Join participante names
     const participanteIds = typedEntries
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         .in('id', uniqueIds);
 
       if (participantes) {
-        for (const p of participantes as unknown as ParticipanteIdRow[]) {
+        for (const p of participantes) {
           nombreMap.set(p.id, p.nombre);
         }
       }

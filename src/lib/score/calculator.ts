@@ -151,7 +151,7 @@ export async function recalcularScore(params: RecalcularParams): Promise<number>
     .eq('id', params.participanteId)
     .single();
 
-  const participante = rawParticipante as unknown as ParticipanteScore | null;
+  const participante = rawParticipante;
 
   if (!participante) {
     throw new Error(`Participante no encontrado: ${params.participanteId}`);
@@ -187,7 +187,7 @@ export async function recalcularScore(params: RecalcularParams): Promise<number>
       score_nuevo: scoreNuevo,
       referencia_tipo: params.referenciaTipo ?? null,
       referencia_id: params.referenciaId ?? null,
-    } as never);
+    });
 
   if (insertError) {
     console.error('[score] Error al insertar evento_score:', insertError.message);
@@ -196,7 +196,7 @@ export async function recalcularScore(params: RecalcularParams): Promise<number>
   // 5. Update participante score
   const { error: updateError } = await supabase
     .from('participantes')
-    .update({ score_reputacion: scoreNuevo } as never)
+    .update({ score_reputacion: scoreNuevo })
     .eq('id', params.participanteId);
 
   if (updateError) {
@@ -228,7 +228,7 @@ export async function obtenerHistorialScore(
     .eq('id', participanteId)
     .single();
 
-  const participante = rawParticipante as unknown as ParticipanteScore | null;
+  const participante = rawParticipante;
 
   if (!participante) {
     throw new Error(`Participante no encontrado: ${participanteId}`);
@@ -242,7 +242,7 @@ export async function obtenerHistorialScore(
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const eventos = (rawEventos ?? []) as unknown as EventoScoreRow[];
+  const eventos = rawEventos ?? [];
   const scoreEventos = participante.score_reputacion;
   const meses = diffMeses(new Date(participante.created_at), new Date());
 
@@ -285,7 +285,7 @@ export async function recalcularTodosLosScores(
 
   const { data: rawParticipantes } = await query;
 
-  const participantes = (rawParticipantes ?? []) as unknown as ParticipanteScore[];
+  const participantes = rawParticipantes ?? [];
   let procesados = 0;
 
   for (const p of participantes) {
@@ -302,7 +302,7 @@ export async function recalcularTodosLosScores(
       .limit(1)
       .maybeSingle();
 
-    const ultimo = ultimoEvento as unknown as { score_nuevo: number; created_at: string } | null;
+    const ultimo = ultimoEvento;
 
     // Calculate how many months of seniority have NOT been applied yet
     let mesesYaAplicados = 0;
@@ -334,12 +334,12 @@ export async function recalcularTodosLosScores(
         score_nuevo: scoreNuevo,
         referencia_tipo: null,
         referencia_id: null,
-      } as never);
+      });
 
     // Update participante
     await supabase
       .from('participantes')
-      .update({ score_reputacion: scoreNuevo } as never)
+      .update({ score_reputacion: scoreNuevo })
       .eq('id', p.id);
 
     procesados++;

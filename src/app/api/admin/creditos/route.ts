@@ -87,7 +87,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .order('fecha_solicitud', { ascending: false })
       .range(from, to);
 
-    const typedCreditos = (creditos ?? []) as unknown as CreditoRow[];
+    const typedCreditos = creditos ?? [];
 
     // 4. Collect unique prestatario IDs and fetch their names
     const prestatarioIds = [...new Set(typedCreditos.map((c) => c.prestatario_id))];
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .select('id, nombre')
       .in('id', prestatarioIds);
 
-    const typedParticipantes = (participantes ?? []) as unknown as ParticipanteRow[];
+    const typedParticipantes = participantes ?? [];
     const nombreMap = new Map(typedParticipantes.map((p) => [p.id, p.nombre]));
 
     // 5. Build enriched response

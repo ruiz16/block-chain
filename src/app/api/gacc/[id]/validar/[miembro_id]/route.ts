@@ -45,7 +45,7 @@ export async function POST(
       .eq('user_id', user.id)
       .single();
 
-    const typedValidador = validador as unknown as { id: string } | null;
+    const typedValidador = validador;
 
     if (!typedValidador) {
       return NextResponse.json(
@@ -88,7 +88,7 @@ export async function POST(
       .is('validado_en', null)  // Must be pending
       .maybeSingle();
 
-    const typedTarget = targetMembership as unknown as { id: string; participante_id: string } | null;
+    const typedTarget = targetMembership;
 
     if (!typedTarget) {
       return NextResponse.json(
@@ -118,7 +118,7 @@ export async function POST(
       .update({
         validado_por: typedValidador.id,
         validado_en: now,
-      } as never)
+      })
       .eq('id', typedTarget.id);
 
     if (updateError) {
@@ -132,7 +132,7 @@ export async function POST(
     // Also update participante row
     await supabase
       .from('participantes')
-      .update({ validado_gacc: true, gacc_id: grupoId } as never)
+      .update({ validado_gacc: true, gacc_id: grupoId })
       .eq('id', miembroId);
 
     // ------------------------------------------------------------------

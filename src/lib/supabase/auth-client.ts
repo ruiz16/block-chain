@@ -11,14 +11,15 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let authClient: ReturnType<typeof createBrowserClient> | null = null;
+let authClient: SupabaseClient<Database> | null = null;
 
 /**
  * Returns a singleton Supabase browser client configured for Auth.
  * Uses the anon key — RLS policies enforce access control.
  */
-export function getAuthClient(): SupabaseClient {
+export function getAuthClient(): SupabaseClient<Database> {
   if (authClient) return authClient;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -38,7 +39,7 @@ export function getAuthClient(): SupabaseClient {
     );
   }
 
-  authClient = createBrowserClient(supabaseUrl, anonKey);
+  authClient = createBrowserClient<Database>(supabaseUrl, anonKey);
 
   return authClient;
 }

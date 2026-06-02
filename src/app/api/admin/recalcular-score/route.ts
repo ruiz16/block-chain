@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const participante = rawParticipante as unknown as { rol: string } | null;
+    const participante = rawParticipante;
 
     if (!participante || participante.rol !== 'admin') {
       return NextResponse.json(

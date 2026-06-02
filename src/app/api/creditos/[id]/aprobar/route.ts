@@ -66,7 +66,7 @@ export async function PATCH(
       );
     }
 
-    const credito = creditoRow as unknown as CreditoRowSimple;
+    const credito = creditoRow;
 
     // ------------------------------------------------------------------
     // 3. Validate estado IN ('pendiente', 'avalado')
@@ -91,7 +91,7 @@ export async function PATCH(
         fecha_vencimiento: new Date(
           Date.now() + credito.plazo_dias * 24 * 60 * 60 * 1000,
         ).toISOString(),
-      } as never)
+      })
       .eq('id', credito.id);
 
     if (updateError) {

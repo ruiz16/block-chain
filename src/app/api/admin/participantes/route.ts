@@ -71,7 +71,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    const typedParticipantes = (participantes ?? []) as unknown as ParticipanteRow[];
+    const typedParticipantes = participantes ?? [];
     const participanteIds = typedParticipantes.map((p) => p.id);
 
     // Step 4: Fetch credit stats for all returned participants
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         .select('prestatario_id, monto')
         .in('prestatario_id', participanteIds);
 
-      const typedCreditos = (creditos ?? []) as unknown as CreditoStatsRow[];
+      const typedCreditos = creditos ?? [];
 
       for (const c of typedCreditos) {
         const current = creditStats.get(c.prestatario_id) ?? { count: 0, total: 0 };

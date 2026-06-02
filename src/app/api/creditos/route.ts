@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as ParticipanteRow | null;
+    const typedParticipante = participante;
 
     if (!typedParticipante) {
       return NextResponse.json(
@@ -118,7 +118,7 @@ export async function POST(request: Request): Promise<Response> {
       .from('creditos')
       .insert({
         prestatario_id: typedParticipante.id,
-        monto: montoCusd,
+        monto: montoCusd.toString(),
         monto_cop: montoCop,
         tasa_cambio: tasaCambio,
         descripcion: descripcion ?? null,
@@ -126,7 +126,7 @@ export async function POST(request: Request): Promise<Response> {
         interes_porcentaje: interesPorcentaje,
         plazo_dias: plazo_dias,
         numero_cuotas: numero_cuotas,
-      } as never)
+      })
       .select()
       .single();
 
@@ -145,7 +145,7 @@ export async function POST(request: Request): Promise<Response> {
     await registrarAuditLog({
       accion: 'credito_creado',
       entidadTipo: 'credito',
-      entidadId: (nuevoCredito as unknown as { id: string }).id,
+      entidadId: nuevoCredito.id,
       participanteId: typedParticipante.id,
       detalles: {
         monto: montoCusd,
@@ -212,7 +212,7 @@ export async function GET(): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as ParticipanteRow | null;
+    const typedParticipante = participante;
 
     if (!typedParticipante) {
       // User has no participante row — return empty array

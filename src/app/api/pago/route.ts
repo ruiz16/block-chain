@@ -99,7 +99,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as ParticipanteRow | null;
+    const typedParticipante = participante;
 
     if (participanteError || !typedParticipante) {
       return NextResponse.json(
@@ -127,7 +127,7 @@ export async function POST(request: Request): Promise<Response> {
       .eq('id', cuota_id)
       .single();
 
-    const typedCuota = cuota as unknown as CuotaConCredito | null;
+    const typedCuota = cuota as CuotaConCredito | null;
 
     if (cuotaError || !typedCuota) {
       return NextResponse.json(
@@ -273,7 +273,7 @@ export async function POST(request: Request): Promise<Response> {
         estado: 'pagada',
         tx_hash_pago: tx_hash,
         fecha_pago: new Date().toISOString(),
-      } as never)
+      })
       .eq('id', typedCuota.id);
 
     if (updateCuotaError) {
@@ -317,7 +317,7 @@ export async function POST(request: Request): Promise<Response> {
         .update({
           estado: 'pagado',
           fecha_pago: new Date().toISOString(),
-        } as never)
+        })
         .eq('id', creditoData.id);
 
       if (updateCreditoError) {

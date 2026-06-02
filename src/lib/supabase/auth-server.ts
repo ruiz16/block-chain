@@ -15,6 +15,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // Cookie store compatible with Next.js RequestCookies / NextRequest cookies
 // We use rest parameters + any to stay compatible across Next.js versions
@@ -32,7 +33,7 @@ interface CookieStore {
  *
  * @param cookieStore - The cookie store from the request (NextRequest.cookies or next/headers cookies())
  */
-export function getServerClient(cookieStore: CookieStore): SupabaseClient {
+export function getServerClient(cookieStore: CookieStore): SupabaseClient<Database> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -50,7 +51,7 @@ export function getServerClient(cookieStore: CookieStore): SupabaseClient {
     );
   }
 
-  return createServerClient(supabaseUrl, anonKey, {
+  return createServerClient<Database>(supabaseUrl, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();

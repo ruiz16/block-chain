@@ -23,7 +23,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     .eq('user_id', user.id)
     .single();
 
-  const participante = rawParticipante as unknown as { id: string } | null;
+  const participante = rawParticipante;
 
   if (!participante) {
     return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .eq('id', body.cuota_id)
       .single();
 
-    const cuota = rawCuota as unknown as { credito_id: string } | null;
+    const cuota = rawCuota;
 
     if (!cuota) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     .eq('prestatario_id', participante.id)
     .single();
 
-  const credito = rawCredito as unknown as { id: string; estado: string; monto: string; prestatario_id: string } | null;
+  const credito = rawCredito;
 
   if (fetchError || !credito) {
     return NextResponse.json(
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const { error: updateError } = await supabase
     .from('creditos')
-    .update({ estado: 'desembolsado' } as never)
+    .update({ estado: 'desembolsado' })
     .eq('id', credito.id);
 
   if (updateError) {

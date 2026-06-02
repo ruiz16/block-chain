@@ -9,14 +9,15 @@
 // Use client.ts (service_role) instead.
 // =============================================================================
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-let browserClient: ReturnType<typeof createClient> | null = null;
+let browserClient: SupabaseClient<Database> | null = null;
 
 /**
  * Returns a singleton Supabase client configured with the anon/public key.
  */
-export function getBrowserClient(): ReturnType<typeof createClient> {
+export function getBrowserClient(): SupabaseClient<Database> {
   if (browserClient) return browserClient;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -34,7 +35,7 @@ export function getBrowserClient(): ReturnType<typeof createClient> {
     );
   }
 
-  browserClient = createClient(supabaseUrl, anonKey);
+  browserClient = createClient<Database>(supabaseUrl, anonKey);
 
   return browserClient;
 }

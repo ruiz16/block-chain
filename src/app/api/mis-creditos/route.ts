@@ -52,7 +52,7 @@ export async function GET(): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedParticipante = participante as unknown as ParticipanteRow | null;
+    const typedParticipante = participante;
 
     if (!typedParticipante) {
       return NextResponse.json({ creditos: [] }, { status: 200 });
