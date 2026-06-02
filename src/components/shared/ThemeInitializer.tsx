@@ -10,19 +10,10 @@
 // Renders nothing — zero visual impact.
 // =============================================================================
 
-import { useEffect } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function ThemeInitializer() {
-  useEffect(() => {
-    // Read persisted preference and apply to <html>
-    const stored = localStorage.getItem('theme');
-    if (stored === 'dark' || stored === 'light') {
-      document.documentElement.classList.toggle('dark', stored === 'dark');
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.classList.toggle('dark', prefersDark);
-    }
-  }, []);
-
+  // Mounting the hook is enough — the effect syncs <html> class + localStorage
+  useTheme();
   return null;
 }

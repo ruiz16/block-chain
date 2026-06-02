@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // =============================================================================
 // Server Auth Client — @supabase/ssr createServerClient
 // =============================================================================
@@ -17,13 +16,22 @@ import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
-// Cookie store compatible with Next.js RequestCookies / NextRequest cookies
-// We use rest parameters + any to stay compatible across Next.js versions
-// where the delete/set signatures may change.
+/**
+ * Minimal cookie store interface compatible with both:
+ * - NextRequest.cookies (App Router middleware)
+ * - cookies() from next/headers (Route Handlers, Server Components)
+ *
+ * The optional set/delete methods handle the fact that Server Components
+ * return a readonly cookie store that only implements getAll().
+ *
+ * Uses rest params to stay compatible with the overloaded signatures
+ * of Next.js RequestCookies / ReadonlyRequestCookies without fighting
+ * TypeScript's function-arity contravariance.
+ */
 interface CookieStore {
-  getAll(): any;
-  set?(...args: any[]): void;
-  delete?(...args: any[]): void;
+  getAll(): { name: string; value: string }[];
+  set?(...args: unknown[]): void;
+  delete?(...args: unknown[]): void;
 }
 
 /**

@@ -4,36 +4,13 @@
 // ThemeToggle — Dark/Light mode switch
 // =============================================================================
 //
-// Reads the initial theme from localStorage (or system preference) and toggles
-// the "dark" class on the <html> element. Persists the choice.
+// Uses the shared useTheme hook; handles no theme logic itself.
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
-
-type Theme = 'light' | 'dark';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('dark');
-
-  // On mount: read from localStorage or system preference
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored);
-      document.documentElement.classList.toggle('dark', stored === 'dark');
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(prefersDark ? 'dark' : 'light');
-      document.documentElement.classList.toggle('dark', prefersDark);
-    }
-  }, []);
-
-  const toggle = useCallback(() => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('theme', next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
-  }, [theme]);
+  const { theme, toggle } = useTheme();
 
   return (
     <button

@@ -17,9 +17,15 @@
 //   estado=aprobado          → [Desembolsar] button → POST /api/desembolso
 //
 // Per-row loading state via isLoading map, per-row inline errors via rowErrors map.
+//
+// Composition over render-prop:
+//   Instead of passing a `renderAvalManager` render prop, the parent component
+//   manages the expanded-aval state and renders GestorAvales directly below
+//   <PanelAprobacion>. This avoids prop-drilling and keeps state colocated
+//   with the page that owns it.
 // =============================================================================
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import CeloScanLink from '@/components/shared/CeloScanLink';
 import { EmptyState } from '@/components/ui';
 import type { CreditoPendiente } from '@/types/database';
@@ -28,28 +34,30 @@ type PanelState = 'empty' | 'list' | 'success' | 'error';
 
 interface PanelAprobacionProps {
   creditosIniciales: CreditoPendiente[];
-  /**
-   * Optional render prop for per-row aval management (GestorAvales).
-   * The third argument `onEstadoChange` should be passed to GestorAvales
-   * to keep the parent in sync with aval state transitions.
-   */
-  renderAvalManager?: (
-    creditoId: string,
-    prestatarioId: string,
-    onEstadoChange: (nuevoEstado: string) => void,
-  ) => ReactNode;
+  /** Credit estado map managed by parent — enables composition with GestorAvales */
+  creditEstados: Record<string, string>;
+  /** Called when any action changes a credit's estado (approval, aval, etc.) */
+  onCreditEstadoChange: (creditoId: string, nuevoEstado: string) => void;
+  /** Enable aval management UI column and per-row "Avales" button */
+  enableAvalManagement?: boolean;
+  /** Currently expanded aval row (managed by parent) */
+  expandedAvalId?: string | null;
+  /** Toggle aval expansion for a given credit */
+  onToggleAval?: (creditoId: string | null) => void;
 }
 
 export default function PanelAprobacion({
   creditosIniciales,
-  renderAvalManager,
+  creditEstados,
+  onCreditEstadoChange,
+  enableAvalManagement = false,
+  expandedAvalId = null,
+  onToggleAval,
 }: PanelAprobacionProps) {
   const [state, setState] = useState<PanelState>(creditosIniciales.length === 0 ? 'empty' : 'list');
   const [creditos, setCreditos] = useState<CreditoPendiente[]>(creditosIniciales);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [creditEstados, setCreditEstados] = useState<Record<string, string>>({});
-  const [expandedAval, setExpandedAval] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
@@ -60,11 +68,6 @@ export default function PanelAprobacion({
     if (creditosIniciales.length === 0) {
       setState('empty');
     } else {
-      const estados: Record<string, string> = {};
-      creditosIniciales.forEach((c) => {
-        if (c.estado) estados[c.id] = c.estado;
-      });
-      setCreditEstados(estados);
       setState('list');
     }
   }, [creditosIniciales]);
@@ -108,7 +111,7 @@ export default function PanelAprobacion({
         }
 
         // Update estado in local state — row stays in list so admin can then desembolsar
-        setCreditEstados((prev) => ({ ...prev, [creditoId]: 'aprobado' }));
+        onCreditEstadoChange(creditoId, 'aprobado');
       } else if (estadoActual === 'aprobado') {
         // --- Step 2: DISBURSEMENT ---
         const response = await fetch('/api/desembolso', {
@@ -137,10 +140,6 @@ export default function PanelAprobacion({
     } finally {
       setIsLoading((prev) => ({ ...prev, [creditoId]: false }));
     }
-  }, []);
-
-  const handleAvalEstadoChange = useCallback((creditoId: string, nuevoEstado: string) => {
-    setCreditEstados((prev) => ({ ...prev, [creditoId]: nuevoEstado }));
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -231,55 +230,16 @@ export default function PanelAprobacion({
         </div>
 
         {creditos.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
-            <div className="overflow-x-auto">
-              <table
-                className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
-                aria-label="Créditos pendientes"
-              >
-                <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
-                  <tr>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                      Monto
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                      Prestatario
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                      Score
-                    </th>
-                    {renderAvalManager && (
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                        Estado
-                      </th>
-                    )}
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                      Fecha solicitud
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  {creditos.map((credito) => (
-                    <PanelRow
-                      key={credito.id}
-                      credito={credito}
-                      creditEstados={creditEstados}
-                      isLoading={isLoading}
-                      rowErrors={rowErrors}
-                      expandedAval={expandedAval}
-                      renderAvalManager={renderAvalManager}
-                      onAction={handleAction}
-                      onToggleAval={setExpandedAval}
-                      onAvalEstadoChange={handleAvalEstadoChange}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PanelTable
+            creditos={creditos}
+            creditEstados={creditEstados}
+            isLoading={isLoading}
+            rowErrors={rowErrors}
+            enableAvalManagement={enableAvalManagement}
+            expandedAvalId={expandedAvalId}
+            onAction={handleAction}
+            onToggleAval={onToggleAval}
+          />
         )}
       </div>
     );
@@ -290,83 +250,97 @@ export default function PanelAprobacion({
   // ==========================================================================
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
-        <div className="overflow-x-auto">
-          <table
-            className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
-            aria-label="Créditos pendientes de aprobación"
-          >
-            <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
-              <tr>
+      <PanelTable
+        creditos={creditos}
+        creditEstados={creditEstados}
+        isLoading={isLoading}
+        rowErrors={rowErrors}
+        enableAvalManagement={enableAvalManagement}
+        expandedAvalId={expandedAvalId}
+        onAction={handleAction}
+        onToggleAval={onToggleAval}
+      />
+    </div>
+  );
+}
+
+// =============================================================================
+// PanelRow — Individual credit row with two-step action buttons
+// =============================================================================
+
+// =============================================================================
+// PanelTable — Shared table layout for both error and list states
+// =============================================================================
+
+interface PanelTableProps {
+  creditos: CreditoPendiente[];
+  creditEstados: Record<string, string>;
+  isLoading: Record<string, boolean>;
+  rowErrors: Record<string, string>;
+  enableAvalManagement: boolean;
+  expandedAvalId: string | null;
+  onAction: (creditoId: string, estadoActual: string) => Promise<void>;
+  onToggleAval?: (creditoId: string | null) => void;
+}
+
+function PanelTable({
+  creditos,
+  creditEstados,
+  isLoading,
+  rowErrors,
+  enableAvalManagement,
+  expandedAvalId,
+  onAction,
+  onToggleAval,
+}: PanelTableProps) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
+      <div className="overflow-x-auto">
+        <table
+          className="min-w-full divide-y divide-slate-100 dark:divide-gray-700"
+          aria-label="Créditos pendientes"
+        >
+          <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+            <tr>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Monto
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Prestatario
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Score
+              </th>
+              {enableAvalManagement && (
                 <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Monto
+                  Estado
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Prestatario
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Score
-                </th>
-                {renderAvalManager && (
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                    Estado
-                  </th>
-                )}
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Fecha solicitud
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {creditos.map((credito) => (
-                <PanelRow
-                  key={credito.id}
-                  credito={credito}
-                  creditEstados={creditEstados}
-                  isLoading={isLoading}
-                  rowErrors={rowErrors}
-                  expandedAval={expandedAval}
-                  renderAvalManager={renderAvalManager}
-                  onAction={handleAction}
-                  onToggleAval={setExpandedAval}
-                  onAvalEstadoChange={handleAvalEstadoChange}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+              )}
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Fecha solicitud
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+            {creditos.map((credito) => (
+              <PanelRow
+                key={credito.id}
+                credito={credito}
+                curEstado={creditEstados[credito.id] ?? credito.estado ?? 'pendiente'}
+                isLoading={isLoading[credito.id] ?? false}
+                rowError={rowErrors[credito.id] ?? null}
+                enableAvalManagement={enableAvalManagement}
+                expandedAvalId={expandedAvalId}
+                onAction={onAction}
+                onToggleAval={onToggleAval}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      {/* Expandable aval manager per credit */}
-      {expandedAval && renderAvalManager && (() => {
-        const credito = creditos.find((c) => c.id === expandedAval);
-        if (!credito || !credito.prestatarioId) return null;
-
-        return (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800/50 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Gestión de avales — {credito.solicitante}
-              </h3>
-              <button
-                onClick={() => setExpandedAval(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
-                aria-label="Cerrar gestión de avales"
-              >
-                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            {renderAvalManager(credito.id, credito.prestatarioId, (nuevoEstado) => {
-              handleAvalEstadoChange(credito.id, nuevoEstado);
-            })}
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -377,41 +351,32 @@ export default function PanelAprobacion({
 
 interface PanelRowProps {
   credito: CreditoPendiente;
-  creditEstados: Record<string, string>;
-  isLoading: Record<string, boolean>;
-  rowErrors: Record<string, string>;
-  expandedAval: string | null;
-  renderAvalManager?: (
-    creditoId: string,
-    prestatarioId: string,
-    onEstadoChange: (nuevoEstado: string) => void,
-  ) => ReactNode;
+  curEstado: string;
+  isLoading: boolean;
+  rowError: string | null;
+  enableAvalManagement: boolean;
+  expandedAvalId: string | null;
   onAction: (creditoId: string, estadoActual: string) => Promise<void>;
-  onToggleAval: (creditoId: string | null) => void;
-  onAvalEstadoChange: (creditoId: string, nuevoEstado: string) => void;
+  onToggleAval?: (creditoId: string | null) => void;
 }
 
 function PanelRow({
   credito,
-  creditEstados,
+  curEstado,
   isLoading,
-  rowErrors,
-  expandedAval,
-  renderAvalManager,
+  rowError,
+  enableAvalManagement,
+  expandedAvalId,
   onAction,
   onToggleAval,
-  onAvalEstadoChange,
 }: PanelRowProps) {
-  const curEstado: string = creditEstados[credito.id] ?? credito.estado ?? 'pendiente';
-  const isRowLoading = isLoading[credito.id] ?? false;
-  const rowError = rowErrors[credito.id] ?? null;
-
   const isApprovalAction = curEstado === 'pendiente' || curEstado === 'avalado';
   const buttonLabel = isApprovalAction ? 'Aprobar' : 'Desembolsar';
   const buttonLabelLoading = isApprovalAction ? 'Aprobando…' : 'Desembolsando…';
+  const isExpanded = expandedAvalId === credito.id;
 
   return (
-    <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
+    <tr className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
       <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
         {credito.monto.toLocaleString('es-CO')} cUSD
       </td>
@@ -429,7 +394,7 @@ function PanelRow({
           {credito.score} pts
         </span>
       </td>
-      {renderAvalManager && (
+      {enableAvalManagement && (
         <td className="px-6 py-4.5 whitespace-nowrap text-sm">
           <div className="flex items-center gap-2">
             <span
@@ -464,7 +429,7 @@ function PanelRow({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onAction(credito.id, curEstado)}
-              disabled={isRowLoading}
+              disabled={isLoading}
               className={`inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-semibold rounded-lg shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer ${
                 isApprovalAction
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:ring-blue-500'
@@ -472,7 +437,7 @@ function PanelRow({
               }`}
               aria-label={`${buttonLabel} crédito de ${credito.solicitante}`}
             >
-              {isRowLoading ? (
+              {isLoading ? (
                 <>
                   <svg
                     className="animate-spin h-3.5 w-3.5 mr-1.5 text-white"
@@ -490,15 +455,15 @@ function PanelRow({
                 buttonLabel
               )}
             </button>
-            {renderAvalManager && credito.prestatarioId && (
+            {enableAvalManagement && credito.prestatarioId && onToggleAval && (
               <button
-                onClick={() => onToggleAval(expandedAval === credito.id ? null : credito.id)}
+                onClick={() => onToggleAval(isExpanded ? null : credito.id)}
                 className="inline-flex items-center px-3 py-2 border border-slate-200 dark:border-gray-600 text-xs font-semibold rounded-lg text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-slate-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 transition-all duration-150 cursor-pointer"
-                aria-label={expandedAval === credito.id ? 'Ocultar avales' : 'Gestionar avales'}
-                aria-expanded={expandedAval === credito.id}
+                aria-label={isExpanded ? 'Ocultar avales' : 'Gestionar avales'}
+                aria-expanded={isExpanded}
               >
                 <svg
-                  className={`h-3.5 w-3.5 mr-1 transition-transform ${expandedAval === credito.id ? 'rotate-90' : ''}`}
+                  className={`h-3.5 w-3.5 mr-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
                   fill="currentColor"

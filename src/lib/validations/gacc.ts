@@ -76,3 +76,9 @@ export function validateUnirseGacc(
 export const ValidarMiembroSchema = z.object({}).strict();
 
 export type ValidarMiembroInput = z.infer<typeof ValidarMiembroSchema>;
+
+export function validateValidarMiembro(
+  input: unknown,
+): { success: true; data: ValidarMiembroInput } | { success: false; error: z.ZodError } {
+  return ValidarMiembroSchema.safeParse(input);
+}

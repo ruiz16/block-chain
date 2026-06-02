@@ -383,7 +383,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
       </aside>
 
       {/* ── Main content area ── */}
-      <main className="md:ml-64 pt-14 md:pt-0 min-h-screen bg-gray-50 dark:bg-gray-950">
+      <main id="main-content" tabIndex={-1} className="md:ml-64 pt-14 md:pt-0 min-h-screen bg-gray-50 dark:bg-gray-950 outline-none">
         {children}
       </main>
     </>

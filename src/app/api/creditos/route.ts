@@ -15,7 +15,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
-import { copToCusd, getCopUsdRate } from '@/config/currency';
+import { copToCusd, getCopUsdRate, INTERES_PORCENTAJE } from '@/config/currency';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const tasaCambio = getCopUsdRate();
     const montoCusd = copToCusd(montoCop);
-    const interesPorcentaje = 10; // Fixed 10% interest rate
+    const interesPorcentaje = INTERES_PORCENTAJE;
 
     const { data: nuevoCredito, error: insertError } = await supabase
       .from('creditos')

@@ -18,21 +18,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // =============================================================================
-// EIP-1193 Ethereum Provider type declaration
+// EIP-1193 Provider type comes from @/types/ethereum.d.ts (global Window)
 // =============================================================================
-
-interface EthereumProvider {
-  isMetaMask?: boolean;
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: string, handler: (...args: unknown[]) => void) => void;
-  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
-}
-
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
 
 interface WalletConnectButtonProps {
   onAddressChange: (address: string) => void;

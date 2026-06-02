@@ -15,6 +15,12 @@
 // =============================================================================
 
 /**
+ * Default interest rate for all credits (10%).
+ * In production this could come from env vars or a config table.
+ */
+export const INTERES_PORCENTAJE = 10;
+
+/**
  * Returns the COP/USD exchange rate from environment variables.
  * Throws if NEXT_PUBLIC_COP_USD_RATE is not set or is not a valid number.
  */

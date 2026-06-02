@@ -149,7 +149,8 @@ export default function SiweLogin() {
       // ----------------------------------------------------------------------
       // Step 4: Request signature from wallet (opens MetaMask popup)
       // ----------------------------------------------------------------------
-      const signature = (await window.ethereum.request({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const signature = (await (window.ethereum as any).request({
         method: 'personal_sign',
         params: [messageToSign, address],
       })) as string;

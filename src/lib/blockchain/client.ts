@@ -11,29 +11,33 @@
 
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { celoSepolia } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
+import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import { getCeloRpcUrl } from '@/config/celo';
 
 // Module-level cache — singleton pattern.
+// Types use ReturnType<typeof fn> to stay in sync with whatever viem exports.
 
-let publicClient: any = null;
+type PublicClientType = ReturnType<typeof createPublicClient>;
+type WalletClientType = ReturnType<typeof createWalletClient>;
 
-let walletClient: any = null;
+let publicClient: PublicClientType | null = null;
 
-let account: any = null;
+let walletClient: WalletClientType | null = null;
+
+let account: PrivateKeyAccount | null = null;
 
 /**
  * Returns a singleton public (read-only) viem client for Celo Sepolia.
  */
-export function getPublicClient() {
-  if (publicClient) return publicClient as ReturnType<typeof createPublicClient>;
+export function getPublicClient(): PublicClientType {
+  if (publicClient) return publicClient;
 
   publicClient = createPublicClient({
     chain: celoSepolia,
     transport: http(getCeloRpcUrl()),
-  });
+  }) as PublicClientType;
 
-  return publicClient as ReturnType<typeof createPublicClient>;
+  return publicClient;
 }
 
 /**
@@ -42,8 +46,8 @@ export function getPublicClient() {
  *
  * Throws if CELO_PRIVATE_KEY is not set.
  */
-export function getWalletClient() {
-  if (walletClient) return walletClient as ReturnType<typeof createWalletClient>;
+export function getWalletClient(): WalletClientType {
+  if (walletClient) return walletClient;
 
   const rawKey = process.env.CELO_PRIVATE_KEY;
 
@@ -55,9 +59,9 @@ export function getWalletClient() {
   }
 
   // Normalize: add 0x prefix if missing (MetaMask exports without it)
-  const privateKey = rawKey.startsWith('0x') ? rawKey : (`0x${rawKey}` as const);
+  const privateKey = rawKey.startsWith('0x') ? (rawKey as `0x${string}`) : (`0x${rawKey}` as `0x${string}`);
 
-  const acc = privateKeyToAccount(privateKey as `0x${string}`);
+  const acc = privateKeyToAccount(privateKey);
   account = acc;
 
   walletClient = createWalletClient({
@@ -66,14 +70,14 @@ export function getWalletClient() {
     account: acc,
   });
 
-  return walletClient as ReturnType<typeof createWalletClient>;
+  return walletClient;
 }
 
 /**
  * Returns the Account derived from CELO_PRIVATE_KEY.
  * Must call getWalletClient() first to initialize the account.
  */
-export function getAccount() {
+export function getAccount(): PrivateKeyAccount {
   if (!account) {
     // Initialize wallet client to populate account
     getWalletClient();
@@ -83,7 +87,7 @@ export function getAccount() {
     throw new Error('No se pudo inicializar la cuenta de Celo');
   }
 
-  return account as ReturnType<typeof privateKeyToAccount>;
+  return account;
 }
 
 /**

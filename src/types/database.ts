@@ -205,12 +205,22 @@ export interface GrupoGaccConMiembros extends GrupoGaccRow {
 // API Response Types
 // =============================================================================
 
-/** Generic wrapper for typed API responses */
-export interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  detail?: string;
-}
+/**
+ * Discriminated union for all API responses.
+ *
+ * Use `ApiResult<T>` instead of ad-hoc `{ data?: T; error?: string }`
+ * so that callers MUST check `.success` before accessing `.data`:
+ *
+ *   const result: ApiResult<CreditoRow> = await getCreditos();
+ *   if (result.success) {
+ *     console.log(result.data);   // ✅ typed as CreditoRow
+ *   } else {
+ *     console.error(result.error); // ✅ typed as string
+ *   }
+ */
+export type ApiResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; detail?: string };
 
 /** Successful credit approval response */
 export interface AprobarCreditoResponse {

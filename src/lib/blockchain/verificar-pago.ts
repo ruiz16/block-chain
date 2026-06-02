@@ -138,7 +138,7 @@ export async function verificarPago(
   // ------------------------------------------------------------------
   // 4. Find the cUSD Transfer event in receipt logs
   // ------------------------------------------------------------------
-  const transferLog = receipt.logs.find((log) => {
+  const transferLog = receipt.logs.find((log: { address: string; topics?: string[] | null }) => {
     if (log.address.toLowerCase() !== cusdAddress.toLowerCase()) return false;
     if (!log.topics?.[0]) return false;
     return log.topics[0].toLowerCase() === TRANSFER_EVENT_SIGNATURE;
