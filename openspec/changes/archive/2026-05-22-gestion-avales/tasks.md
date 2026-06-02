@@ -13,7 +13,7 @@
 
 ## Phase 3: API Routes
 
-- [x] 3.1 Create `src/app/api/avales/route.ts` — **POST**: Zod validate, fetch credito (404/`pendiente` or 409), fetch avalador (404/role `aval`|`prestamista` or 403), check no self-assign (400), check no duplicate (409), INSERT aval (default `monto_maximo` from credit monto), UPDATE credito to `avalado`, `registrarAuditLog('aval_agregado')`, return 201. **GET**: filter by `credito_id` or `participante_id`, join `participantes` for name/wallet, return 200 array
+- [x] 3.1 Create `src/app/api/avales/route.ts` — **POST**: Zod validate, fetch credito (404/`pendiente` or 409), fetch avalador (404/valid participant or 403), check no self-assign (400), check no duplicate (409), INSERT aval (default `monto_maximo` from credit monto), UPDATE credito to `avalado`, `registrarAuditLog('aval_agregado')`, return 201. **GET**: filter by `credito_id` or `participante_id`, join `participantes` for name/wallet, return 200 array
 - [x] 3.2 Create `src/app/api/avales/[id]/revocar/route.ts` — **PATCH**: validate id UUID (400), fetch aval (404/active), check credito not disbursed/pagado/default (409), SET `activo=false`, COUNT remaining active avales, UPDATE credito to `pendiente` if count=0, `registrarAuditLog('aval_revocado')`, return 200
 
 ## Phase 4: UI Component

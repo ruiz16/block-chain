@@ -8,7 +8,7 @@ Follow existing desembolso pattern (Zod → Supabase service client → audit lo
 
 | Decision | Options | Tradeoff | Chosen |
 |----------|---------|----------|--------|
-| Avalador validation layer | Route handler vs DB trigger | Trigger is atomic but can't return rich messages (e.g. "avalador must be role='aval' or 'prestamista'"). Route handler can return i18n-ready error codes. | **Route handler** — richer errors |
+| Avalador validation layer | Route handler vs DB trigger | Trigger is atomic but can't return rich messages (e.g. "avalador must be a valid participant"). Route handler can return i18n-ready error codes. | **Route handler** — richer errors |
 | Credit state on revoke | Always revert to `pendiente` vs count-based | If a credit has 2 avales (currently prohibited by UNIQUE on prestatario+credito, but possible if expanded), revoking one shouldn't drop the credit. Count-based is future-proof. | **Count active avales** — revert to `pendiente` only when count = 0 |
 | GestorAvales placement | Inline in PanelAprobacion vs standalone | Inline is simpler now but couples concerns. Standalone follows single-responsibility and allows reuse in a future detail page. | **Standalone component** at `components/avales/` |
 | Enum extension | Raw ALTER TYPE vs DO block | ALTER TYPE ... ADD VALUE inside a transaction errors if value exists. DO block with pg_enum check is idempotent and safe for re-runs. | **DO block** — idempotent migrations |

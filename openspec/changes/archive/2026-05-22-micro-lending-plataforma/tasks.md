@@ -103,7 +103,7 @@
 - `supabase/migrations/001_schema.sql` — Complete migration
 
 **SQL content**:
-- **Enums**: `rol_participante` (`prestamista`, `prestatario`, `aval`), `estado_credito` (`pendiente`, `avalado`, `aprobado`, `desembolsado`, `pagado`, `default`)
+- **Enums**: `rol_participante` (`prestatario`, `admin`), `estado_credito` (`pendiente`, `avalado`, `aprobado`, `desembolsado`, `pagado`, `default`)
 - **Table `participantes`**: id (uuid PK), created_at, wallet_address (text UNIQUE NOT NULL), nombre (text NOT NULL), rol (enum NOT NULL), score_reputacion (integer DEFAULT 50, CHECK 0-100), activo (boolean DEFAULT true)
 - **Table `creditos`**: id (uuid PK), prestatario_id (uuid FK→participantes), monto (numeric, CHECK > 0), descripcion (text), estado (enum NOT NULL), tx_hash (text UNIQUE nullable), fecha_solicitud, fecha_actualizacion
 - **Table `avales`**: id (uuid PK), aval_id (FK→participantes), prestatario_id (FK→participantes), credito_id (FK→creditos), monto_maximo (numeric CHECK > 0), fecha_creacion, activo; UNIQUE (prestatario_id, credito_id)
@@ -146,7 +146,7 @@
 - `Wei = Brand<bigint, "Wei">` — cUSD amount in smallest unit
 - `Address = Brand<\`0x${string}\`, "Address">` — Celo wallet address
 - `TxHash = Brand<\`0x${string}\`, "TxHash">` — Transaction hash
-- `RolParticipante` union type: `'prestamista' | 'prestatario' | 'aval'`
+- `RolParticipante` union type: `'prestatario' | 'admin'`
 - `EstadoCredito` union type: `'pendiente' | 'avalado' | 'aprobado' | 'desembolsado' | 'pagado' | 'default'`
 - `ParticipanteRow` interface
 - `CreditoRow` interface

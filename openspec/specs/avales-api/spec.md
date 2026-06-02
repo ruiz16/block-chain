@@ -8,10 +8,10 @@ REST API endpoints for managing avales (guarantors) on credits — assign, list,
 
 ### Requirement: POST /api/avales — Asignar Aval
 
-The endpoint MUST accept `{ credito_id: string, avalador_id: string }`. The system MUST validate both are valid UUIDs, the credit exists in `pendiente` state, the avalador exists with rol `aval` or `prestamista`, the avalador is not the credit's prestatario, and no active aval exists for that credit. On success (201), the system SHALL insert an `avales` row with `activo = true`, transition the credit to `avalado`, and insert an `audit_log` row with `accion = 'aval_agregado'`.
+The endpoint MUST accept `{ credito_id: string, avalador_id: string }`. The system MUST validate both are valid UUIDs, the credit exists in `pendiente` state, the avalador is a valid participant, the avalador is not the credit's prestatario, and no active aval exists for that credit. On success (201), the system SHALL insert an `avales` row with `activo = true`, transition the credit to `avalado`, and insert an `audit_log` row with `accion = 'aval_agregado'`.
 
 #### Scenario: Asignar aval exitoso
-- GIVEN a credit in `pendiente` and a participant with rol `aval` distinct from the prestatario
+- GIVEN a credit in `pendiente` and a participant distinct from the prestatario
 - WHEN `POST /api/avales` is called with valid `credito_id` and `avalador_id`
 - THEN the response is 201
 - AND the credit transitions to `avalado`

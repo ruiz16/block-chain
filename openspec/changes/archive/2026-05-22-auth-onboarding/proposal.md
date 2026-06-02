@@ -21,7 +21,7 @@ Platform has no authentication — users can't log in, register, or create their
 - 2FA / MFA
 - Password reset flow
 - Wallet signature verification (EIP-4361 / SIWE)
-- Role-based UI gating (prestamista/prestatario/aval)
+- Role-based UI gating (prestatario)
 
 ## Capabilities
 

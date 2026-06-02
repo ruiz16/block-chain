@@ -116,7 +116,7 @@ The system MUST allow authenticated users without a participantes row to create 
 
 - GIVEN an authenticated user with no participantes row
 - WHEN they visit `/onboarding`
-- THEN they see a form with nombre (text), wallet_address (text), rol (select: prestamista, prestatario, aval)
+- THEN they see a form with nombre (text), wallet_address (text), rol (select: prestatario)
 
 - GIVEN an authenticated user who submits valid onboarding data
 - WHEN the form POSTs to the API

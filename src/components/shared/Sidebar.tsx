@@ -12,7 +12,7 @@
 //
 // Props:
 //   userName   — Display name from the participantes table
-//   userRole   — Role string (prestatario, aval, prestamista, admin)
+//   userRole   — Role string (prestatario, admin)
 //   userEmail  — Email from Supabase Auth (optional, for display)
 // =============================================================================
 
@@ -49,13 +49,11 @@ interface NavItemDef {
 
 const ROLE_LABELS: Record<string, string> = {
   prestatario: 'Prestatario',
-  prestamista: 'Prestamista',
   admin: 'Administrador',
 };
 
 const ROLE_COLORS: Record<string, string> = {
   prestatario: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
-  prestamista: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300',
   admin: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
 };
 

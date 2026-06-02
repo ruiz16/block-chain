@@ -10,7 +10,7 @@
 | `created_at` | `timestamptz` | NOT NULL, default `now()` |
 | `wallet_address` | `text` | NOT NULL, UNIQUE |
 | `nombre` | `text` | NOT NULL |
-| `rol` | `rol_participante` | NOT NULL — enum: `prestamista`, `prestatario`, `aval` |
+| `rol` | `rol_participante` | NOT NULL — enum: `prestatario`, `admin` |
 | `score_reputacion` | `integer` | NOT NULL, default 50, CHECK(0–100) |
 | `activo` | `boolean` | NOT NULL, default `true` |
 
@@ -32,7 +32,7 @@
 
 **Unique**: `(prestatario_id, credito_id)` — one guarantor per credit per person.
 
-**RLS**: Aval sees own rows; prestamista sees rows for credits they fund.
+**RLS**: Aval sees own rows; admin manages credits.
 
 ### 1.3 `creditos`
 
@@ -51,7 +51,7 @@
 
 **Indexes**: index on `estado`, index on `prestatario_id`.
 
-**RLS**: Prestatario owns credit; prestamista sees assigned; aval sees linked.
+**RLS**: Prestatario owns credit; aval sees linked.
 
 ### 1.4 `audit_log`
 

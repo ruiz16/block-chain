@@ -162,7 +162,7 @@ User on /onboarding (authenticated, no participantes.user_id = auth.uid())
 │  Onboarding Form │
 │  nombre          │
 │  wallet_address  │  ← pre-filled via ConnectWallet button
-│  rol             │  ← dropdown: prestamista / prestatario / aval
+│  rol             │  ← dropdown: prestatario
 └────────┬─────────┘
          │ POST /api/participantes
          ▼
@@ -261,7 +261,7 @@ export async function getServerSession(cookieStore: RequestCookies): Promise<Ses
 {
   "nombre": "string (required, 1-255 chars)",
   "wallet_address": "0x... (optional, Ethereum address)",
-  "rol": "prestamista | prestatario | aval"
+  "rol": "prestatario"
 }
 ```
 
@@ -366,4 +366,4 @@ Reverse order: remove pages → remove middleware → remove AuthProvider → re
 
 - [ ] Existing `participantes` rows have `wallet_address` but no `user_id`. How do we backfill? Options: manual CSV import with auth.users mapping, or leave NULL and create new rows per user. If participants table already has production data, we need a mapping strategy.
 - [ ] The `GET /api/avales` and `GET /api/desembolso` routes use service-role client and fetch from `participantes` freely — those still work after migration since service-role bypasses RLS. But should server-rendered dashboard pages (like `/aprobacion/page.tsx`) switch to the authenticated server client for RLS enforcement? Currently they use service-role. Decision: keep service-role for now (out of scope), address in a separate security audit change.
-- [ ] Should `/onboarding` redirect to `/aprobacion` always, or should it redirect based on the user's `rol` (prestamista → different dashboard)? For now: always `/aprobacion`. Can revisit when role-based routing is spec'd.
+- [ ] Should `/onboarding` redirect to `/aprobacion` always, or should it redirect based on the user's `rol`? For now: always `/aprobacion`. Can revisit when role-based routing is spec'd.

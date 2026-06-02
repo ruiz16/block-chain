@@ -190,7 +190,7 @@ WHEN navega a /admin/dashboard
 THEN ve 4 tarjetas de KPI y tabla con últimos 20 audit entries
 
 Scenario: No-admin bloqueado en dashboard
-GIVEN un usuario autenticado con rol = 'prestamista'
+GIVEN un usuario autenticado con rol = 'prestatario'
 WHEN navega a /admin/dashboard
 THEN recibe 403 Forbidden
 

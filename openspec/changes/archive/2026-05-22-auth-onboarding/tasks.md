@@ -356,7 +356,7 @@
 - `CrearParticipanteSchema`: validates POST body
   - `nombre`: `z.string().min(1).max(255)`
   - `wallet_address`: `z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()`
-  - `rol`: `z.enum(['prestamista', 'prestatario', 'aval'])`
+  - `rol`: `z.enum(['prestatario'])`
 - `CheckParticipanteSchema`: validates GET query params
   - `check_existing`: `z.literal('true').optional()`
 
@@ -420,7 +420,7 @@
 - Form fields:
   - `nombre`: text input (required, max 255)
   - `wallet_address`: text input (optional, pre-filled by WalletConnect)
-  - `rol`: select dropdown with options: `prestamista`, `prestatario`, `aval`
+  - `rol`: select dropdown with options: `prestatario`
   - + ConnectWallet button (see Phase 8)
 - Validation (client-side before POST):
   - `nombre` not empty

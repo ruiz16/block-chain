@@ -100,8 +100,6 @@ Mapeo de colores por estado (global):
 | `desembolsado` | emerald |
 | `vencida`, `default`, `inactivo` | red |
 | `prestatario` | blue |
-| `aval` | purple |
-| `prestamista` | indigo |
 | `admin` | amber |
 
 ### HealthIndicator

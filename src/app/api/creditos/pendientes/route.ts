@@ -5,19 +5,12 @@
 // Devuelve los créditos en estados pendiente/avalado/aprobado con el nombre
 // y score del prestatario, más la cantidad de avales activos por crédito.
 //
-// Acceso restringido a: admin, aval, prestamista (requireReviewer).
-//
-// Auth flow:
-// 1. Lee cookie de sesión via getServerUser()
-// 2. Verifica que el usuario tenga rol reviewer (no prestatario)
-// 3. Consulta créditos + avales en batch
-// 4. Retorna { creditos: CreditoPendiente[] }
+// Auth: requireReviewer — admin only.
 // =============================================================================
 
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { getServerUser } from '@/lib/supabase/auth-server';
+import { requireReviewer } from '@/lib/auth-guards';
 import type { CreditoPendiente } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -35,40 +28,15 @@ interface CreditoRowWithPrestatario {
     | { nombre: string; score_reputacion: number }[];
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session + reviewer role
+    // 1. Auth guard: admin, prestamista, or aval only
     // ------------------------------------------------------------------
-    const cookieStore = await cookies();
-    const user = await getServerUser(cookieStore);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión' },
-        { status: 401 },
-      );
-    }
+    const auth = await requireReviewer(request);
+    if (auth instanceof Response) return auth;
 
     const supabase = getSupabaseClient();
-
-    const { data: participante } = await supabase
-      .from('participantes')
-      .select('id, rol')
-      .eq('user_id', user.id)
-      .single();
-
-    const typedParticipante = participante as { id: string; rol: string } | null;
-
-    if (
-      !typedParticipante ||
-      !['admin'].includes(typedParticipante.rol)
-    ) {
-      return NextResponse.json(
-        { error: 'ACCESO_DENEGADO', detail: 'Solo administradores pueden ver créditos pendientes' },
-        { status: 403 },
-      );
-    }
 
     // ------------------------------------------------------------------
     // 2. Fetch pending/approved credits with prestatario info

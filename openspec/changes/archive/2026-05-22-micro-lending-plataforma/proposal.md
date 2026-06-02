@@ -24,7 +24,7 @@ Build a community micro-lending platform on Celo Alfajores where participants gr
 ## Capabilities
 
 ### New Capabilities
-- `participant-management`: Registration, roles (prestamista/prestatario/aval), reputation score CRUD
+- `participant-management`: Registration, roles (prestatario/admin), reputation score CRUD
 - `guarantor-system`: Aval relationships — create, verify, dissolve; cascade rules on score changes
 - `credit-lifecycle`: Loan request → approval → disbursement → repayment workflow; status state machine
 - `audit-trail`: Immutable append-only log for every mutation on financial entities

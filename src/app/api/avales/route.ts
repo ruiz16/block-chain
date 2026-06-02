@@ -381,7 +381,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 0. Security guard: Must be authenticated
     // ------------------------------------------------------------------
-    const auth = await requireRoles(request, ['admin', 'prestatario', 'prestamista']);
+    const auth = await requireRoles(request, ['admin', 'prestatario']);
     if (auth instanceof Response) return auth;
 
     const url = new URL(request.url);

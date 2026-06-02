@@ -52,25 +52,11 @@ const USERS_TO_SEED = [
     wallet_address: '0x1111111111111111111111111111111111111111',
   },
   {
-    email: 'prestamista@blockchain.com',
-    password: 'Blockchain2026!',
-    nombre: 'Juan Prestamista',
-    rol: 'prestamista',
-    wallet_address: '0x2222222222222222222222222222222222222222',
-  },
-  {
     email: 'prestatario@blockchain.com',
     password: 'Blockchain2026!',
     nombre: 'Pedro Prestatario',
     rol: 'prestatario',
     wallet_address: '0x3333333333333333333333333333333333333333',
-  },
-  {
-    email: 'aval@blockchain.com',
-    password: 'Blockchain2026!',
-    nombre: 'Maria Aval',
-    rol: 'aval',
-    wallet_address: '0x4444444444444444444444444444444444444444',
   },
 ];
 

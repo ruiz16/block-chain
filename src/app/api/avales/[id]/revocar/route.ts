@@ -44,7 +44,7 @@ export async function PATCH(
   try {
     const { id: routeId } = await params;
     // ------------------------------------------------------------------
-    // 0. Security guard: Must be admin, aval, or prestamista
+    // 0. Security guard: admin only
     // ------------------------------------------------------------------
     const auth = await requireReviewer(request);
     if (auth instanceof Response) return auth;

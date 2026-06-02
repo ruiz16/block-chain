@@ -46,7 +46,7 @@
 **What**:
 - Add `'admin'` to the `RolParticipante` union type:
   ```typescript
-  export type RolParticipante = 'prestamista' | 'prestatario' | 'aval' | 'admin';
+  export type RolParticipante = 'prestatario' | 'admin';
   ```
 
 - [x] Task 2.2 — Create `src/lib/admin-guard.ts`

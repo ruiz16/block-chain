@@ -109,7 +109,7 @@ src/components/creditos/PanelAprobacion.tsx(40,3): error TS2339
 | POST credito exists | ✅ Implemented | 404 if not found |
 | POST credito estado | ✅ Implemented | 409 if not 'pendiente' |
 | POST avalador exists | ✅ Implemented | 404 if not found |
-| POST avalador role | ✅ Implemented | 403 if not 'aval' or 'prestamista' |
+| POST avalador role | ✅ Implemented | 403 if not valid participant |
 | POST no self-aval | ✅ Implemented | 400 if avalador_id === prestatario_id |
 | POST no duplicate | ✅ Implemented | 409 if active aval exists |
 | POST INSERT aval | ✅ Implemented | Default `monto_maximo` from credit `monto` |
