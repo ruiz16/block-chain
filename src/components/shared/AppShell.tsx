@@ -63,16 +63,11 @@ export default function AppShell({ children }: AppShellProps) {
 
   const isPublic = isPublicRoute(pathname);
 
-  // Reset profile when on public routes or not authenticated
+  // Fetch participant profile when on a dashboard route and authenticated.
+  // Also resets profile when navigating to public routes or after logout.
   useEffect(() => {
     if (isPublic || !user) {
       setProfile(null);
-    }
-  }, [isPublic, user]);
-
-  // Fetch participant profile when on a dashboard route and authenticated
-  useEffect(() => {
-    if (isPublic || !user) {
       return;
     }
 
@@ -134,14 +129,23 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   // -----------------------------------------------------------------------
-  // Authenticated on dashboard route: show sidebar
-  // Use a fallback name/role while profile loads
+  // Profile not loaded yet — render children without sidebar to avoid
+  // flashing the wrong role in the sidebar (Bug fix: was defaulting to
+  // 'prestatario' before profile fetch completed).
+  // -----------------------------------------------------------------------
+
+  if (!profile) {
+    return <>{children}</>;
+  }
+
+  // -----------------------------------------------------------------------
+  // Authenticated + profile loaded: show sidebar
   // -----------------------------------------------------------------------
 
   return (
     <Sidebar
-      userName={profile?.nombre ?? 'Cargando...'}
-      userRole={profile?.rol ?? 'prestatario'}
+      userName={profile.nombre}
+      userRole={profile.rol}
       userEmail={user.email}
     >
       {needsWallet && (

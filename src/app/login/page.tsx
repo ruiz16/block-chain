@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/supabase/auth-client';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { ErrorAlert } from '@/components/ui';
 
 type PageState = 'idle' | 'loading' | 'error';
 
@@ -97,12 +98,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 bg-gray-50 dark:bg-gray-950">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
-          Iniciar Sesión
-        </h1>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xl shadow-slate-100/40 dark:shadow-black/20 p-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
+            Iniciar Sesión
+          </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {/* Email */}
           <div>
             <label
@@ -147,12 +149,7 @@ export default function LoginPage() {
 
           {/* Error message */}
           {state === 'error' && errorMsg && (
-            <div
-              className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
-              role="alert"
-            >
-              <p className="text-sm text-red-700 dark:text-red-200">{errorMsg}</p>
-            </div>
+            <ErrorAlert message={errorMsg} />
           )}
 
           {/* Submit button */}
@@ -180,8 +177,9 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+        </div>
 
-        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
           ¿No tienes cuenta?{' '}
           <Link
             href="/register"

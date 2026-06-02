@@ -14,10 +14,19 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { PageHeader, LoadingSkeleton, ErrorAlert, StatusBadge, CardSection } from '@/components/ui';
 import CrearGaccForm from '@/components/gacc/CrearGaccForm';
 import UnirseGaccForm from '@/components/gacc/UnirseGaccForm';
 import MiembroList from '@/components/gacc/MiembroList';
 import ValidationBadge from '@/components/gacc/ValidationBadge';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatCop(monto: number): string {
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(monto);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,6 +70,20 @@ interface MiembroSelf {
   validado: boolean;
 }
 
+interface PendienteAval {
+  id: string;
+  prestatario_id: string;
+  prestatario_nombre: string;
+  prestatario_score_efectivo: number | null;
+  monto: string;
+  monto_cop: number;
+  descripcion: string | null;
+  fecha_solicitud: string;
+  total_necesarios: number;
+  avales_actuales: number;
+  ya_avale: boolean;
+}
+
 // =============================================================================
 // Page Component
 // =============================================================================
@@ -74,6 +97,11 @@ export default function GaccPage() {
   const [grupo, setGrupo] = useState<GrupoData | null>(null);
   const [miembroSelf, setMiembroSelf] = useState<MiembroSelf | null>(null);
   const [miembros, setMiembros] = useState<MiembroData[]>([]);
+
+  // Pending credits to aval
+  const [pendientes, setPendientes] = useState<PendienteAval[]>([]);
+  const [loadingPendientes, setLoadingPendientes] = useState(false);
+  const [avalingId, setAvalingId] = useState<string | null>(null);
 
   // ------------------------------------------------------------------
   // Fetch GACC data on mount
@@ -116,20 +144,70 @@ export default function GaccPage() {
   }, [fetchMiGrupo]);
 
   // ------------------------------------------------------------------
+  // Fetch pending credits to aval (only when has-gacc)
+  // ------------------------------------------------------------------
+  const fetchPendientes = useCallback(async () => {
+    try {
+      setLoadingPendientes(true);
+      const res = await fetch('/api/gacc/pendientes-de-aval');
+      if (res.ok) {
+        const data = await res.json();
+        setPendientes(data.creditos ?? []);
+      }
+    } catch {
+      // Silently fail — non-critical section
+    } finally {
+      setLoadingPendientes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pageState === 'has-gacc') {
+      fetchPendientes();
+    }
+  }, [pageState, fetchPendientes]);
+
+  // ------------------------------------------------------------------
+  // Handle avalar un crédito
+  // ------------------------------------------------------------------
+  const handleAvalar = useCallback(async (creditoId: string) => {
+    try {
+      setAvalingId(creditoId);
+      const res = await fetch('/api/avales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credito_id: creditoId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail ?? 'Error al avalar el crédito');
+        return;
+      }
+
+      // Refresh the pending list
+      await fetchPendientes();
+      // Also refresh group info (miembros might be updated)
+      fetchMiGrupo();
+    } catch {
+      alert('Error de conexión al avalar el crédito');
+    } finally {
+      setAvalingId(null);
+    }
+  }, [fetchPendientes, fetchMiGrupo]);
+
+  // ------------------------------------------------------------------
   // Handlers for child component callbacks
   // ------------------------------------------------------------------
   const handleCrearSuccess = useCallback(() => {
-    // After creating GACC, refresh to show the group view
     fetchMiGrupo();
   }, [fetchMiGrupo]);
 
   const handleUnirseSuccess = useCallback(() => {
-    // After joining, refresh to show the group view
     fetchMiGrupo();
   }, [fetchMiGrupo]);
 
   const handleMiembroValidado = useCallback(() => {
-    // After validating a member, refresh to show updated statuses
     fetchMiGrupo();
   }, [fetchMiGrupo]);
 
@@ -138,24 +216,9 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'loading') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div
-          className="flex items-center justify-center p-12"
-          aria-busy="true"
-          role="status"
-        >
-          <svg
-            className="animate-spin h-8 w-8 text-blue-600 mr-3"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <span className="text-gray-600 dark:text-gray-300">Cargando tu GACC…</span>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader title="Grupo de Ahorro y Crédito Comunitario" subtitle="Cargando tu GACC…" />
+        <LoadingSkeleton variant="text" />
       </div>
     );
   }
@@ -165,34 +228,9 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'error') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4" role="alert">
-          <div className="flex items-start">
-            <svg
-              className="h-5 w-5 text-red-500 mt-0.5 mr-3 shrink-0"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div className="flex-1">
-              <p className="text-red-800 dark:text-red-200 font-medium">Error al cargar tu GACC</p>
-              {errorMsg && <p className="text-red-600 dark:text-red-300 text-sm mt-1">{errorMsg}</p>}
-            </div>
-          </div>
-          <button
-            onClick={fetchMiGrupo}
-            className="mt-3 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-          >
-            Reintentar
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader title="Grupo de Ahorro y Crédito Comunitario" />
+        <ErrorAlert message={errorMsg ?? 'Error al cargar tu GACC'} onRetry={fetchMiGrupo} />
       </div>
     );
   }
@@ -202,15 +240,11 @@ export default function GaccPage() {
   // ==========================================================================
   if (pageState === 'no-gacc') {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Grupo de Ahorro y Crédito Comunitario
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Crea o únete a un GACC para empezar a solicitar créditos
-          </p>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <PageHeader
+          title="Grupo de Ahorro y Crédito Comunitario"
+          subtitle="Crea o únete a un GACC para empezar a solicitar créditos"
+        />
 
         {/* Tab selector */}
         <div className="flex gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
@@ -237,23 +271,19 @@ export default function GaccPage() {
         </div>
 
         {/* Tab content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          {tab === 'crear' ? (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Crear un nuevo GACC
-              </h2>
+        {tab === 'crear' ? (
+          <CardSection title="Crear un nuevo GACC">
+            <div className="p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Al crear un GACC, automáticamente serás el creador y quedarás validado.
                 Luego podrás compartir el código con otros participantes para que se unan.
               </p>
               <CrearGaccForm onSuccess={handleCrearSuccess} />
             </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Unirse a un GACC existente
-              </h2>
+          </CardSection>
+        ) : (
+          <CardSection title="Unirse a un GACC existente">
+            <div className="p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Ingresa el código que te compartió el creador del GACC.
                 Una vez que te unas, un miembro validado del grupo deberá aceptar tu membresía
@@ -261,8 +291,8 @@ export default function GaccPage() {
               </p>
               <UnirseGaccForm onSuccess={handleUnirseSuccess} />
             </div>
-          )}
-        </div>
+          </CardSection>
+        )}
       </div>
     );
   }
@@ -273,9 +303,9 @@ export default function GaccPage() {
   const isCreator = miembroSelf?.id === grupo?.creador_id;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {grupo?.nombre ?? 'Mi GACC'}
@@ -284,9 +314,7 @@ export default function GaccPage() {
             <ValidationBadge validado={miembroSelf.validado} />
           )}
           {isCreator && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-700">
-              Creador
-            </span>
+            <StatusBadge status="admin" label="Creador" />
           )}
         </div>
         {grupo?.descripcion && (
@@ -358,11 +386,84 @@ export default function GaccPage() {
         </div>
       )}
 
+      {/* Pending credits to aval section */}
+      {miembroSelf && miembroSelf.validado && (
+        <div className="mb-6">
+          {loadingPendientes ? (
+            <LoadingSkeleton variant="text" />
+          ) : pendientes.length > 0 ? (
+            <CardSection title={`Créditos pendientes de aval (${pendientes.length})`}>
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {pendientes.map((cred) => {
+                  const completado = cred.avales_actuales >= cred.total_necesarios;
+                  const puedeAvalar = !cred.ya_avale && !completado;
+
+                  return (
+                    <div key={cred.id} className="p-4 flex items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm text-gray-900 dark:text-white">
+                            {cred.prestatario_nombre}
+                          </span>
+                          {cred.prestatario_score_efectivo !== null && (
+                            <span className={`text-xs font-semibold ${
+                              cred.prestatario_score_efectivo >= 70
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : cred.prestatario_score_efectivo >= 40
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-red-600 dark:text-red-400'
+                            }`}>
+                              Score: {cred.prestatario_score_efectivo}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {formatCop(cred.monto_cop)} — {cred.descripcion ?? 'Sin descripción'}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                          {cred.avales_actuales} de {cred.total_necesarios} avales
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {cred.ya_avale ? (
+                          <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+                            ✓ Avalado
+                          </span>
+                        ) : completado ? (
+                          <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                            Completado
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleAvalar(cred.id)}
+                            disabled={avalingId === cred.id}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {avalingId === cred.id ? (
+                              <>
+                                <svg className="animate-spin h-3 w-3 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Avalando…
+                              </>
+                            ) : (
+                              'Avalar'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardSection>
+          ) : null}
+        </div>
+      )}
+
       {/* Members section */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Miembros ({miembros.length})
-        </h2>
+      <CardSection title={`Miembros (${miembros.length})`}>
         {grupo && miembroSelf && (
           <MiembroList
             grupoId={grupo.id}
@@ -372,7 +473,7 @@ export default function GaccPage() {
             onMiembroValidado={handleMiembroValidado}
           />
         )}
-      </div>
+      </CardSection>
     </div>
   );
 }

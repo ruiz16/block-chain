@@ -20,6 +20,7 @@ import { createWalletClient, custom } from 'viem';
 import { celoSepolia } from 'viem/chains';
 import { getCusdContractAddress, getPlatformWalletAddressPublic, parseCusd } from '@/config/celo';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
+import { LoadingSkeleton, EmptyState } from '@/components/ui';
 import type { EnrichedCuota } from '@/app/api/mis-cuotas/route';
 
 type PanelState = 'loading' | 'empty' | 'no-pending' | 'list' | 'connecting' | 'submitting' | 'success' | 'error';
@@ -331,15 +332,7 @@ export default function PanelPagos() {
   // Render: loading
   // ==========================================================================
   if (state === 'loading') {
-    return (
-      <div className="flex items-center justify-center p-8" aria-busy="true" role="status">
-        <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <span className="text-gray-600 dark:text-gray-300">Cargando tus cuotas…</span>
-      </div>
-    );
+    return <LoadingSkeleton variant="table" />;
   }
 
   // ==========================================================================
@@ -347,12 +340,15 @@ export default function PanelPagos() {
   // ==========================================================================
   if (state === 'empty') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <svg className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes cuotas registradas</p>
-      </div>
+      <EmptyState
+        title="Sin cuotas registradas"
+        description="No tienes cuotas registradas en la plataforma."
+        icon={
+          <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        }
+      />
     );
   }
 
@@ -361,13 +357,15 @@ export default function PanelPagos() {
   // ==========================================================================
   if (state === 'no-pending') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <svg className="h-16 w-16 text-green-300 dark:text-green-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes pagos pendientes</p>
-        <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Todas tus cuotas están al día</p>
-      </div>
+      <EmptyState
+        title="No tienes pagos pendientes"
+        description="Todas tus cuotas están al día"
+        icon={
+          <svg className="h-16 w-16 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        }
+      />
     );
   }
 

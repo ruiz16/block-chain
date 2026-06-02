@@ -96,7 +96,7 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
-// Only run middleware on dashboard routes
+// Protect dashboard routes AND /perfil (which is outside the dashboard group)
 export const config = {
   matcher: [
     '/solicitar',

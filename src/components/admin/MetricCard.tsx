@@ -32,7 +32,7 @@ export interface MetricCardProps {
 // ---------------------------------------------------------------------------
 export default function MetricCard({ label, value, icon, trend }: MetricCardProps) {
   return (
-    <div className="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+    <div className="rounded-xl bg-white dark:bg-gray-800 border border-slate-200/80 dark:border-slate-700 p-5 shadow-sm">
       <div className="flex items-start justify-between">
         {icon && (
           <div className="flex-shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">

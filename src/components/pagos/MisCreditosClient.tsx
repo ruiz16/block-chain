@@ -10,31 +10,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import CeloScanLink from '@/components/shared/CeloScanLink';
-import type { CreditoRow, EstadoCredito } from '@/types/database';
+import { StatusBadge, LoadingSkeleton, ErrorAlert, EmptyState } from '@/components/ui';
+import type { CreditoRow } from '@/types/database';
 
 type PageState = 'loading' | 'empty' | 'list' | 'error';
-
-// =============================================================================
-// Estado badge colors
-// =============================================================================
-
-const ESTADO_COLORS: Record<string, string> = {
-  pendiente: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700',
-  avalado: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-700',
-  aprobado: 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700',
-  desembolsado: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-700',
-  pagado: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700',
-  default: 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-700',
-};
-
-const ESTADO_LABELS: Record<string, string> = {
-  pendiente: 'Pendiente',
-  avalado: 'Avalado',
-  aprobado: 'Aprobado',
-  desembolsado: 'Desembolsado',
-  pagado: 'Pagado',
-  default: 'Default',
-};
 
 // =============================================================================
 // Component
@@ -78,29 +57,7 @@ export default function MisCreditosClient() {
   // Render: loading state
   // ==========================================================================
   if (state === 'loading') {
-    return (
-      <div
-        className="flex items-center justify-center p-8"
-        aria-busy="true"
-        role="status"
-      >
-        <svg
-          className="animate-spin h-8 w-8 text-blue-600 mr-3"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
-        <span className="text-gray-600 dark:text-gray-300">Cargando tus créditos…</span>
-      </div>
-    );
+    return <LoadingSkeleton variant="table" />;
   }
 
   // ==========================================================================
@@ -108,24 +65,15 @@ export default function MisCreditosClient() {
   // ==========================================================================
   if (state === 'empty') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <svg
-          className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-          />
-        </svg>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">No tienes créditos registrados</p>
-      </div>
+      <EmptyState
+        title="No tienes créditos registrados"
+        description="Aún no has solicitado ningún crédito en la plataforma."
+        icon={
+          <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        }
+      />
     );
   }
 
@@ -133,28 +81,7 @@ export default function MisCreditosClient() {
   // Render: error state
   // ==========================================================================
   if (state === 'error') {
-    return (
-      <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4" role="alert">
-        <div className="flex items-start">
-          <svg
-            className="h-5 w-5 text-red-500 mt-0.5 mr-3 shrink-0"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <div className="flex-1">
-            <p className="text-red-800 dark:text-red-200 font-medium">{errorMsg}</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <ErrorAlert message={errorMsg!} onRetry={fetchCreditos} />;
   }
 
   // ==========================================================================
@@ -195,17 +122,11 @@ export default function MisCreditosClient() {
 
               return (
                 <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
+                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-gray-900 dark:text-white font-bold">
                     $ {montoCop.toLocaleString('es-CO')} COP
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        ESTADO_COLORS[credito.estado] ?? 'bg-slate-50 dark:bg-gray-700 text-slate-700 dark:text-gray-300 border border-slate-200 dark:border-gray-600'
-                      }`}
-                    >
-                      {ESTADO_LABELS[credito.estado] ?? credito.estado}
-                    </span>
+                    <StatusBadge status={credito.estado} />
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-500 dark:text-gray-400 font-medium">
                     {new Date(credito.fecha_solicitud).toLocaleDateString('es-CO', {

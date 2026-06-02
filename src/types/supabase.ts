@@ -59,6 +59,8 @@ export interface Database {
           user_id: string;
           score_reputacion: number;
           activo: boolean;
+          estado: string;
+          codigo_referido: string | null;
           auth_password: string | null;
           gacc_id: string | null;
           validado_gacc: boolean;
@@ -72,6 +74,8 @@ export interface Database {
           user_id: string;
           score_reputacion?: number; // default 50
           activo?: boolean; // default true
+          estado?: string;
+          codigo_referido?: string | null;
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean; // default false
@@ -85,6 +89,8 @@ export interface Database {
           user_id?: string;
           score_reputacion?: number;
           activo?: boolean;
+          estado?: string;
+          codigo_referido?: string | null;
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean;
