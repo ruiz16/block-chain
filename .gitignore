@@ -50,6 +50,10 @@ next-env.d.ts
 
 #GRAPHIFY
 graphify-out/*
+
+#IA - AGENTS
 .agents/*
 .claude/*
+openspec/*
+docs/*
 skills-lock.json

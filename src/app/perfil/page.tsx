@@ -270,7 +270,7 @@ export default function PerfilPage() {
   // ------------------------------------------------------------------------
   // Profile loaded — render form
   // ------------------------------------------------------------------------
-  const rolLabel = profile?.rol === 'prestatario' ? 'Prestatario'
+  const rolLabel = profile?.rol === 'usuario' ? 'Usuario'
     : profile?.rol === 'admin' ? 'Administrador'
     : profile?.rol ?? '—';
 

@@ -52,10 +52,10 @@ const USERS_TO_SEED = [
     wallet_address: '0x1111111111111111111111111111111111111111',
   },
   {
-    email: 'prestatario@blockchain.com',
+    email: 'test@blockchain.com',
     password: 'Blockchain2026!',
-    nombre: 'Pedro Prestatario',
-    rol: 'prestatario',
+    nombre: 'Pedro Usuario',
+    rol: 'usuario',
     wallet_address: '0x3333333333333333333333333333333333333333',
   },
 ];
@@ -74,7 +74,7 @@ async function seed() {
 
   for (const seedUser of USERS_TO_SEED) {
     let authUser = existingUsersByEmail.get(seedUser.email.toLowerCase());
-    
+
     if (!authUser) {
       console.log(`Creando usuario Auth para ${seedUser.email}...`);
       const { data: createData, error: createError } = await supabase.auth.admin.createUser({

@@ -101,7 +101,7 @@ export default function AppShell({ children }: AppShellProps) {
   }, [isPublic, user]);
 
   // Determine whether to show wallet warning
-  const needsWallet = profile?.rol === 'prestatario' && !profile.wallet_address && !walletWarningDismissed;
+  const needsWallet = profile?.rol === 'usuario' && !profile.wallet_address && !walletWarningDismissed;
 
   // -----------------------------------------------------------------------
   // Public routes: no sidebar, just children
@@ -131,7 +131,7 @@ export default function AppShell({ children }: AppShellProps) {
   // -----------------------------------------------------------------------
   // Profile not loaded yet — render children without sidebar to avoid
   // flashing the wrong role in the sidebar (Bug fix: was defaulting to
-  // 'prestatario' before profile fetch completed).
+  // 'usuario' before profile fetch completed).
   // -----------------------------------------------------------------------
 
   if (!profile) {

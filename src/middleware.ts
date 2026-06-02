@@ -83,8 +83,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Aprobacion routes: blocked for 'prestatario' role
-    if (isAprobacionRoute && (!role || role === 'prestatario')) {
+    // Aprobacion routes: blocked for 'usuario' role
+    if (isAprobacionRoute && (!role || role === 'usuario')) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/login';
       loginUrl.searchParams.set('redirect', pathname);

@@ -18,7 +18,7 @@ const STATE_COLORS: Record<string, string> = {
   inactivo: 'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
   // Roles
   admin: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
-  prestatario: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700',
+  usuario: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -33,7 +33,7 @@ const STATE_LABELS: Record<string, string> = {
   activo: 'Activo',
   inactivo: 'Inactivo',
   admin: 'Administrador',
-  prestatario: 'Prestatario',
+  usuario: 'Usuario',
 };
 
 interface StatusBadgeProps {

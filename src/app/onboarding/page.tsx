@@ -59,7 +59,7 @@ export default function OnboardingPage() {
         if (!cancelled) {
           if (data.exists) {
             // User already has a profile — redirect to dashboard based on role
-            if (data.participante?.rol === 'prestatario') {
+            if (data.participante?.rol === 'usuario') {
               router.push('/mis-creditos');
             } else {
               router.push('/aprobacion');
@@ -137,8 +137,8 @@ export default function OnboardingPage() {
 
         if (res.status === 201) {
           setPageState('redirecting');
-          // Redirect based on role — prestatarios go to GACC first
-          if (rol === 'prestatario') {
+          // Redirect based on role — usuarios go to GACC first
+          if (rol === 'usuario') {
             router.push('/gacc');
           } else {
             router.push('/aprobacion');
@@ -159,7 +159,7 @@ export default function OnboardingPage() {
           setErrorMsg(data.detail ?? 'Ya tienes un perfil de participante');
           // Shouldn't happen since we checked on mount, but handle it gracefully
           setPageState('redirecting');
-          if (rol === 'prestatario' || data.participante?.rol === 'prestatario') {
+          if (rol === 'usuario' || data.participante?.rol === 'usuario') {
             router.push('/mis-creditos');
           } else {
             router.push('/aprobacion');
@@ -285,7 +285,7 @@ export default function OnboardingPage() {
               className="block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             >
               <option value="">Selecciona un rol</option>
-              <option value="prestatario">Prestatario</option>
+              <option value="usuario">Usuario</option>
             </select>
             {fieldErrors.rol && (
               <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.rol}</p>

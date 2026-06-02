@@ -162,4 +162,4 @@ Además, tiene acceso a un **registro de auditoría** completo donde puede ver c
 
 ## 9. Resumen en 3 Líneas
 
-> Una plataforma digital que permite pedir, aprobar y pagar micro-créditos de forma transparente, automatizada y verificable. Cada transacción financiera queda registrada en la blockchain de Celo, eliminando la necesidad de conciliación manual y reduciendo drásticamente los costos operativos. El sistema incluye roles bien definidos (prestatario, admin), un sistema de reputación, y un panel de control con indicadores en tiempo real.
+> Una plataforma digital que permite pedir, aprobar y pagar micro-créditos de forma transparente, automatizada y verificable. Cada transacción financiera queda registrada en la blockchain de Celo, eliminando la necesidad de conciliación manual y reduciendo drásticamente los costos operativos. El sistema incluye roles bien definidos (usuario, admin), un sistema de reputación, y un panel de control con indicadores en tiempo real.

@@ -32,8 +32,8 @@ export const CrearParticipanteSchema = z.object({
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida. Debe ser una dirección Ethereum (0x...)')
     .optional()
     .or(z.literal('')),
-  rol: z.enum(['prestatario'], {
-    message: 'El rol debe ser prestatario',
+  rol: z.enum(['usuario'], {
+    message: 'El rol debe ser usuario',
   }),
   codigo_referido: z
     .string()

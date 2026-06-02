@@ -12,7 +12,7 @@
 //
 // Props:
 //   userName   — Display name from the participantes table
-//   userRole   — Role string (prestatario, admin)
+//   userRole   — Role string (usuario, admin)
 //   userEmail  — Email from Supabase Auth (optional, for display)
 // =============================================================================
 
@@ -48,12 +48,12 @@ interface NavItemDef {
 // ---------------------------------------------------------------------------
 
 const ROLE_LABELS: Record<string, string> = {
-  prestatario: 'Prestatario',
+  usuario: 'Usuario',
   admin: 'Administrador',
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  prestatario: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
+  usuario: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
   admin: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
 };
 
@@ -122,10 +122,10 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Créditos',
     items: [
-      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['prestatario', 'admin'] },
-      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['prestatario'] },
-      { label: 'Mi GACC', href: '/gacc', icon: Icons.shield, roles: ['prestatario'] },
-      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['prestatario', 'admin'] },
+      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['usuario', 'admin'] },
+      { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['usuario'] },
+      { label: 'Mi GACC', href: '/gacc', icon: Icons.shield, roles: ['usuario'] },
+      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['usuario', 'admin'] },
     ],
   },
   {
@@ -147,8 +147,8 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Configuración',
     items: [
-      { label: 'Notificaciones', href: '/notificaciones', icon: Icons.bell, roles: ['prestatario', 'admin'] },
-      { label: 'Mi Perfil', href: '/perfil', icon: Icons.user, roles: ['prestatario', 'admin'] },
+      { label: 'Notificaciones', href: '/notificaciones', icon: Icons.bell, roles: ['usuario', 'admin'] },
+      { label: 'Mi Perfil', href: '/perfil', icon: Icons.user, roles: ['usuario', 'admin'] },
     ],
   },
 ];

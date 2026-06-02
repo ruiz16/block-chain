@@ -41,8 +41,8 @@ export default function Home() {
 
         if (!cancelled) {
           setStatus('redirecting');
-          if (data.exists && data.participante?.rol === 'prestatario') {
-            // Prestatarios without a GACC need to create/join one first
+          if (data.exists && data.participante?.rol === 'usuario') {
+            // Usuarios without a GACC need to create/join one first
             if (!data.participante.gacc_id) {
               router.replace('/gacc');
             } else {

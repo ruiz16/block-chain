@@ -63,7 +63,7 @@ export default function SolicitarCredito() {
         const data = await res.json();
 
         if (!cancelled) {
-          if (data.exists && data.participante?.rol === 'prestatario') {
+          if (data.exists && data.participante?.rol === 'usuario') {
             const gaccId = data.participante.gacc_id;
             const validado = data.participante.validado_gacc;
 

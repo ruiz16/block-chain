@@ -490,7 +490,7 @@ export async function POST(request: NextRequest) {
             user_id: currentUser.id,
             wallet_address: walletAddress,
             nombre: `Wallet ${truncatedAddress}`,
-            rol: 'prestatario',
+            rol: 'usuario',
             score_reputacion: 50,
             activo: true,
             auth_password: password,
