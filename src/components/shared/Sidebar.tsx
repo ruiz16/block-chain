@@ -16,7 +16,7 @@
 //   userEmail  — Email from Supabase Auth (optional, for display)
 // =============================================================================
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, memo, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -156,6 +156,53 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Memoized NavLink — only re-renders when active state or notifCount changes
+// ---------------------------------------------------------------------------
+
+const NavLink = memo(function NavLink({
+  item,
+  active,
+  role,
+  notifCount,
+  onClose,
+}: {
+  item: NavItemDef;
+  active: boolean;
+  role: RolParticipante;
+  notifCount: number;
+  onClose: () => void;
+}) {
+  const isNotificaciones = item.href === '/notificaciones';
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className={`
+        group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+        transition-all duration-150
+        ${
+          active
+            ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-l-4 border-blue-600 dark:border-blue-400 pl-[10px]'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 border-l-4 border-transparent pl-3'
+        }
+      `}
+      aria-current={active ? 'page' : undefined}
+    >
+      <span className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
+        {item.icon}
+      </span>
+      <span className="flex-1">{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
+      {isNotificaciones && notifCount > 0 && (
+        <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+          {notifCount > 9 ? '9+' : notifCount}
+        </span>
+      )}
+    </Link>
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Sidebar Component
 // ---------------------------------------------------------------------------
 
@@ -198,38 +245,7 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
     return pathname === href || pathname.startsWith(href + '/');
   };
 
-  const renderNavLink = (item: NavItemDef) => {
-    const active = isActive(item.href);
-    const isNotificaciones = item.href === '/notificaciones';
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={closeMobile}
-        className={`
-          group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-          transition-all duration-150
-          ${
-            active
-              ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-l-4 border-blue-600 dark:border-blue-400 pl-[10px]'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 border-l-4 border-transparent pl-3'
-          }
-        `}
-        aria-current={active ? 'page' : undefined}
-      >
-        <span className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
-          {item.icon}
-        </span>
-        <span className="flex-1">{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
-        {isNotificaciones && notifCount > 0 && (
-          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
-            {notifCount > 9 ? '9+' : notifCount}
-          </span>
-        )}
-      </Link>
-    );
-  };
+  // renderNavLink reemplazado por NavLink memoizado (arriba)
 
   // -----------------------------------------------------------------------
   // Sidebar content (shared between mobile drawer and desktop sidebar)
@@ -273,7 +289,16 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
               {section.title}
             </p>
             <div className="space-y-0.5">
-              {section.items.map(renderNavLink)}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                  role={role}
+                  notifCount={notifCount}
+                  onClose={closeMobile}
+                />
+              ))}
             </div>
           </div>
         ))}
