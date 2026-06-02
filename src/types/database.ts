@@ -25,7 +25,7 @@ export type TxHash = Brand<`0x${string}`, 'TxHash'>;
 // Database Enums (union types matching SQL enums)
 // =============================================================================
 
-export type RolParticipante = 'prestamista' | 'prestatario' | 'aval' | 'admin';
+export type RolParticipante = 'prestamista' | 'prestatario' | 'admin';
 
 export type EstadoCredito =
   | 'pendiente'
