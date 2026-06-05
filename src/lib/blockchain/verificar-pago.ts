@@ -1,19 +1,22 @@
 // =============================================================================
-// verificarPago — On-Chain cUSD Payment Verification (Read-Only)
+// verificarPago — On-Chain COPm Payment Verification (Read-Only)
 // =============================================================================
 //
 // Pure blockchain verification function. Takes a transaction hash and expected
-// amount, verifies the on-chain transaction represents a valid cUSD repayment
+// amount, verifies the on-chain transaction represents a valid COPm repayment
 // to the platform wallet.
 //
-// CRITICAL: For ERC-20 cUSD transfers, the transaction `to` is the cUSD
+// CRITICAL: For ERC-20 COPm transfers, the transaction `to` is the COPm
 // contract, NOT the platform wallet. We must parse `Transfer` event logs
 // from the receipt to find the actual recipient and amount.
+//
+// COPm (Mento Colombian Peso) is an 18-decimal ERC-20, identical to cUSD
+// in interface — only the contract address changes.
 // =============================================================================
 
 import { decodeEventLog } from 'viem';
 import { getPublicClient, getPlatformWalletAddress } from '@/lib/blockchain/client';
-import { getCusdContractAddress } from '@/config/celo';
+import { getCopmContractAddress } from '@/config/celo';
 import type { VerificationResult } from '@/types/database';
 
 // =============================================================================
@@ -69,14 +72,14 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 // =============================================================================
 
 /**
- * Verifies that an on-chain transaction represents a valid cUSD repayment
+ * Verifies that an on-chain transaction represents a valid COPm repayment
  * to the platform wallet with sufficient amount.
  *
  * Flow:
  * 1. Fetch transaction & receipt via publicClient
- * 2. Verify tx.to === cUSD contract address (TX_DESTINO_INVALIDO)
+ * 2. Verify tx.to === COPm contract address (TX_DESTINO_INVALIDO)
  * 3. Verify receipt.status === 'success' (TX_REVERTIDA)
- * 4. Find cUSD Transfer event in receipt logs
+ * 4. Find COPm Transfer event in receipt logs
  * 5. Verify Transfer event recipient === platform wallet (TX_BENEFICIARIO_INVALIDO)
  * 6. Verify Transfer event value >= expected amount (TX_MONTO_INSUFICIENTE)
  *
@@ -87,7 +90,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * Error codes:
  * - TX_NO_ENCONTRADA: Transaction not found on-chain
  * - TX_REVERTIDA: Transaction receipt status is 'reverted'
- * - TX_DESTINO_INVALIDO: Transaction is not to the cUSD contract
+ * - TX_DESTINO_INVALIDO: Transaction is not to the COPm contract
  * - TX_BENEFICIARIO_INVALIDO: Transfer recipient is not the platform wallet
  * - TX_MONTO_INSUFICIENTE: Transferred amount is less than expected
  * - RPC_ERROR: RPC timeout or network error during verification
@@ -97,7 +100,7 @@ export async function verificarPago(
   montoEsperado: bigint,
 ): Promise<VerificationResult> {
   const publicClient = getPublicClient();
-  const cusdAddress = getCusdContractAddress();
+  const copmAddress = getCopmContractAddress();
   const platformWallet = getPlatformWalletAddress();
 
   // ------------------------------------------------------------------
@@ -122,9 +125,9 @@ export async function verificarPago(
   }
 
   // ------------------------------------------------------------------
-  // 2. Verify tx.to === cUSD contract address
+  // 2. Verify tx.to === COPm contract address
   // ------------------------------------------------------------------
-  if (!tx.to || tx.to.toLowerCase() !== cusdAddress.toLowerCase()) {
+  if (!tx.to || tx.to.toLowerCase() !== copmAddress.toLowerCase()) {
     return failure('TX_DESTINO_INVALIDO');
   }
 
@@ -136,10 +139,10 @@ export async function verificarPago(
   }
 
   // ------------------------------------------------------------------
-  // 4. Find the cUSD Transfer event in receipt logs
+  // 4. Find the COPm Transfer event in receipt logs
   // ------------------------------------------------------------------
   const transferLog = receipt.logs.find((log: { address: string; topics?: string[] | null }) => {
-    if (log.address.toLowerCase() !== cusdAddress.toLowerCase()) return false;
+    if (log.address.toLowerCase() !== copmAddress.toLowerCase()) return false;
     if (!log.topics?.[0]) return false;
     return log.topics[0].toLowerCase() === TRANSFER_EVENT_SIGNATURE;
   });

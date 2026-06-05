@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
           ),
         },
         {
-          label: 'Desembolsado (cUSD)',
+          label: 'Desembolsado (COPm)',
           value: Number(metrics.totalDesembolsado).toLocaleString('es-CO'),
           icon: (
             <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
           ),
         },
         {
-          label: 'En Circulación (cUSD)',
+          label: 'En Circulación (COPm)',
           value: Number(metrics.enCirculacion).toLocaleString('es-CO'),
           icon: (
             <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

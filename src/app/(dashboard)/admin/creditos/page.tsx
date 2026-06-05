@@ -127,8 +127,7 @@ export default function AdminCreditosPage() {
             <thead className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
               <tr>
                 <th scope="col" className="px-6 py-4.5 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Solicitante</th>
-                <th scope="col" className="px-6 py-4.5 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">Monto (COP)</th>
-                <th scope="col" className="px-6 py-4.5 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">Monto (cUSD)</th>
+                <th scope="col" className="px-6 py-4.5 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">Monto (COPm)</th>
                 <th scope="col" className="px-6 py-4.5 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">Estado</th>
                 <th scope="col" className="px-6 py-4.5 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">Plazo</th>
                 <th scope="col" className="px-6 py-4.5 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">Vencimiento</th>
@@ -148,10 +147,7 @@ export default function AdminCreditosPage() {
                     {c.prestatario_nombre}
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm text-right font-mono text-slate-600 dark:text-gray-300 font-semibold">
-                    ${Number(c.monto_cop).toLocaleString('es-CO', { minimumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-6 py-4.5 whitespace-nowrap text-sm text-right font-mono text-slate-400 dark:text-gray-500">
-                    {Number(c.monto).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                    ${Number(c.monto).toLocaleString('es-CO', { minimumFractionDigits: 0 })}
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm text-center">
                     <StatusBadge status={c.estado} />

@@ -118,12 +118,12 @@ export default function MisCreditosClient() {
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {creditos.map((credito) => {
-              const montoCop = Number(credito.monto_cop);
+              const montoCop = Number(credito.monto);
 
               return (
                 <tr key={credito.id} className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm text-gray-900 dark:text-white font-bold">
-                    $ {montoCop.toLocaleString('es-CO')} COP
+                    $ {montoCop.toLocaleString('es-CO')} COPm
                   </td>
                   <td className="px-6 py-4.5 whitespace-nowrap text-sm">
                     <StatusBadge status={credito.estado} />

@@ -21,7 +21,7 @@ export default function PagosPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <PageHeader
         title="Mis Pagos"
-        subtitle="Paga tus cuotas directamente con MetaMask. Necesitas cUSD en tu wallet de Celo Sepolia."
+        subtitle="Paga tus cuotas en COPm (Mento Colombian Peso) desde MetaMask o MiniPay. El monto está en pesos colombianos — 1 COPm = 1 COP."
       />
 
       <PanelPagos />

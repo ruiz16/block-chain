@@ -31,8 +31,6 @@ import type { Database } from '@/types/supabase';
 interface CreditoConPrestatario {
   id: string;
   monto: string;
-  monto_cop: string;
-  tasa_cambio: string;
   estado: string;
   tx_hash: string | null;
   descripcion: string | null;
@@ -93,8 +91,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       .select(`
         id,
         monto,
-        monto_cop,
-        tasa_cambio,
         estado,
         tx_hash,
         descripcion,
@@ -196,14 +192,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 7. Execute blockchain transfer
+    // 7. Execute blockchain transfer (COPm on Celo)
     // ------------------------------------------------------------------
-    const montoCusd = typedCredito.monto;
+    const montoWei = typedCredito.monto;
 
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(montoCusd));
+      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(montoWei));
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
@@ -211,13 +207,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         entidadTipo: 'credito',
         entidadId: typedCredito.id,
         participanteId: prestatario.id,
-        detalles: {
-          error: blockchainErr instanceof Error ? blockchainErr.message : String(blockchainErr),
-          credito_id: typedCredito.id,
-          score_reputacion: scoreReputacion,
-          monto: typedCredito.monto,
-          monto_cop: typedCredito.monto_cop,
-          tasa_cambio: typedCredito.tasa_cambio,
+          detalles: {
+            error: blockchainErr instanceof Error ? blockchainErr.message : String(blockchainErr),
+            credito_id: typedCredito.id,
+            score_reputacion: scoreReputacion,
+            monto: typedCredito.monto,
         },
       });
 
@@ -340,8 +334,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       participanteId: prestatario.id,
       detalles: {
         monto: typedCredito.monto,
-        monto_cop: typedCredito.monto_cop,
-        tasa_cambio: typedCredito.tasa_cambio,
         tx_hash: txHash,
         score_reputacion: scoreReputacion,
         numero_cuotas: numCuotas,

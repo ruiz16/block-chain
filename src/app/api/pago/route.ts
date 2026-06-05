@@ -2,6 +2,9 @@
 // POST /api/pago — Register Payment for a Single Cuota
 // =============================================================================
 //
+// Uses COPm (Mento Colombian Peso) for on-chain verification.
+// The payment is verified against the COPm contract on Celo.
+//
 // Flow:
 // 1. Parse and validate body via Zod (400 on failure)
 // 2. Verify session via auth-server (401 if no session)
@@ -379,7 +382,7 @@ function mapVerificationError(reason: string): string {
   const messages: Record<string, string> = {
     TX_NO_ENCONTRADA: 'La transacción no existe en la blockchain',
     TX_REVERTIDA: 'La transacción fue revertida en la blockchain',
-    TX_DESTINO_INVALIDO: 'La transacción no es al contrato de cUSD',
+    TX_DESTINO_INVALIDO: 'La transacción no es al contrato de COPm',
     TX_BENEFICIARIO_INVALIDO: 'El destinatario no es la wallet de la plataforma',
     TX_MONTO_INSUFICIENTE: 'El monto enviado es menor al valor de la cuota',
   };

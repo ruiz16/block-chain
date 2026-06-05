@@ -15,7 +15,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
-import { copToCusd, getCopUsdRate, INTERES_PORCENTAJE } from '@/config/currency';
+import { INTERES_PORCENTAJE } from '@/config/currency';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -108,19 +108,18 @@ export async function POST(request: Request): Promise<Response> {
     const { monto: montoCop, descripcion, plazo_dias, numero_cuotas } = validation.data;
 
     // ------------------------------------------------------------------
-    // 4. Save BOTH COP (original, for display) and cUSD (blockchain)
+    // 4. Save COPm amount directly (COPm = COP 1:1).
+    //    monto stores the human-readable COPm value (e.g., "1000000" for 1M COPm).
+    //    Wei conversion (parseTokenAmount) only happens at the blockchain boundary:
+    //    disbursement (src/lib/blockchain/desembolsar.ts) and payment verification.
     // ------------------------------------------------------------------
-    const tasaCambio = getCopUsdRate();
-    const montoCusd = copToCusd(montoCop);
     const interesPorcentaje = INTERES_PORCENTAJE;
 
     const { data: nuevoCredito, error: insertError } = await supabase
       .from('creditos')
       .insert({
         prestatario_id: typedParticipante.id,
-        monto: montoCusd.toString(),
-        monto_cop: montoCop,
-        tasa_cambio: tasaCambio,
+        monto: montoCop.toString(),
         descripcion: descripcion ?? null,
         estado: 'pendiente',
         interes_porcentaje: interesPorcentaje,
@@ -148,9 +147,7 @@ export async function POST(request: Request): Promise<Response> {
       entidadId: nuevoCredito.id,
       participanteId: typedParticipante.id,
       detalles: {
-        monto: montoCusd,
-        monto_cop: montoCop,
-        tasa_cambio: tasaCambio,
+        monto: nuevoCredito.monto,
         plazo_dias,
         numero_cuotas,
         interes_porcentaje: interesPorcentaje,

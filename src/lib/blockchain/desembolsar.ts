@@ -2,17 +2,23 @@
 // desembolsarCredito — Core Blockchain Disbursement Operation
 // =============================================================================
 //
-// Orchestrates the full on-chain cUSD transfer:
+// Orchestrates the full on-chain COPm transfer through Celo:
 //   1. Simulate (pre-flight check)
-//   2. Execute (write contract)
+//   2. Execute (write contract)  — uses COPm as fee currency (CIP-64)
 //   3. Wait for receipt
 //   4. Verify receipt status
 //   5. Return TxHash
+//
+// COPm is an 18-decimal ERC-20, same as cUSD. The only difference is
+// the contract address and the fee currency field in the transaction.
+//
+// Fee abstraction: COPm is allowlisted as fee currency on Celo, so the
+// platform wallet can pay gas in COPm instead of CELO.
 // =============================================================================
 
 import { getContract } from 'viem';
 import { getPublicClient, getWalletClient } from '@/lib/blockchain/client';
-import { getCusdContractAddress } from '@/config/celo';
+import { getCopmContractAddress } from '@/config/celo';
 import type { Address, TxHash, Wei } from '@/types/database';
 
 // =============================================================================
@@ -28,6 +34,16 @@ export class BlockchainError extends Error {
     this.code = code;
   }
 }
+
+// =============================================================================
+// COPm Token Address (fee currency — 18 decimals, no adapter needed)
+// =============================================================================
+
+/**
+ * COPm contract address on Celo mainnet.
+ * Using Copm (uppercase) to distinguish from the getCopmContractAddress() config fn.
+ */
+const COPM_TOKEN_ADDRESS = getCopmContractAddress();
 
 // =============================================================================
 // Minimal ERC-20 ABI (only what we need)
@@ -58,11 +74,16 @@ const ERC20_ABI = [
 // =============================================================================
 
 /**
- * Executes a cUSD transfer to the specified address.
+ * Executes a COPm transfer to the specified address.
+ *
+ * Uses CIP-64 transactions with COPm as the fee currency, so the platform
+ * wallet pays gas in COPm instead of CELO.
+ *
+ * COPm is 18 decimals — same as cUSD — so NO adapter is needed for feeCurrency.
  *
  * Flow:
  * 1. Simulate the transfer via `simulateContract` (catches revert reasons early)
- * 2. Execute via `writeContract`
+ * 2. Execute via `writeContract` with feeCurrency = COPm address (CIP-64)
  * 3. Wait for transaction receipt
  * 4. Verify receipt status
  *
@@ -79,15 +100,13 @@ export async function desembolsarCredito(to: Address, monto: Wei): Promise<TxHas
   const publicClient = getPublicClient();
   const walletClient = getWalletClient();
 
-  const cusdAddress = getCusdContractAddress();
-
   // ------------------------------------------------------------------
   // 1. Simulate the transfer (pre-flight check)
   // ------------------------------------------------------------------
   // NOTE: We do NOT catch errors from simulateContract — the route handler
   // needs them to detect RPC failures and audit appropriately.
   const { request } = await publicClient.simulateContract({
-    address: cusdAddress,
+    address: COPM_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'transfer',
     args: [to as `0x${string}`, monto as bigint],
@@ -95,9 +114,15 @@ export async function desembolsarCredito(to: Address, monto: Wei): Promise<TxHas
   });
 
   // ------------------------------------------------------------------
-  // 2. Execute the transfer
+  // 2. Execute the transfer with COPm as fee currency (CIP-64)
+  //    Using type '0x7b' to enable the feeCurrency field.
+  //    COPm has 18 decimals = no adapter needed.
   // ------------------------------------------------------------------
-  const txHash = await walletClient.writeContract(request);
+  const txHash = await walletClient.writeContract({
+    ...request,
+    feeCurrency: COPM_TOKEN_ADDRESS,
+    type: '0x7b' as any, // CIP-64 transaction type for fee currency support
+  });
 
   // ------------------------------------------------------------------
   // 3. Wait for transaction receipt

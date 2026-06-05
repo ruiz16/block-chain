@@ -18,7 +18,7 @@ import { z } from 'zod';
  * Schema for requesting a new credit.
  *
  * - monto: required, must be positive — amount in COP (Colombian Pesos).
- *   The API will convert this to cUSD internally using the hardcoded rate.
+ *   Stored as COPm (Mento Colombian Peso, pegged 1:1). No conversion needed.
  * - descripcion: optional, max 500 chars
  * - plazo_dias: required, integer between 30 and 365
  * - numero_cuotas: optional, integer between 1 and 60 (default: 1).
@@ -26,10 +26,10 @@ import { z } from 'zod';
  *
  * @example
  *   { monto: 1_000_000, plazo_dias: 90 }
- *   // → $1.000.000 COP ≈ 275.23 cUSD, single payment
+ *   // → $1.000.000 COPm, single payment
  *
  *   { monto: 3_000_000, plazo_dias: 180, numero_cuotas: 6 }
- *   // → $3.000.000 COP in 6 monthly cuotas of 1/6 each
+ *   // → $3.000.000 COPm in 6 monthly cuotas of 1/6 each
  */
 export const SolicitarCreditoSchema = z.object({
   monto: z.number().positive('El monto debe ser mayor a 0 (en COP)'),
