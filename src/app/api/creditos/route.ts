@@ -120,6 +120,7 @@ export async function POST(request: Request): Promise<Response> {
         prestatario_id: typedParticipante.id,
         monto: montoCusd.toString(),
         monto_cop: montoCop,
+        moneda: 'COPm',
         tasa_cambio: tasaCambio,
         descripcion: descripcion ?? null,
         estado: 'pendiente',

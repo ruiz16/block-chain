@@ -79,11 +79,14 @@ export interface SiweNonceRow {
   created_at: string;    // timestamptz ISO string
 }
 
+export type MonedaCredito = 'COPm' | 'cUSD';
+
 export interface CreditoRow {
   id: string;
   prestatario_id: string;
   monto: string; // NUMERIC from Postgres — cUSD (blockchain)
   monto_cop: string; // NUMERIC(15,2) — original COP amount
+  moneda: MonedaCredito;
   tasa_cambio: string; // NUMERIC(12,2) — COP/cUSD rate at creation
   descripcion: string | null;
   estado: EstadoCredito;

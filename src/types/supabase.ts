@@ -103,6 +103,7 @@ export interface Database {
           prestatario_id: string;
           monto: string; // numeric(40,0) — cUSD wei
           monto_cop: string; // numeric(15,2)
+          moneda: string; // 'COPm' | 'cUSD'
           tasa_cambio: string; // numeric(12,2)
           descripcion: string | null;
           estado: DbEstadoCredito;
@@ -121,6 +122,7 @@ export interface Database {
           prestatario_id: string;
           monto: string; // cUSD wei
           monto_cop: number; // COP amount
+          moneda?: string; // default 'COPm'
           tasa_cambio: number; // exchange rate
           descripcion?: string | null;
           estado?: DbEstadoCredito; // default 'pendiente'
@@ -139,6 +141,7 @@ export interface Database {
           prestatario_id?: string;
           monto?: string;
           monto_cop?: number;
+          moneda?: string;
           tasa_cambio?: number;
           descripcion?: string | null;
           estado?: DbEstadoCredito;
