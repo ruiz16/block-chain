@@ -504,23 +504,115 @@ export async function POST(request: NextRequest) {
 
         userId = currentUser.id;
       } else {
-        // --- No hay sesión activa → no podemos asociar la wallet ---
-        return NextResponse.json(
-          {
-            error: 'WALLET_NO_ASOCIADA',
-            detail:
-              'Esta wallet no está asociada a ninguna cuenta. ' +
-              'Primero iniciá sesión con tu correo electrónico y luego ' +
-              'conectá tu wallet desde tu perfil para poder usar el inicio ' +
-              'de sesión con wallet.',
-          },
-          { status: 401 },
-        );
+        // --- No hay sesión activa → buscar o crear auth user + participante ---
+        password = crypto.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(36)}`;
+
+        // First, check if an auth user already exists for this wallet email
+        // (e.g., previous SIWE created the user but participante row was
+        // removed or lost the wallet_address link)
+        const { data: allUsers } = await admin.auth.admin.listUsers();
+        const existingAuthUser = allUsers?.users?.find((u) => u.email === email);
+
+        if (existingAuthUser) {
+          // Auth user already exists — reuse it
+          userId = existingAuthUser.id;
+
+          // Update password so we can sign in
+          await admin.auth.admin.updateUserById(userId, { password });
+
+          // Look for an existing participante linked to this user
+          const { data: orphanParticipante } = await admin
+            .from('participantes')
+            .select('id, auth_password')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (orphanParticipante) {
+            // Re-link wallet_address and update password
+            await admin
+              .from('participantes')
+              .update({
+                wallet_address: parsed.address.toLowerCase(),
+                auth_password: password,
+              })
+              .eq('id', orphanParticipante.id);
+          } else {
+            // No participante exists — create a placeholder
+            const truncatedAddress = `${parsed.address.slice(0, 6)}...${parsed.address.slice(-4)}`;
+            await admin.from('participantes').insert({
+              user_id: userId,
+              wallet_address: parsed.address.toLowerCase(),
+              nombre: `Wallet ${truncatedAddress}`,
+              rol: 'usuario',
+              score_reputacion: 50,
+              activo: true,
+              auth_password: password,
+            }).maybeSingle();
+          }
+
+          // Mark as existing user so mobile skips Register
+          isNewUser = false;
+        } else {
+          // No existing auth user — create new one
+          const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+          });
+
+          if (createError || !newUser?.user) {
+            const errorMsg = createError?.message ?? 'No se pudo crear el usuario';
+            console.error('[siwe] Error creating auth user:', errorMsg);
+
+            return NextResponse.json(
+              {
+                error: 'ERROR_INTERNO',
+                detail: `No se pudo crear la cuenta: ${errorMsg}`,
+              },
+              { status: 500 },
+            );
+          }
+
+          userId = newUser.user.id;
+          isNewUser = true;
+
+          // Create placeholder participante so CASE A finds it on reconnect
+          const truncatedAddress = `${parsed.address.slice(0, 6)}...${parsed.address.slice(-4)}`;
+          await admin.from('participantes').insert({
+            user_id: userId,
+            wallet_address: parsed.address.toLowerCase(),
+            nombre: `Wallet ${truncatedAddress}`,
+            rol: 'usuario',
+            score_reputacion: 50,
+            activo: true,
+            auth_password: password,
+          }).maybeSingle();
+        }
       }
     }
 
     // -------------------------------------------------------------------------
-    // 10. Create session
+    // 10. Resolve actual email for sign-in
+    //
+    // CASES A/B: the auth user may have had their email updated during /register
+    // (from the deterministic wallet_...@example.com to the user's real email).
+    // Using the wallet-derived email here would cause signInWithPassword to fail.
+    //
+    // CASE C (existing auth user found by email): same situation — the user may
+    // have already gone through /register in a previous session.
+    //
+    // Only CASE C (new auth user just created) should use the wallet-derived email.
+    // -------------------------------------------------------------------------
+    let signInEmail = email;
+    if (!isNewUser && userId) {
+      const { data: userRecord } = await admin.auth.admin.getUserById(userId);
+      if (userRecord?.user?.email) {
+        signInEmail = userRecord.user.email;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 11. Create session
     //
     // Two-step approach:
     //   a) Sign in with a plain createClient to get a session
@@ -535,7 +627,7 @@ export async function POST(request: NextRequest) {
     const anonClient = createClient(supabaseUrl, anonKey);
     const { data: signInData, error: signInError } =
       await anonClient.auth.signInWithPassword({
-        email,
+        email: signInEmail,
         password,
       });
 
@@ -545,7 +637,7 @@ export async function POST(request: NextRequest) {
       console.error('Error creating session:', JSON.stringify({
         message: errorMsg,
         status,
-        email,
+        email: signInEmail,
       }));
       return NextResponse.json(
         {
@@ -587,7 +679,7 @@ export async function POST(request: NextRequest) {
     }
 
     // -------------------------------------------------------------------------
-    // 11. Return success
+    // 12. Return success
     // -------------------------------------------------------------------------
     return response;
   } catch (err) {

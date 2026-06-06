@@ -19,6 +19,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerClient } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import type { Database } from '@/types/supabase';
 import { ActualizarParticipanteSchema } from '@/lib/validations/participantes';
 
@@ -29,12 +30,14 @@ import { ActualizarParticipanteSchema } from '@/lib/validations/participantes';
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session
+    // 1. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
+    const bearerResult = !user && !userError ? await getBearerUser(request) : null;
+    const authedUser = user ?? bearerResult?.user ?? null;
 
-    if (userError || !user) {
+    if (!authedUser) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión' },
         { status: 401 },
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { data: participante, error: fetchError } = await supabase
       .from('participantes')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', authedUser.id)
       .maybeSingle();
 
     if (fetchError) {
@@ -112,10 +115,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { nombre, wallet_address } = validation.data;
+    const { nombre, wallet_address, telefono } = validation.data;
 
     // Check that at least one field was provided
-    if (nombre === undefined && wallet_address === undefined) {
+    if (nombre === undefined && wallet_address === undefined && telefono === undefined) {
       return NextResponse.json(
         { error: 'DATOS_INVALIDOS', detail: 'Debes proporcionar al menos un campo para actualizar' },
         { status: 400 },
@@ -141,6 +144,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     const updateData: Partial<Database['public']['Tables']['participantes']['Update']> = {};
     if (nombre !== undefined) updateData.nombre = nombre;
     if (wallet_address !== undefined) updateData.wallet_address = wallet_address;
+    if (telefono !== undefined) updateData.telefono = telefono;
 
     // ------------------------------------------------------------------
     // 4. Update participante row (scoped to current user via user_id)

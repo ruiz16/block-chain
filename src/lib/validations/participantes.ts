@@ -18,6 +18,7 @@ import { z } from 'zod';
  * Schema for creating a new participant during onboarding.
  *
  * - nombre: required, 1-255 chars
+ * - email: required, valid email
  * - wallet_address: optional, must be valid Ethereum address (0x-prefixed, 40 hex chars)
  * - rol: must be one of the valid roles
  * - codigo_referido: optional, 8-40 chars, código de otro participante para unirse a su red
@@ -27,6 +28,9 @@ export const CrearParticipanteSchema = z.object({
     .string()
     .min(1, 'El nombre es requerido')
     .max(255, 'El nombre no puede exceder 255 caracteres'),
+  email: z
+    .string()
+    .email('Debe ser un correo electrónico válido'),
   wallet_address: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida. Debe ser una dirección Ethereum (0x...)')
@@ -39,6 +43,10 @@ export const CrearParticipanteSchema = z.object({
     .string()
     .min(8, 'El código de referido debe tener al menos 8 caracteres')
     .max(40, 'El código de referido no puede exceder 40 caracteres')
+    .optional(),
+  telefono: z
+    .string()
+    .min(1, 'El número de celular es requerido')
     .optional(),
 }).strict();
 
@@ -96,6 +104,10 @@ export const ActualizarParticipanteSchema = z.object({
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida')
     .optional()
     .or(z.literal('')),
+  telefono: z
+    .string()
+    .min(1, 'El número de celular es requerido')
+    .optional(),
 }).strict();
 
 /** Inferred TypeScript type from the schema */

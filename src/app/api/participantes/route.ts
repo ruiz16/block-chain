@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerClient } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
@@ -23,6 +24,24 @@ import {
 } from '@/lib/validations/participantes';
 import type { ParticipanteRow } from '@/types/database';
 import { registrarReferido } from '@/lib/referidos/registry';
+
+// =============================================================================
+// Admin client (service_role) for auth user management
+// =============================================================================
+
+function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Falta NEXT_PUBLIC_SUPABASE_URL');
+  }
+  if (!serviceKey) {
+    throw new Error('Falta SUPABASE_SERVICE_KEY');
+  }
+
+  return createClient(supabaseUrl, serviceKey);
+}
 
 // =============================================================================
 // POST /api/participantes — Crear Participante (Onboarding)
@@ -54,19 +73,22 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { nombre, wallet_address, rol, codigo_referido } = validation.data;
+    const { nombre, email, wallet_address, rol, codigo_referido, telefono } = validation.data;
 
     // ------------------------------------------------------------------
     // 2. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
-    const { data: { user }, error: userError } = await serverClient.auth.getUser();
+    const { data: { user } } = await serverClient.auth.getUser();
 
     // Fallback: Bearer token for mobile clients (no cookies)
     const bearerResult = !user ? await getBearerUser(request) : null;
     const authedUser = user ?? bearerResult?.user ?? null;
 
-    if (userError || !authedUser) {
+    // NOTE: userError from cookie auth is intentionally ignored here.
+    // On cross-origin requests (mobile → web API), the cookie auth may fail
+    // even when there's no actual error — the Bearer fallback is authoritative.
+    if (!authedUser) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para completar el registro' },
         { status: 401 },
@@ -74,7 +96,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 3. Check if user already has a participantes row
+    // 3. Check if user already has a participante row (created by SIWE)
     // ------------------------------------------------------------------
     const supabase = getSupabaseClient();
     const { data: existing } = await supabase
@@ -84,24 +106,71 @@ export async function POST(request: NextRequest): Promise<Response> {
       .maybeSingle();
 
     if (existing) {
+      // Already has a placeholder — update with real data
+      const { error: updateError } = await supabase
+        .from('participantes')
+        .update({
+          nombre,
+          wallet_address: wallet_address ? wallet_address.toLowerCase() : undefined,
+          rol,
+          telefono: telefono || undefined,
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        console.error('[participantes] Error al actualizar participante:', updateError.message);
+
+        return NextResponse.json(
+          { error: 'ERROR_INTERNO', detail: 'Error al actualizar el perfil del participante' },
+          { status: 500 },
+        );
+      }
+
+      // Update auth user's email
+      try {
+        const admin = getAdminClient();
+        await admin.auth.admin.updateUserById(authedUser.id, { email });
+      } catch (emailErr) {
+        console.warn('[participantes] Error al actualizar email del auth user:', emailErr);
+      }
+
+      // Generate código de referido if not already set
+      const codigoSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const codigoReferido = `MANGLE-${nombre.replace(/\s+/g, '').substring(0, 8).toUpperCase()}-${codigoSuffix}`;
+
+      await supabase
+        .from('participantes')
+        .update({ codigo_referido: codigoReferido } as never)
+        .eq('id', existing.id);
+
       return NextResponse.json(
-        { error: 'USUARIO_YA_REGISTRADO', detail: 'Este usuario ya tiene un perfil de participante' },
-        { status: 409 },
+        {
+          id: existing.id,
+          nombre,
+          wallet_address: wallet_address || '',
+          rol,
+          telefono: telefono || '',
+          user_id: authedUser.id,
+          activo: true,
+          codigo_referido: codigoReferido,
+        },
+        { status: 200 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 4. INSERT using service-role client
+    // 4. INSERT — first time registration
     // ------------------------------------------------------------------
     const { data: newParticipante, error: insertError } = await supabase
       .from('participantes')
       .insert({
         nombre,
-        wallet_address: wallet_address || '',  // Use empty string if not provided
+        wallet_address: wallet_address ? wallet_address.toLowerCase() : '',  // Normalize to lowercase
         rol,
         user_id: authedUser.id,
         activo: true,
         score_reputacion: 50,  // Default starting score
+        telefono: telefono || '',
       })
       .select()
       .single();
@@ -116,6 +185,17 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const typedParticipante = newParticipante as unknown as ParticipanteRow;
+
+    // ------------------------------------------------------------------
+    // 4b. Update auth user's email from deterministic to real email
+    // ------------------------------------------------------------------
+    try {
+      const admin = getAdminClient();
+      await admin.auth.admin.updateUserById(authedUser.id, { email });
+    } catch (emailErr) {
+      // Non-fatal: the auth user already has a deterministic email from SIWE
+      console.warn('[participantes] Error al actualizar email del auth user:', emailErr);
+    }
 
     // ------------------------------------------------------------------
     // 5. Generate unique código de referido
@@ -153,6 +233,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         nombre: typedParticipante.nombre,
         wallet_address: typedParticipante.wallet_address,
         rol: typedParticipante.rol,
+        telefono: typedParticipante.telefono,
         user_id: typedParticipante.user_id,
         activo: typedParticipante.activo,
         codigo_referido: codigoReferido,
@@ -208,13 +289,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     // 2. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
-    const { data: { user }, error: userError } = await serverClient.auth.getUser();
+    const { data: { user } } = await serverClient.auth.getUser();
 
     // Fallback: Bearer token for mobile clients
     const bearerResult = !user ? await getBearerUser(request) : null;
     const authedUser = user ?? bearerResult?.user ?? null;
 
-    if (userError || !authedUser) {
+    if (!authedUser) {
       // Not authenticated — exists=false, not an error
       return NextResponse.json({ exists: false }, { status: 200 });
     }

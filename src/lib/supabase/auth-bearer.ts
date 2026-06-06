@@ -40,18 +40,32 @@ export async function getBearerUser(
   request: Request,
 ): Promise<BearerAuthResult | null> {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.warn('[getBearerUser] No Authorization header or not Bearer');
+    return null;
+  }
 
   const token = authHeader.slice(7);
-  if (!token) return null;
+  if (!token) {
+    console.warn('[getBearerUser] Token is empty after Bearer prefix');
+    return null;
+  }
 
   const supabase = getSupabaseClient();
 
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
-  if (error || !user) return null;
+  if (error) {
+    console.error('[getBearerUser] supabase.auth.getUser error:', error.message);
+    return null;
+  }
 
-  // Look up participante by auth user_id
+  if (!user) {
+    console.warn('[getBearerUser] supabase.auth.getUser returned null user');
+    return null;
+  }
+
+  // Look up participante by auth user_id (may not exist yet for new users)
   const { data: participante } = await supabase
     .from('participantes')
     .select('id, gacc_id, validado_gacc, nombre, wallet_address')

@@ -68,6 +68,7 @@ export interface ParticipanteRow {
   auth_password?: string | null; // Auto-generated SIWE password — added in migration 007
   gacc_id?: string | null;       // GACC al que pertenece — added in migration 010
   validado_gacc?: boolean;       // Validado por el GACC — added in migration 010
+  telefono: string;              // Número de celular — added in migration 018
 }
 
 /** SIWE nonce row — matches supabase/migrations/007_siwe.sql */
