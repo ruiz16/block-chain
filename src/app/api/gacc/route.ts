@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { CrearGaccSchema, validateCrearGacc } from '@/lib/validations/gacc';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
@@ -41,10 +42,12 @@ function generarCodigo(): string {
 export async function POST(request: Request): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session
+    // 1. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const cookieStore = await cookies();
-    const user = await getServerUser(cookieStore);
+    const cookieUser = await getServerUser(cookieStore);
+    const bearerResult = !cookieUser ? await getBearerUser(request) : null;
+    const user = cookieUser ?? bearerResult?.user ?? null;
 
     if (!user) {
       return NextResponse.json(
@@ -58,13 +61,16 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     // 2. Look up participante by auth user_id
     // ------------------------------------------------------------------
-    const { data: participante } = await supabase
-      .from('participantes')
-      .select('id, gacc_id')
-      .eq('user_id', user.id)
-      .single();
+    let typedParticipante = bearerResult?.participante ?? null;
+    if (!typedParticipante) {
+      const { data: participante } = await supabase
+        .from('participantes')
+        .select('id, gacc_id')
+        .eq('user_id', user.id)
+        .single();
 
-    const typedParticipante = participante;
+      typedParticipante = participante;
+    }
 
     if (!typedParticipante) {
       return NextResponse.json(

@@ -16,6 +16,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerClient } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import {
   CrearParticipanteSchema,
   CheckParticipanteQuerySchema,
@@ -56,12 +57,16 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { nombre, wallet_address, rol, codigo_referido } = validation.data;
 
     // ------------------------------------------------------------------
-    // 2. Verify session server-side
+    // 2. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
 
-    if (userError || !user) {
+    // Fallback: Bearer token for mobile clients (no cookies)
+    const bearerResult = !user ? await getBearerUser(request) : null;
+    const authedUser = user ?? bearerResult?.user ?? null;
+
+    if (userError || !authedUser) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para completar el registro' },
         { status: 401 },
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { data: existing } = await supabase
       .from('participantes')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', authedUser.id)
       .maybeSingle();
 
     if (existing) {
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         nombre,
         wallet_address: wallet_address || '',  // Use empty string if not provided
         rol,
-        user_id: user.id,
+        user_id: authedUser.id,
         activo: true,
         score_reputacion: 50,  // Default starting score
       })
@@ -200,12 +205,16 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 2. Verify session
+    // 2. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
 
-    if (userError || !user) {
+    // Fallback: Bearer token for mobile clients
+    const bearerResult = !user ? await getBearerUser(request) : null;
+    const authedUser = user ?? bearerResult?.user ?? null;
+
+    if (userError || !authedUser) {
       // Not authenticated — exists=false, not an error
       return NextResponse.json({ exists: false }, { status: 200 });
     }
@@ -217,7 +226,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { data: participante } = await supabase
       .from('participantes')
       .select('id, nombre, rol, wallet_address, gacc_id, validado_gacc')
-      .eq('user_id', user.id)
+      .eq('user_id', authedUser.id)
       .maybeSingle();
 
     if (!participante) {

@@ -526,15 +526,12 @@ export async function POST(request: NextRequest) {
     //   a) Sign in with a plain createClient to get a session
     //   b) Set the session on the SSR client so cookies are written to response
     //
-    // This avoids issues with createServerClient + signInWithPassword in
-    // Next.js 16 where cookie handling might differ.
+    // Also returns access_token + refresh_token for mobile/Bearer auth clients.
     // -------------------------------------------------------------------------
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    const response = NextResponse.json({ ok: true, isNewUser });
-
-    // Step a: Sign in with plain client to get session
+    // Step a: Sign in with plain client to get session FIRST
     const anonClient = createClient(supabaseUrl, anonKey);
     const { data: signInData, error: signInError } =
       await anonClient.auth.signInWithPassword({
@@ -558,6 +555,14 @@ export async function POST(request: NextRequest) {
         { status },
       );
     }
+
+    // Create response WITH tokens for mobile clients
+    const response = NextResponse.json({
+      ok: true,
+      isNewUser,
+      access_token: signInData.session.access_token,
+      refresh_token: signInData.session.refresh_token,
+    });
 
     // Step b: Set the session on the SSR client to persist cookies
     const serverClient = createServerClient(supabaseUrl, anonKey, {
