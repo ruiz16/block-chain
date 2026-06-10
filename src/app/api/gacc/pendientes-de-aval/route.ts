@@ -22,6 +22,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { scoreEfectivo } from '@/lib/score/calculator';
 
 // ---------------------------------------------------------------------------
@@ -65,13 +66,15 @@ interface PrestatarioInfo {
 // GET
 // =============================================================================
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session
+    // 1. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const cookieStore = await cookies();
-    const user = await getServerUser(cookieStore);
+    const cookieUser = await getServerUser(cookieStore);
+    const bearerResult = !cookieUser ? await getBearerUser(request) : null;
+    const user = cookieUser ?? bearerResult?.user ?? null;
 
     if (!user) {
       return NextResponse.json(
