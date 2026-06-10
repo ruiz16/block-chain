@@ -44,6 +44,7 @@ interface CreditoRow {
   descripcion: string | null;
   fecha_solicitud: string;
   estado: string;
+  expiracion_en: string | null;
 }
 
 interface AvalRow {
@@ -132,7 +133,7 @@ export async function GET(): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: creditos, error: creditosError } = await supabase
       .from('creditos')
-      .select('id, prestatario_id, monto, descripcion, fecha_solicitud, estado')
+      .select('id, prestatario_id, monto, descripcion, fecha_solicitud, estado, expiracion_en')
       .in('prestatario_id', todosLosMiembros)
       .eq('estado', 'pendiente')
       .order('fecha_solicitud', { ascending: false });
@@ -149,7 +150,18 @@ export async function GET(): Promise<Response> {
       return NextResponse.json({ creditos: [] }, { status: 200 });
     }
 
-    const typedCreditos = creditos as unknown as CreditoRow[];
+    const typedCreditos = (creditos as unknown as CreditoRow[]).filter((c) => {
+      // Lazy expiration: if past expiracion_en, mark as expirado and exclude
+      if (c.expiracion_en && new Date(c.expiracion_en) < new Date()) {
+        supabase.from('creditos').update({ estado: 'expirado' } as never).eq('id', c.id);
+        return false;
+      }
+      return true;
+    });
+
+    if (typedCreditos.length === 0) {
+      return NextResponse.json({ creditos: [] }, { status: 200 });
+    }
 
     // ------------------------------------------------------------------
     // 5. For each credit, count avales and check if current user avaled
@@ -173,7 +185,7 @@ export async function GET(): Promise<Response> {
     //     and check if current user already avaled
     const creditosConAvales = await Promise.all(
       typedCreditos.map(async (credito) => {
-        // Members that need to aval = ALL GACC members except the prestatario
+        // All GACC members except prestatario can aval
         const miembrosQueAvalan = todosLosMiembros.filter(
           (pid) => pid !== credito.prestatario_id,
         );
@@ -209,7 +221,7 @@ export async function GET(): Promise<Response> {
           monto: credito.monto,
           descripcion: credito.descripcion,
           fecha_solicitud: credito.fecha_solicitud,
-          total_necesarios: miembrosQueAvalan.length,
+          avales_minimos: 3,
           avales_actuales: avalCount ?? 0,
           ya_avale: !!miAval,
         };

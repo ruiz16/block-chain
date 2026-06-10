@@ -74,9 +74,19 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 2b. GACC validation check
+    // 2b. GACC validation check — AHORA OBLIGATORIO
     // ------------------------------------------------------------------
-    if (typedParticipante.gacc_id && !typedParticipante.validado_gacc) {
+    if (!typedParticipante.gacc_id) {
+      return NextResponse.json(
+        {
+          error: 'SIN_GACC',
+          detail: 'Debes pertenecer a un GACC para solicitar un crédito. Crea o únete a un grupo desde la sección GACC.',
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!typedParticipante.validado_gacc) {
       return NextResponse.json(
         {
           error: 'GACC_NO_VALIDADO',
@@ -136,6 +146,8 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const interesPorcentaje = INTERES_PORCENTAJE;
 
+    const expiracionEn = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
     const { data: nuevoCredito, error: insertError } = await supabase
       .from('creditos')
       .insert({
@@ -144,11 +156,12 @@ export async function POST(request: Request): Promise<Response> {
         moneda: 'COPm',
         uso,
         descripcion: descripcion ?? null,
-        estado: 'pendiente',
+        estado: 'pendiente' as never,
         interes_porcentaje: interesPorcentaje,
         plazo_dias: plazo_dias,
         numero_cuotas: numero_cuotas,
-      })
+        expiracion_en: expiracionEn,
+      } as never)
       .select()
       .single();
 

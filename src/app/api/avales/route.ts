@@ -135,11 +135,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { credito_id } = validation.data;
 
     // ------------------------------------------------------------------
-    // 4. Fetch credit — must exist and be in 'pendiente'
+    // 4. Fetch credit — must exist, be in 'pendiente', and not expired
     // ------------------------------------------------------------------
     const { data: credito, error: creditoError } = await supabase
       .from('creditos')
-      .select('id, monto, estado, prestatario_id')
+      .select('id, monto, estado, prestatario_id, expiracion_en')
       .eq('id', credito_id)
       .single();
 
@@ -150,7 +150,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const typedCredito = credito;
+    const typedCredito = credito as unknown as {
+      id: string;
+      monto: string;
+      estado: string;
+      prestatario_id: string;
+      expiracion_en: string | null;
+    };
 
     if (typedCredito.estado !== 'pendiente') {
       return NextResponse.json(
@@ -159,6 +165,22 @@ export async function POST(request: NextRequest): Promise<Response> {
           detail: `El crédito está en estado "${typedCredito.estado}", debe estar en "pendiente"`,
         },
         { status: 409 },
+      );
+    }
+
+    // Lazy expiration: if past expiracion_en, mark as expirado and reject
+    if (typedCredito.expiracion_en && new Date(typedCredito.expiracion_en) < new Date()) {
+      await supabase
+        .from('creditos')
+        .update({ estado: 'expirado' } as never)
+        .eq('id', typedCredito.id);
+
+      return NextResponse.json(
+        {
+          error: 'CREDITO_EXPIRADO',
+          detail: 'Este crédito expiró porque no consiguió los avales necesarios a tiempo.',
+        },
+        { status: 410 },
       );
     }
 
@@ -270,62 +292,43 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 10. Check if ALL GACC members have avaled → transition to avalado
+    // 10. Check if 3 avales reached → transition to avalado
     // ------------------------------------------------------------------
 
-    // 10a. Count total active GACC members (excluyendo al prestatario)
-    const { data: miembros, error: miembrosError } = await supabase
+    // 10a. Count only avales from GACC members (excluding prestatario)
+    const { data: miembros } = await supabase
       .from('gacc_miembros')
       .select('participante_id')
       .eq('grupo_id', grupoId)
       .eq('activo', true)
       .not('participante_id', 'eq', typedCredito.prestatario_id);
 
-    if (miembrosError) {
-      console.warn('[avales] Error al contar miembros GACC:', miembrosError.message);
-    }
-
-    const totalMembersToAval = (miembros ?? []).length;
-
-    // 10b. Count how many GACC members have already avaled this credit
     const avaladorIds = (miembros ?? []).map((m: GaccMiembroRow) => m.participante_id);
 
-    let allAvalados = false;
+    const AVALES_MINIMOS = 3;
+    let avalCount = 0;
 
     if (avaladorIds.length > 0) {
-      const { count: avalCount, error: countError } = await supabase
+      const { count } = await supabase
         .from('avales')
         .select('id', { count: 'exact', head: true })
         .eq('credito_id', credito_id)
         .eq('activo', true)
         .in('aval_id', avaladorIds);
 
-      if (countError) {
-        console.warn('[avales] Error al contar avales:', countError.message);
-      }
-
-      // If all eligible members have avaled → transition
-      allAvalados = (avalCount ?? 0) >= totalMembersToAval;
+      avalCount = count ?? 0;
     }
 
+    const umbralAlcanzado = avalCount >= AVALES_MINIMOS;
     let nuevoEstado = 'pendiente';
 
-    if (allAvalados) {
+    if (umbralAlcanzado) {
       nuevoEstado = 'avalado';
 
-      const { error: updateError } = await supabase
+      await supabase
         .from('creditos')
         .update({ estado: 'avalado' } as never)
         .eq('id', typedCredito.id);
-
-      if (updateError) {
-        console.warn(
-          '[avales] Error al actualizar estado del crédito a avalado:',
-          updateError.message,
-          { credito_id: typedCredito.id },
-        );
-        // No retornamos error — el aval ya se insertó correctamente
-      }
     }
 
     // ------------------------------------------------------------------
@@ -341,8 +344,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         avalador_nombre: typedAvalador.nombre,
         credito_id: typedCredito.id,
         monto_maximo: montoMaximo,
-        total_miembros_gacc: totalMembersToAval,
-        avales_completados: allAvalados,
+        avales_actuales: avalCount,
+        avales_minimos: AVALES_MINIMOS,
+        umbral_alcanzado: umbralAlcanzado,
       },
     });
 
@@ -354,8 +358,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         status: 'aval_asignado' as const,
         aval: newAval,
         credito_estado: nuevoEstado,
-        total_necesarios: totalMembersToAval,
-        avales_actuales: allAvalados ? totalMembersToAval : (miembros?.length ?? 0), // aproximado
+        avales_minimos: AVALES_MINIMOS,
+        avales_actuales: avalCount,
+        umbral_alcanzado: umbralAlcanzado,
       },
       { status: 201 },
     );

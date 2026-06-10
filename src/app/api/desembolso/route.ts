@@ -159,22 +159,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 5. Check reputation score > 80 (using scoreEfectivo)
+    // 5. Score — solo informativo para auditoría, NO bloquea
     // ------------------------------------------------------------------
     const scoreReputacion = scoreEfectivo(
       prestatario.score_reputacion,
       prestatario.created_at,
     );
-
-    if (scoreReputacion <= 80) {
-      return NextResponse.json(
-        {
-          error: 'SCORE_INSUFICIENTE',
-          detail: `El score de reputación (${scoreReputacion}) debe ser mayor a 80`,
-        },
-        { status: 403 },
-      );
-    }
 
     // ------------------------------------------------------------------
     // 6. Validate borrower has a wallet configured
