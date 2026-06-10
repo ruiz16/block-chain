@@ -65,6 +65,7 @@ export interface Database {
           auth_password: string | null;
           gacc_id: string | null;
           validado_gacc: boolean;
+          telefono: string;
           email: string;
         };
         Insert: {
@@ -82,6 +83,7 @@ export interface Database {
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean; // default false
+          telefono?: string; // default ''
           email?: string; // default ''
         };
         Update: {
@@ -99,6 +101,7 @@ export interface Database {
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean;
+          telefono?: string;
           email?: string;
         };
         Relationships: [];

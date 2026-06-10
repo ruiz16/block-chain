@@ -19,6 +19,13 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
+/**
+ * Supabase select string that matches BearerAuthResult['participante'].
+ * Use this in every fallback `.select()` that assigns to typedParticipante.
+ */
+export const PARTICIPANTE_AUTH_SELECT =
+  'id, gacc_id, validado_gacc, nombre, wallet_address' as const;
+
 export interface BearerAuthResult {
   user: User;
   participante: {
@@ -68,7 +75,7 @@ export async function getBearerUser(
   // Look up participante by auth user_id (may not exist yet for new users)
   const { data: participante } = await supabase
     .from('participantes')
-    .select('id, gacc_id, validado_gacc, nombre, wallet_address')
+    .select(PARTICIPANTE_AUTH_SELECT)
     .eq('user_id', user.id)
     .single();
 

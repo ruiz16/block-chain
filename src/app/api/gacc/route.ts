@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
-import { getBearerUser } from '@/lib/supabase/auth-bearer';
+import { getBearerUser, PARTICIPANTE_AUTH_SELECT } from '@/lib/supabase/auth-bearer';
 import { CrearGaccSchema, validateCrearGacc } from '@/lib/validations/gacc';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!typedParticipante) {
       const { data: participante } = await supabase
         .from('participantes')
-        .select('id, gacc_id')
+        .select(PARTICIPANTE_AUTH_SELECT)
         .eq('user_id', user.id)
         .single();
 
