@@ -336,15 +336,22 @@ export default function PanelPagos() {
   // ==========================================================================
   if (state === 'no-pending') {
     return (
-      <EmptyState
-        title="No tienes pagos pendientes"
-        description="Todas tus cuotas están al día"
-        icon={
-          <svg className="h-16 w-16 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        }
-      />
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-gray-800 shadow-xl shadow-slate-100/40 dark:shadow-black/20">
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-200">Cuotas al día</p>
+          </div>
+        </div>
+        <div className="px-6 py-8 text-center">
+          <p className="text-sm text-slate-500 dark:text-gray-400">No tenés cuotas pendientes.</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Todas tus cuotas están al día.</p>
+        </div>
+      </div>
     );
   }
 
