@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!typedParticipante) {
       const { data: participante } = await supabase
         .from('participantes')
-        .select('id, gacc_id, validado_gacc')
+        .select('id, gacc_id, validado_gacc, nombre, wallet_address')
         .eq('user_id', user.id)
         .single();
 
