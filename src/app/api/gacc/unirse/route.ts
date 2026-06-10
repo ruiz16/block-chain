@@ -96,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: grupo } = await supabase
       .from('grupos_gacc')
-      .select('id, nombre, activo, municipio')
+      .select('id, nombre, activo, municipio, creador_id')
       .eq('codigo', codigo.toUpperCase().trim())
       .single();
 
@@ -129,41 +129,38 @@ export async function POST(request: Request): Promise<Response> {
     const typedMember = existingMember;
 
     if (typedMember) {
-      if (typedMember.validado_en) {
-        // Already a validated member — just update participante
-        await supabase
-          .from('participantes')
-          .update({ gacc_id: typedGrupo.id, validado_gacc: true })
-          .eq('id', typedParticipante.id);
+      // Ensure participante is always in sync regardless of how they got here
+      await supabase
+        .from('participantes')
+        .update({ gacc_id: typedGrupo.id, validado_gacc: true })
+        .eq('id', typedParticipante.id);
 
-        return NextResponse.json(
-          {
-            status: 'ya_eras_miembro',
-        grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
-          },
-          { status: 200 },
-        );
+      if (!typedMember.validado_en) {
+        // Legacy row without validation — complete it now
+        await supabase
+          .from('gacc_miembros')
+          .update({ validado_por: typedGrupo.creador_id, validado_en: new Date().toISOString() })
+          .eq('id', typedMember.id);
       }
 
-      // Pending validation
       return NextResponse.json(
-        {
-          status: 'pendiente_validacion',
-          grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
-          detail: 'Ya solicitaste unirte a este GACC. Espera a que un miembro te valide.',
-        },
+        { status: 'ya_eras_miembro', grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio } },
         { status: 200 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 6. Insert membership (pending validation)
+    // 6. Insert membership (auto-validated by GACC creator)
     // ------------------------------------------------------------------
+    const now = new Date().toISOString();
+
     const { error: insertError } = await supabase
       .from('gacc_miembros')
       .insert({
         grupo_id: typedGrupo.id,
         participante_id: typedParticipante.id,
+        validado_por: typedGrupo.creador_id,
+        validado_en: now,
       });
 
     if (insertError) {
@@ -172,6 +169,18 @@ export async function POST(request: Request): Promise<Response> {
         { error: 'ERROR_INTERNO', detail: 'Error al registrar la membresía' },
         { status: 500 },
       );
+    }
+
+    // ------------------------------------------------------------------
+    // 6b. Sync participante row so gacc_id-based guards work immediately
+    // ------------------------------------------------------------------
+    const { error: updateError } = await supabase
+      .from('participantes')
+      .update({ gacc_id: typedGrupo.id, validado_gacc: true })
+      .eq('id', typedParticipante.id);
+
+    if (updateError) {
+      console.error('[gacc/unirse] Error al actualizar gacc_id:', updateError.message);
     }
 
     // ------------------------------------------------------------------
@@ -190,9 +199,9 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     return NextResponse.json(
       {
-        status: 'pendiente_validacion',
+        status: 'validado',
         grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
-        detail: 'Te has unido al GACC. Un miembro del grupo debe validar tu membresía para que puedas solicitar créditos.',
+        detail: 'Te has unido al GACC y fuiste validado automáticamente.',
       },
       { status: 201 },
     );
