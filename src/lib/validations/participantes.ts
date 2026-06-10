@@ -47,6 +47,11 @@ export const CrearParticipanteSchema = z.object({
     .string()
     .min(1, 'El número de celular es requerido')
     .optional(),
+  codigo_referido: z
+    .string()
+    .min(8, 'El código de referido debe tener al menos 8 caracteres')
+    .max(40, 'El código de referido no puede exceder 40 caracteres')
+    .optional(),
 }).strict();
 
 /** Inferred TypeScript type from the schema */

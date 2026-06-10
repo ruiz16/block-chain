@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { nombre, email, wallet_address, rol, oficio, telefono } = validation.data;
+    const { nombre, email, wallet_address, rol, oficio, telefono, codigo_referido } = validation.data;
 
     // ------------------------------------------------------------------
     // 2. Verify session (cookies → Bearer token fallback for mobile)
