@@ -129,7 +129,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { monto: montoCop, descripcion, plazo_dias, numero_cuotas } = validation.data;
+    const { monto: montoCop, uso, descripcion, plazo_dias, numero_cuotas } = validation.data;
 
     // ------------------------------------------------------------------
     // 4. Save credit — monto is in COPm (wei)
@@ -142,6 +142,7 @@ export async function POST(request: Request): Promise<Response> {
         prestatario_id: typedParticipante.id,
         monto: montoCop.toString(),
         moneda: 'COPm',
+        uso,
         descripcion: descripcion ?? null,
         estado: 'pendiente',
         interes_porcentaje: interesPorcentaje,
@@ -204,7 +205,7 @@ export async function POST(request: Request): Promise<Response> {
 // GET /api/creditos — Listar mis créditos
 // =============================================================================
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
     // ------------------------------------------------------------------
     // 1. Verify session (cookies → Bearer token fallback for mobile)

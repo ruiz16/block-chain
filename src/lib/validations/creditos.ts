@@ -33,11 +33,12 @@ import { z } from 'zod';
  */
 export const SolicitarCreditoSchema = z.object({
   monto: z.number().positive('El monto debe ser mayor a 0 (en COP)'),
+  uso: z.string().min(1, 'Selecciona el uso del crédito'),
   descripcion: z.string().max(500, 'La descripción no puede exceder 500 caracteres').optional(),
   plazo_dias: z
     .number()
     .int('El plazo debe ser un número entero')
-    .min(30, 'Mínimo 30 días')
+    .min(7, 'Mínimo 7 días')
     .max(365, 'Máximo 365 días'),
   numero_cuotas: z
     .number()

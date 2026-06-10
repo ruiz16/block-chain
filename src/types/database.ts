@@ -114,6 +114,7 @@ export interface CreditoRow {
   prestatario_id: string;
   monto: string; // NUMERIC from Postgres — COPm (wei)
   moneda: MonedaCredito;
+  uso: string;
   descripcion: string | null;
   estado: EstadoCredito;
   interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
@@ -201,6 +202,7 @@ export interface CreditoPendiente {
 /** Input for POST /api/creditos */
 export interface SolicitarCreditoInput {
   monto: number;
+  uso: string;
   descripcion?: string;
   plazo_dias: number;
 }

@@ -50,14 +50,7 @@ const USERS_TO_SEED = [
     nombre: 'Administrador Sistema',
     rol: 'admin',
     wallet_address: '0x1111111111111111111111111111111111111111',
-  },
-  {
-    email: 'test@blockchain.com',
-    password: 'Blockchain2026!',
-    nombre: 'Pedro Usuario',
-    rol: 'usuario',
-    wallet_address: '0x3333333333333333333333333333333333333333',
-  },
+  }
 ];
 
 async function seed() {
