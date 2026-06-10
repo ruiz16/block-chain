@@ -187,12 +187,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    if (typedCuota.estado !== 'pendiente') {
+    // Both 'pendiente' and 'vencida' cuotas are payable — overdue debt is still valid debt
+    if (typedCuota.estado !== 'pendiente' && typedCuota.estado !== 'vencida') {
       console.warn('[pago] Cuota en estado inválido:', { cuota_id: typedCuota.id, estado: typedCuota.estado });
       return NextResponse.json(
         {
           error: 'ESTADO_INCORRECTO',
-          detail: `La cuota está en estado "${typedCuota.estado}", debe estar en "pendiente"`,
+          detail: `La cuota está en estado "${typedCuota.estado}", solo se pueden pagar cuotas pendientes o vencidas`,
         },
         { status: 409 },
       );
