@@ -1,39 +1,44 @@
 // =============================================================================
-// POST /api/pago — Register Payment for a Single Cuota
+// POST /api/pago/simulado — Register Payment (Simulated, no on-chain tx)
 // =============================================================================
+//
+// IDÉNTICO a POST /api/pago pero SIN verificación blockchain.
+// Útil para mobile/testing donde no hay tx_hash real.
 //
 // Flow:
 // 1. Parse and validate body via Zod (400 on failure)
-// 2. Verify session via auth-server (401 if no session)
+// 2. Verify session (401 if no session)
 // 3. Get participante by auth user_id (404 if not found)
 // 4. Fetch cuota by cuota_id with credito info (404/409)
 // 5. Check cuota estado === 'pendiente' (409 if already paid)
 // 6. Check credito estado === 'desembolsado' (409 if not)
-// 7. Call verificarPago() with cuota.monto_cuota for on-chain verification
-// 8. UPDATE cuota: estado='pagada', tx_hash_pago, fecha_pago=NOW()
-// 9. If all cuotas are now paid → UPDATE credito: estado='pagado', fecha_pago=NOW()
-// 10. Return 200 { status: 'pagado', cuota_id, credito_id }
+// 7. UPDATE cuota: estado='pagada', tx_hash_pago=simulado, fecha_pago=NOW()
+// 8. If all cuotas are now paid → UPDATE credito: estado='pagado', fecha_pago=NOW()
+// 9. Return 200 { status: 'pagado', cuota_id, credito_id }
 // =============================================================================
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { getServerClient } from '@/lib/supabase/auth-server';
+import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
-import { PagoSchema } from '@/lib/validations/pago';
-import { verificarPago } from '@/lib/blockchain/verificar-pago';
-import { parseWeiFromDb } from '@/config/celo';
+import { z } from 'zod';
 import { recalcularScore } from '@/lib/score/calculator';
 import { recalcularScoreRed } from '@/lib/referidos/score-red';
 import { verificarAtrasosRed } from '@/lib/referidos/semaforo';
 import type { PagoResponse } from '@/types/database';
 
 // ---------------------------------------------------------------------------
-// Types for Supabase query results (no generated types available)
+// Validation — solo cuota_id, sin tx_hash
 // ---------------------------------------------------------------------------
-interface ParticipanteRow {
-  id: string;
-}
+
+const PagoSimuladoSchema = z.object({
+  cuota_id: z.string().uuid('cuota_id debe ser un UUID válido'),
+}).strict();
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface CuotaConCredito {
   id: string;
@@ -47,7 +52,7 @@ interface CuotaConCredito {
   };
 }
 
-export async function POST(request: NextRequest): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   try {
     // ------------------------------------------------------------------
     // 1. Parse and validate body
@@ -56,38 +61,31 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
-        {
-          error: 'DATOS_INVALIDOS',
-          detail: 'El cuerpo de la solicitud no es un JSON válido',
-        },
+        { error: 'DATOS_INVALIDOS', detail: 'El cuerpo de la solicitud no es un JSON válido' },
         { status: 400 },
       );
     }
 
-    const validation = PagoSchema.safeParse(body);
+    const validation = PagoSimuladoSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
-        {
-          error: 'DATOS_INVALIDOS',
-          detail: validation.error.issues[0]?.message ?? 'Datos inválidos',
-        },
+        { error: 'DATOS_INVALIDOS', detail: validation.error.issues[0]?.message ?? 'Datos inválidos' },
         { status: 400 },
       );
     }
 
-    const { cuota_id, tx_hash } = validation.data;
+    const { cuota_id } = validation.data;
 
     // ------------------------------------------------------------------
-    // 2. Verify session (cookies → Bearer fallback for mobile)
+    // 2. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const cookieStore = await cookies();
-    const serverClient = getServerClient(cookieStore);
-    const { data: { user }, error: userError } = await serverClient.auth.getUser();
-    const bearerResult = !user ? await getBearerUser(request) : null;
-    const authedUser = user ?? bearerResult?.user ?? null;
+    const cookieUser = await getServerUser(cookieStore);
+    const bearerResult = !cookieUser ? await getBearerUser(request) : null;
+    const user = cookieUser ?? bearerResult?.user ?? null;
 
-    if (!authedUser) {
+    if (!user) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para registrar un pago' },
         { status: 401 },
@@ -99,15 +97,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 3. Get participante by auth user_id
     // ------------------------------------------------------------------
-    const { data: participante, error: participanteError } = await supabase
-      .from('participantes')
-      .select('id')
-      .eq('user_id', authedUser.id)
-      .single();
+    let typedParticipante: { id: string } | null = bearerResult?.participante ?? null;
+    if (!typedParticipante) {
+      const { data: participante } = await supabase
+        .from('participantes')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-    const typedParticipante = participante;
+      typedParticipante = participante;
+    }
 
-    if (participanteError || !typedParticipante) {
+    if (!typedParticipante) {
       return NextResponse.json(
         { error: 'CUOTA_NO_ENCONTRADA', detail: 'No se encontró un participante asociado a tu cuenta' },
         { status: 404 },
@@ -169,31 +170,16 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 5. Check cuota estado === 'pendiente'
     // ------------------------------------------------------------------
-    console.log('[pago] Estados recibidos:', {
-      cuota_id: typedCuota.id,
-      cuota_estado: typedCuota.estado,
-      credito_id: creditoData.id,
-      credito_estado: creditoData.estado,
-    });
-
     if (typedCuota.estado === 'pagada') {
-      console.warn('[pago] Cuota ya pagada:', { cuota_id: typedCuota.id, estado: typedCuota.estado });
       return NextResponse.json(
-        {
-          error: 'YA_PAGADA',
-          detail: `La cuota #${typedCuota.numero_cuota} ya fue pagada anteriormente`,
-        },
+        { error: 'YA_PAGADA', detail: `La cuota #${typedCuota.numero_cuota} ya fue pagada anteriormente` },
         { status: 409 },
       );
     }
 
     if (typedCuota.estado !== 'pendiente') {
-      console.warn('[pago] Cuota en estado inválido:', { cuota_id: typedCuota.id, estado: typedCuota.estado });
       return NextResponse.json(
-        {
-          error: 'ESTADO_INCORRECTO',
-          detail: `La cuota está en estado "${typedCuota.estado}", debe estar en "pendiente"`,
-        },
+        { error: 'ESTADO_INCORRECTO', detail: `La cuota está en estado "${typedCuota.estado}", debe estar en "pendiente"` },
         { status: 409 },
       );
     }
@@ -202,96 +188,39 @@ export async function POST(request: NextRequest): Promise<Response> {
     // 6. Check credito estado === 'desembolsado'
     // ------------------------------------------------------------------
     if (creditoData.estado === 'pagado') {
-      console.warn('[pago] Crédito ya pagado:', { credito_id: creditoData.id });
       return NextResponse.json(
-        {
-          error: 'YA_PAGADO',
-          detail: 'Este crédito ya fue pagado completamente',
-        },
+        { error: 'YA_PAGADO', detail: 'Este crédito ya fue pagado completamente' },
         { status: 409 },
       );
     }
 
     if (creditoData.estado !== 'desembolsado') {
-      console.warn('[pago] Crédito en estado inválido:', {
-        credito_id: creditoData.id,
-        estado: creditoData.estado,
-      });
       return NextResponse.json(
-        {
-          error: 'ESTADO_INCORRECTO',
-          detail: `El crédito está en estado "${creditoData.estado}", debe estar en "desembolsado"`,
-        },
+        { error: 'ESTADO_INCORRECTO', detail: `El crédito está en estado "${creditoData.estado}", debe estar en "desembolsado"` },
         { status: 409 },
       );
     }
 
     // ------------------------------------------------------------------
-    // 7. Check tx_hash uniqueness (not used for another cuota)
+    // 7. Generar tx_hash simulado y actualizar cuota
     // ------------------------------------------------------------------
-    const { data: existingCuota } = await supabase
-      .from('cuotas')
-      .select('id')
-      .eq('tx_hash_pago', tx_hash)
-      .maybeSingle();
+    const simulatedTxHash = `sim_${Date.now()}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10)}`;
 
-    if (existingCuota) {
-      return NextResponse.json(
-        {
-          error: 'TX_HASH_DUPLICADO',
-          detail: 'Este hash de transacción ya fue registrado para otra cuota',
-        },
-        { status: 409 },
-      );
-    }
-
-    // ------------------------------------------------------------------
-    // 8. On-chain verification via verificarPago()
-    //    Verify the amount sent is >= this cuota's amount
-    // ------------------------------------------------------------------
-    const montoCuota = parseWeiFromDb(typedCuota.monto_cuota);
-
-    const verification = await verificarPago(
-      tx_hash as `0x${string}`,
-      montoCuota,
-    );
-
-    if (!verification.valid) {
-      // RPC errors are server-side (timeout/network) → 500
-      // All other verification failures are client-side → 422
-      const status = verification.reason === 'RPC_ERROR' ? 500 : 422;
-
-      return NextResponse.json(
-        {
-          error: verification.reason,
-          detail: mapVerificationError(verification.reason),
-        },
-        { status },
-      );
-    }
-
-    // ------------------------------------------------------------------
-    // 9. Update cuota record
-    // ------------------------------------------------------------------
     const { error: updateCuotaError } = await supabase
       .from('cuotas')
       .update({
         estado: 'pagada',
-        tx_hash_pago: tx_hash,
+        tx_hash_pago: simulatedTxHash,
         fecha_pago: new Date().toISOString(),
       })
       .eq('id', typedCuota.id);
 
     if (updateCuotaError) {
-      console.warn(
-        '[pago] Error al actualizar cuota en DB después de verificación exitosa:',
-        updateCuotaError.message,
-        { cuota_id: typedCuota.id, tx_hash },
-      );
+      console.warn('[pago/simulado] Error al actualizar cuota:', updateCuotaError.message);
     }
 
     // ------------------------------------------------------------------
-    // 9b. Recalcular score (pago puntual o atrasado)
+    // 7b. Recalcular score (pago puntual o atrasado)
     // ------------------------------------------------------------------
     const ahora = new Date();
     const fechaVencimiento = new Date(typedCuota.fecha_vencimiento);
@@ -303,22 +232,22 @@ export async function POST(request: NextRequest): Promise<Response> {
       referenciaTipo: 'cuota',
       referenciaId: typedCuota.id,
     }).catch((err) => {
-      console.warn('[pago] Error al recalcular score (no bloqueante):', err);
+      console.warn('[pago/simulado] Error al recalcular score:', err);
     });
 
     // ------------------------------------------------------------------
-    // 9c. Recalcular score de red + verificar semáforo comunitario
+    // 7c. Recalcular score de red + verificar semáforo comunitario
     // ------------------------------------------------------------------
     recalcularScoreRed(typedParticipante.id).catch((err) => {
-      console.warn('[pago] Error al recalcular score de red:', err);
+      console.warn('[pago/simulado] Error al recalcular score de red:', err);
     });
 
     verificarAtrasosRed(typedParticipante.id).catch((err) => {
-      console.warn('[pago] Error al verificar atrasos de red:', err);
+      console.warn('[pago/simulado] Error al verificar atrasos de red:', err);
     });
 
     // ------------------------------------------------------------------
-    // 10. Check if ALL cuotas are now paid → close the credit
+    // 8. Check if ALL cuotas are now paid → close the credit
     // ------------------------------------------------------------------
     const { data: pendingCuotas } = await supabase
       .from('cuotas')
@@ -338,16 +267,12 @@ export async function POST(request: NextRequest): Promise<Response> {
         .eq('id', creditoData.id);
 
       if (updateCreditoError) {
-        console.warn(
-          '[pago] Error al marcar crédito como pagado después de pagar todas las cuotas:',
-          updateCreditoError.message,
-          { credito_id: creditoData.id },
-        );
+        console.warn('[pago/simulado] Error al marcar crédito como pagado:', updateCreditoError.message);
       }
     }
 
     // ------------------------------------------------------------------
-    // 11. Return success
+    // 9. Return success
     // ------------------------------------------------------------------
     const response: PagoResponse = {
       status: 'pagado',
@@ -357,10 +282,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(response, { status: 200 });
   } catch (err) {
-    // ------------------------------------------------------------------
-    // Unexpected error — catch-all
-    // ------------------------------------------------------------------
-    console.error('[pago] Error inesperado:', err);
+    console.error('[pago/simulado] Error inesperado:', err);
 
     return NextResponse.json(
       {
@@ -370,23 +292,4 @@ export async function POST(request: NextRequest): Promise<Response> {
       { status: 500 },
     );
   }
-}
-
-// =============================================================================
-// Error Message Mapping
-// =============================================================================
-
-/**
- * Maps a verification error code to a user-facing detail message.
- */
-function mapVerificationError(reason: string): string {
-  const messages: Record<string, string> = {
-    TX_NO_ENCONTRADA: 'La transacción no existe en la blockchain',
-    TX_REVERTIDA: 'La transacción fue revertida en la blockchain',
-    TX_DESTINO_INVALIDO: 'La transacción no es al contrato de cUSD',
-    TX_BENEFICIARIO_INVALIDO: 'El destinatario no es la wallet de la plataforma',
-    TX_MONTO_INSUFICIENTE: 'El monto enviado es menor al valor de la cuota',
-  };
-
-  return messages[reason] ?? 'Error de verificación en la blockchain';
 }

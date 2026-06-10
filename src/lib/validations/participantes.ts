@@ -39,11 +39,10 @@ export const CrearParticipanteSchema = z.object({
   rol: z.enum(['usuario'], {
     message: 'El rol debe ser usuario',
   }),
-  codigo_referido: z
+  oficio: z
     .string()
-    .min(8, 'El código de referido debe tener al menos 8 caracteres')
-    .max(40, 'El código de referido no puede exceder 40 caracteres')
-    .optional(),
+    .min(1, 'El oficio / rol ancestral es requerido')
+    .max(255, 'El oficio no puede exceder 255 caracteres'),
   telefono: z
     .string()
     .min(1, 'El número de celular es requerido')

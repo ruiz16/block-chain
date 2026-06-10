@@ -96,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: grupo } = await supabase
       .from('grupos_gacc')
-      .select('id, nombre, activo')
+      .select('id, nombre, activo, municipio')
       .eq('codigo', codigo.toUpperCase().trim())
       .single();
 
@@ -139,7 +139,7 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json(
           {
             status: 'ya_eras_miembro',
-            grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre },
+        grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
           },
           { status: 200 },
         );
@@ -149,7 +149,7 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json(
         {
           status: 'pendiente_validacion',
-          grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre },
+          grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
           detail: 'Ya solicitaste unirte a este GACC. Espera a que un miembro te valide.',
         },
         { status: 200 },
@@ -191,7 +191,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       {
         status: 'pendiente_validacion',
-        grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre },
+        grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
         detail: 'Te has unido al GACC. Un miembro del grupo debe validar tu membresía para que puedas solicitar créditos.',
       },
       { status: 201 },

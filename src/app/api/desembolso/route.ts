@@ -21,7 +21,7 @@ import { DesembolsoSchema } from '@/lib/validations/desembolso';
 import { desembolsarCredito, BlockchainError } from '@/lib/blockchain/desembolsar';
 import { registrarAuditLog } from '@/lib/audit/logger';
 import { scoreEfectivo } from '@/lib/score/calculator';
-import { parseCusd } from '@/config/celo';
+import { parseWeiFromDb } from '@/config/celo';
 import type { Address, Wei } from '@/types/database';
 import type { Database } from '@/types/supabase';
 
@@ -31,8 +31,6 @@ import type { Database } from '@/types/supabase';
 interface CreditoConPrestatario {
   id: string;
   monto: string;
-  monto_cop: string;
-  tasa_cambio: string;
   estado: string;
   tx_hash: string | null;
   descripcion: string | null;
@@ -93,8 +91,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       .select(`
         id,
         monto,
-        monto_cop,
-        tasa_cambio,
         estado,
         tx_hash,
         descripcion,
@@ -203,7 +199,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(walletAddress as Address, parseCusd(montoCusd));
+      txHash = await desembolsarCredito(walletAddress as Address, parseWeiFromDb(montoCusd));
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
@@ -216,8 +212,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           credito_id: typedCredito.id,
           score_reputacion: scoreReputacion,
           monto: typedCredito.monto,
-          monto_cop: typedCredito.monto_cop,
-          tasa_cambio: typedCredito.tasa_cambio,
         },
       });
 
@@ -340,8 +334,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       participanteId: prestatario.id,
       detalles: {
         monto: typedCredito.monto,
-        monto_cop: typedCredito.monto_cop,
-        tasa_cambio: typedCredito.tasa_cambio,
         tx_hash: txHash,
         score_reputacion: scoreReputacion,
         numero_cuotas: numCuotas,

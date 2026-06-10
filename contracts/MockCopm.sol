@@ -5,22 +5,22 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title MockCusd
- * @notice ERC-20 test token that mimics cUSD on Celo Sepolia.
- *         The deployer (platform wallet) is the owner and can mint
- *         unlimited tokens for testing.
+ * @title MockCopm
+ * @notice ERC-20 test token that mimics COPm (Moneda Local de Confianza)
+ *         on Celo Sepolia. The deployer (platform wallet) is the owner
+ *         and can mint unlimited tokens for testing.
  *
  * @dev Uses OpenZeppelin ERC20 + Ownable — no custom logic beyond mint().
- *       Decimals = 18 (matches real cUSD).
+ *       Decimals = 18 (matches standard ERC-20).
  */
-contract MockCusd is ERC20, Ownable {
+contract MockCopm is ERC20, Ownable {
     // -----------------------------------------------------------------------
     // Constructor
     // -----------------------------------------------------------------------
 
     /**
-     * @param _name   Token name (e.g. "Celo Dollar")
-     * @param _symbol Token symbol (e.g. "cUSD")
+     * @param _name   Token name (e.g. "Moneda Local de Confianza")
+     * @param _symbol Token symbol (e.g. "COPm")
      */
     constructor(
         string memory _name,

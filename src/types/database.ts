@@ -12,7 +12,7 @@
  */
 export type Brand<K, T> = K & { __brand: T };
 
-/** cUSD amount in wei (smallest unit, 18 decimals) */
+/** COPm amount in wei (smallest unit, 18 decimals) */
 export type Wei = Brand<bigint, 'Wei'>;
 
 /** Celo wallet address (0x-prefixed hex string) */
@@ -39,6 +39,32 @@ export type EstadoCredito =
  * Possible audit log action values.
  * Matches the `tipo_accion` Postgres enum.
  */
+// =============================================================================
+// Education Types — matches supabase/migrations/021_educacion.sql
+// =============================================================================
+
+export interface EduModuloRow {
+  id: string;
+  orden: number;
+  sender: 'system' | 'whatsapp_fld';
+  mensaje: string;
+  created_at: string;
+}
+
+export interface EduProgresoRow {
+  id: string;
+  participante_id: string;
+  modulo_actual: number;
+  completado: boolean;
+  actualizado_en: string;
+}
+
+export interface EduProgresoResponse {
+  modulo_actual: number;
+  completado: boolean;
+  modulos_totales: number;
+}
+
 export type TipoAccion =
   | 'credito_creado'
   | 'credito_aprobado'
@@ -69,6 +95,7 @@ export interface ParticipanteRow {
   gacc_id?: string | null;       // GACC al que pertenece — added in migration 010
   validado_gacc?: boolean;       // Validado por el GACC — added in migration 010
   telefono: string;              // Número de celular — added in migration 018
+  email: string;                 // Correo real del usuario — added in migration 019
 }
 
 /** SIWE nonce row — matches supabase/migrations/007_siwe.sql */
@@ -80,15 +107,13 @@ export interface SiweNonceRow {
   created_at: string;    // timestamptz ISO string
 }
 
-export type MonedaCredito = 'COPm' | 'cUSD';
+export type MonedaCredito = 'COPm';
 
 export interface CreditoRow {
   id: string;
   prestatario_id: string;
-  monto: string; // NUMERIC from Postgres — cUSD (blockchain)
-  monto_cop: string; // NUMERIC(15,2) — original COP amount
+  monto: string; // NUMERIC from Postgres — COPm (wei)
   moneda: MonedaCredito;
-  tasa_cambio: string; // NUMERIC(12,2) — COP/cUSD rate at creation
   descripcion: string | null;
   estado: EstadoCredito;
   interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
@@ -116,10 +141,10 @@ export interface CuotaRow {
   id: string;
   credito_id: string;
   numero_cuota: number;
-  monto_capital: string; // NUMERIC(40,0) from Postgres — cUSD
-  monto_interes: string; // NUMERIC(40,0) — cUSD
-  monto_cuota: string; // NUMERIC(40,0) — capital + interest, cUSD
-  saldo_restante: string; // NUMERIC(40,0) — cUSD
+  monto_capital: string; // NUMERIC(40,0) from Postgres — COPm (wei)
+  monto_interes: string; // NUMERIC(40,0) — COPm (wei)
+  monto_cuota: string; // NUMERIC(40,0) — capital + interest, COPm (wei)
+  saldo_restante: string; // NUMERIC(40,0) — COPm (wei)
   fecha_vencimiento: string;
   estado: 'pendiente' | 'pagada' | 'vencida';
   tx_hash_pago: string | null;
@@ -164,7 +189,7 @@ export interface AuditLogRow {
 /** Credit record for the PanelAprobacion component */
 export interface CreditoPendiente {
   id: string;
-  monto: number; // cUSD decimal
+  monto: number; // COPm decimal
   solicitante: string; // nombre del prestatario
   score: number; // reputation 0-100
   fecha: string; // ISO date string

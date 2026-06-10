@@ -41,7 +41,6 @@ interface CreditoRow {
   id: string;
   prestatario_id: string;
   monto: string;
-  monto_cop: number;
   descripcion: string | null;
   fecha_solicitud: string;
   estado: string;
@@ -133,7 +132,7 @@ export async function GET(): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: creditos, error: creditosError } = await supabase
       .from('creditos')
-      .select('id, prestatario_id, monto, monto_cop, descripcion, fecha_solicitud, estado')
+      .select('id, prestatario_id, monto, descripcion, fecha_solicitud, estado')
       .in('prestatario_id', todosLosMiembros)
       .eq('estado', 'pendiente')
       .order('fecha_solicitud', { ascending: false });
@@ -208,7 +207,6 @@ export async function GET(): Promise<Response> {
               )
             : null,
           monto: credito.monto,
-          monto_cop: credito.monto_cop,
           descripcion: credito.descripcion,
           fecha_solicitud: credito.fecha_solicitud,
           total_necesarios: miembrosQueAvalan.length,

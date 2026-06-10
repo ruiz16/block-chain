@@ -16,7 +16,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
-import { copToCusd, getCopUsdRate, INTERES_PORCENTAJE } from '@/config/currency';
+import { INTERES_PORCENTAJE } from '@/config/currency';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -87,6 +87,25 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
+    // 2c. Education completion check
+    // ------------------------------------------------------------------
+    const { data: edu } = await supabase
+      .from('progreso_educacion')
+      .select('completado')
+      .eq('participante_id', typedParticipante.id)
+      .maybeSingle();
+
+    if (!edu?.completado) {
+      return NextResponse.json(
+        {
+          error: 'EDUCACION_INCOMPLETA',
+          detail: 'Completa el módulo educativo antes de solicitar un crédito.',
+        },
+        { status: 403 },
+      );
+    }
+
+    // ------------------------------------------------------------------
     // 3. Parse and validate body via Zod
     // ------------------------------------------------------------------
     const body: unknown = await request.json().catch(() => null);
@@ -113,20 +132,16 @@ export async function POST(request: Request): Promise<Response> {
     const { monto: montoCop, descripcion, plazo_dias, numero_cuotas } = validation.data;
 
     // ------------------------------------------------------------------
-    // 4. Save BOTH COP (original, for display) and cUSD (blockchain)
+    // 4. Save credit — monto is in COPm (wei)
     // ------------------------------------------------------------------
-    const tasaCambio = getCopUsdRate();
-    const montoCusd = copToCusd(montoCop);
     const interesPorcentaje = INTERES_PORCENTAJE;
 
     const { data: nuevoCredito, error: insertError } = await supabase
       .from('creditos')
       .insert({
         prestatario_id: typedParticipante.id,
-        monto: montoCusd.toString(),
-        monto_cop: montoCop,
+        monto: montoCop.toString(),
         moneda: 'COPm',
-        tasa_cambio: tasaCambio,
         descripcion: descripcion ?? null,
         estado: 'pendiente',
         interes_porcentaje: interesPorcentaje,
@@ -154,9 +169,7 @@ export async function POST(request: Request): Promise<Response> {
       entidadId: nuevoCredito.id,
       participanteId: typedParticipante.id,
       detalles: {
-        monto: montoCusd,
-        monto_cop: montoCop,
-        tasa_cambio: tasaCambio,
+        monto: montoCop,
         plazo_dias,
         numero_cuotas,
         interes_porcentaje: interesPorcentaje,

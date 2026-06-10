@@ -2,7 +2,7 @@
 // desembolsarCredito — Core Blockchain Disbursement Operation
 // =============================================================================
 //
-// Orchestrates the full on-chain cUSD transfer:
+// Orchestrates the full on-chain COPm transfer:
 //   1. Simulate (pre-flight check)
 //   2. Execute (write contract)
 //   3. Wait for receipt
@@ -12,7 +12,7 @@
 
 import { getContract } from 'viem';
 import { getPublicClient, getWalletClient } from '@/lib/blockchain/client';
-import { getCusdContractAddress } from '@/config/celo';
+import { getCopmContractAddress } from '@/config/celo';
 import type { Address, TxHash, Wei } from '@/types/database';
 
 // =============================================================================
@@ -58,7 +58,7 @@ const ERC20_ABI = [
 // =============================================================================
 
 /**
- * Executes a cUSD transfer to the specified address.
+ * Executes a COPm transfer to the specified address.
  *
  * Flow:
  * 1. Simulate the transfer via `simulateContract` (catches revert reasons early)
@@ -79,7 +79,7 @@ export async function desembolsarCredito(to: Address, monto: Wei): Promise<TxHas
   const publicClient = getPublicClient();
   const walletClient = getWalletClient();
 
-  const cusdAddress = getCusdContractAddress();
+  const copmAddress = getCopmContractAddress();
 
   // ------------------------------------------------------------------
   // 1. Simulate the transfer (pre-flight check)
@@ -87,7 +87,7 @@ export async function desembolsarCredito(to: Address, monto: Wei): Promise<TxHas
   // NOTE: We do NOT catch errors from simulateContract — the route handler
   // needs them to detect RPC failures and audit appropriately.
   const { request } = await publicClient.simulateContract({
-    address: cusdAddress,
+    address: copmAddress,
     abi: ERC20_ABI,
     functionName: 'transfer',
     args: [to as `0x${string}`, monto as bigint],

@@ -56,6 +56,7 @@ export interface Database {
           wallet_address: string;
           nombre: string;
           rol: DbRolParticipante;
+          oficio: string;
           user_id: string;
           score_reputacion: number;
           activo: boolean;
@@ -64,6 +65,7 @@ export interface Database {
           auth_password: string | null;
           gacc_id: string | null;
           validado_gacc: boolean;
+          email: string;
         };
         Insert: {
           id?: string; // gen_random_uuid()
@@ -71,6 +73,7 @@ export interface Database {
           wallet_address: string;
           nombre: string;
           rol: DbRolParticipante;
+          oficio?: string;
           user_id: string;
           score_reputacion?: number; // default 50
           activo?: boolean; // default true
@@ -79,6 +82,7 @@ export interface Database {
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean; // default false
+          email?: string; // default ''
         };
         Update: {
           id?: string;
@@ -86,6 +90,7 @@ export interface Database {
           wallet_address?: string;
           nombre?: string;
           rol?: DbRolParticipante;
+          oficio?: string;
           user_id?: string;
           score_reputacion?: number;
           activo?: boolean;
@@ -94,6 +99,7 @@ export interface Database {
           auth_password?: string | null;
           gacc_id?: string | null;
           validado_gacc?: boolean;
+          email?: string;
         };
         Relationships: [];
       };
@@ -101,10 +107,8 @@ export interface Database {
         Row: {
           id: string;
           prestatario_id: string;
-          monto: string; // numeric(40,0) — cUSD wei
-          monto_cop: string; // numeric(15,2)
-          moneda: string; // 'COPm' | 'cUSD'
-          tasa_cambio: string; // numeric(12,2)
+          monto: string; // numeric(40,0) — COPm (wei)
+          moneda: string; // 'COPm'
           descripcion: string | null;
           estado: DbEstadoCredito;
           interes_porcentaje: number; // numeric(5,2)
@@ -120,10 +124,8 @@ export interface Database {
         Insert: {
           id?: string;
           prestatario_id: string;
-          monto: string; // cUSD wei
-          monto_cop: number; // COP amount
+          monto: string; // COPm (wei)
           moneda?: string; // default 'COPm'
-          tasa_cambio: number; // exchange rate
           descripcion?: string | null;
           estado?: DbEstadoCredito; // default 'pendiente'
           interes_porcentaje?: number; // default 0
@@ -140,9 +142,7 @@ export interface Database {
           id?: string;
           prestatario_id?: string;
           monto?: string;
-          monto_cop?: number;
           moneda?: string;
-          tasa_cambio?: number;
           descripcion?: string | null;
           estado?: DbEstadoCredito;
           interes_porcentaje?: number;
@@ -295,6 +295,7 @@ export interface Database {
           creador_id: string;
           activo: boolean;
           created_at: string;
+          municipio: string;
         };
         Insert: {
           id?: string;
@@ -304,6 +305,7 @@ export interface Database {
           creador_id: string;
           activo?: boolean; // default true
           created_at?: string;
+          municipio?: string;
         };
         Update: {
           id?: string;
@@ -343,6 +345,54 @@ export interface Database {
           validado_en?: string | null;
           activo?: boolean;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      modulos_educativos: {
+        Row: {
+          id: string;
+          orden: number;
+          sender: 'system' | 'whatsapp_fld';
+          mensaje: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          orden: number;
+          sender: 'system' | 'whatsapp_fld';
+          mensaje: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          orden?: number;
+          sender?: 'system' | 'whatsapp_fld';
+          mensaje?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      progreso_educacion: {
+        Row: {
+          id: string;
+          participante_id: string;
+          modulo_actual: number;
+          completado: boolean;
+          actualizado_en: string;
+        };
+        Insert: {
+          id?: string;
+          participante_id: string;
+          modulo_actual?: number; // default 1
+          completado?: boolean; // default false
+          actualizado_en?: string;
+        };
+        Update: {
+          id?: string;
+          participante_id?: string;
+          modulo_actual?: number;
+          completado?: boolean;
+          actualizado_en?: string;
         };
         Relationships: [];
       };

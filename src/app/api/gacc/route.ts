@@ -111,7 +111,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { nombre, descripcion } = validation.data;
+    const { nombre, descripcion, municipio } = validation.data;
 
     // ------------------------------------------------------------------
     // 4. Generate unique code (retry if collision)
@@ -140,6 +140,7 @@ export async function POST(request: Request): Promise<Response> {
         descripcion: descripcion || null,
         codigo,
         creador_id: typedParticipante.id,
+        municipio,
       })
       .select()
       .single();
@@ -180,12 +181,13 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       {
         status: 'creado' as const,
-        grupo: {
-          id: typedGrupo.id,
-          nombre: typedGrupo.nombre,
-          codigo: typedGrupo.codigo,
-          descripcion: typedGrupo.descripcion,
-        },
+          grupo: {
+            id: typedGrupo.id,
+            nombre: typedGrupo.nombre,
+            codigo: typedGrupo.codigo,
+            descripcion: typedGrupo.descripcion,
+            municipio: typedGrupo.municipio,
+          },
       },
       { status: 201 },
     );

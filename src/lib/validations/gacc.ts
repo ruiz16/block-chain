@@ -30,6 +30,9 @@ export const CrearGaccSchema = z.object({
     .max(500, 'La descripción no puede exceder 500 caracteres')
     .optional()
     .or(z.literal('')),
+  municipio: z.enum(['guapi', 'timbiqui'], {
+    message: 'El municipio debe ser guapi o timbiqui',
+  }),
 }).strict();
 
 export type CrearGaccInput = z.infer<typeof CrearGaccSchema>;

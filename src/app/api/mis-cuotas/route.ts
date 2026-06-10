@@ -16,10 +16,11 @@
 // are effectively 1-cuota credits.
 // =============================================================================
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { getServerUser } from '@/lib/supabase/auth-server';
+import { getServerClient } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 
 // ---------------------------------------------------------------------------
 // Types for Supabase query results
@@ -31,32 +32,33 @@ interface ParticipanteRow {
 export interface EnrichedCuota {
   id: string;
   credito_id: string;
-  credito_monto: string;     // cUSD total
-  credito_monto_cop: string;  // COP total (original)
-  credito_tasa_cambio: string; // COP/cUSD rate
+  credito_monto: string;     // COPm total
   credito_estado: string;
   credito_descripcion: string | null;
   numero_cuota: number;
   total_cuotas: number;
-  monto_capital: string;  // cUSD
-  monto_interes: string;  // cUSD
-  monto_cuota: string;    // cUSD
-  saldo_restante: string; // cUSD
+  monto_capital: string;  // COPm (wei)
+  monto_interes: string;  // COPm (wei)
+  monto_cuota: string;    // COPm (wei)
+  saldo_restante: string; // COPm (wei)
   fecha_vencimiento: string;
   estado: 'pendiente' | 'pagada' | 'vencida';
   tx_hash_pago: string | null;
   fecha_pago: string | null;
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session
+    // 1. Verify session (cookies → Bearer fallback for mobile)
     // ------------------------------------------------------------------
     const cookieStore = await cookies();
-    const user = await getServerUser(cookieStore);
+    const serverClient = getServerClient(cookieStore);
+    const { data: { user }, error: userError } = await serverClient.auth.getUser();
+    const bearerResult = !user ? await getBearerUser(request) : null;
+    const authedUser = user ?? bearerResult?.user ?? null;
 
-    if (!user) {
+    if (!authedUser) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión para ver tus cuotas' },
         { status: 401 },
@@ -71,7 +73,7 @@ export async function GET(): Promise<Response> {
     const { data: participante } = await supabase
       .from('participantes')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', authedUser.id)
       .single();
 
     const typedParticipante = participante;
@@ -85,7 +87,7 @@ export async function GET(): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: creditos } = await supabase
       .from('creditos')
-      .select('id, monto, monto_cop, tasa_cambio, estado, descripcion, numero_cuotas')
+      .select('id, monto, estado, descripcion, numero_cuotas')
       .eq('prestatario_id', typedParticipante.id)
       .order('fecha_solicitud', { ascending: false });
 
@@ -122,8 +124,6 @@ export async function GET(): Promise<Response> {
         id: cuota.id,
         credito_id: cuota.credito_id,
         credito_monto: credito?.monto ?? '0',
-        credito_monto_cop: credito?.monto_cop ?? '0',
-        credito_tasa_cambio: credito?.tasa_cambio ?? '4000',
         credito_estado: credito?.estado ?? 'desconocido',
         credito_descripcion: credito?.descripcion ?? null,
         numero_cuota: cuota.numero_cuota,

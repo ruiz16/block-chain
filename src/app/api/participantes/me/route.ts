@@ -34,7 +34,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const serverClient = getServerClient(request.cookies);
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
-    const bearerResult = !user && !userError ? await getBearerUser(request) : null;
+    const bearerResult = !user ? await getBearerUser(request) : null;
     const authedUser = user ?? bearerResult?.user ?? null;
 
     if (!authedUser) {

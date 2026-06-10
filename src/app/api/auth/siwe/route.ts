@@ -648,10 +648,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine if the participante has a REAL profile (not auto-generated "Wallet 0x...")
+    let profileCompleted = false;
+    if (userId) {
+      const { data: profileCheck } = await admin
+        .from('participantes')
+        .select('nombre')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (profileCheck?.nombre && !profileCheck.nombre.startsWith('Wallet ')) {
+        profileCompleted = true;
+      }
+    }
+
     // Create response WITH tokens for mobile clients
     const response = NextResponse.json({
       ok: true,
       isNewUser,
+      profile_completed: profileCompleted,
       access_token: signInData.session.access_token,
       refresh_token: signInData.session.refresh_token,
     });

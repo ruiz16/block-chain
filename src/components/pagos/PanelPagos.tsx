@@ -18,7 +18,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createWalletClient, custom } from 'viem';
 import { celoSepolia } from 'viem/chains';
-import { getCusdContractAddress, getPlatformWalletAddressPublic, parseCusd } from '@/config/celo';
+import { getCopmContractAddress, getPlatformWalletAddressPublic, parseWeiFromDb } from '@/config/celo';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
 import { LoadingSkeleton, EmptyState } from '@/components/ui';
 import type { EnrichedCuota } from '@/app/api/mis-cuotas/route';
@@ -32,7 +32,7 @@ type PanelState = 'loading' | 'empty' | 'no-pending' | 'list' | 'connecting' | '
 const ERROR_MESSAGES: Record<string, string> = {
   TX_NO_ENCONTRADA: 'La transacción no existe en la blockchain',
   TX_REVERTIDA: 'La transacción fue revertida en la blockchain',
-  TX_DESTINO_INVALIDO: 'La transacción no es al contrato de cUSD',
+  TX_DESTINO_INVALIDO: 'La transacción no es al contrato de COPm',
   TX_MONTO_INSUFICIENTE: 'El monto enviado es menor al valor de la cuota',
   TX_BENEFICIARIO_INVALIDO: 'El destinatario no es la wallet de la plataforma',
   ESTADO_INCORRECTO: 'La cuota no está en estado de pago pendiente',
@@ -45,41 +45,20 @@ const NETWORK_ERROR = 'Error de conexión. Verifica tu conexión a internet';
 const TX_HASH_REGEX = /^0x[a-f0-9]{64}$/i;
 
 // =============================================================================
-// Helper: format cUSD with 2 decimals
+// Helper: format COPm with locale
 //
 // CRITICAL: The values in cuotas.monto_cuota / credito.monto
-// are already in cUSD (NOT wei), because creditos.monto is stored in cUSD.
+// are already in COPm (raw decimal, NOT wei).
 // We must NOT divide by 10^18 here — that's only for blockchain amounts.
 // =============================================================================
 
-function formatCusd(value: string): string {
+function formatCopm(value: string): string {
   try {
     const num = Number(value);
-    if (isNaN(num)) return '0.00';
-    return num.toFixed(2);
+    if (isNaN(num)) return '$0.00';
+    return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } catch {
-    return '0.00';
-  }
-}
-
-/** Format COP with locale formatting (no decimals) */
-function formatCop(value: string): string {
-  try {
-    const num = Number(value);
-    if (isNaN(num)) return '$0';
-    return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 0 });
-  } catch {
-    return '$0';
-  }
-}
-
-/** Calculate COP value of a cuota using the credit's saved exchange rate */
-function cuotaCop(montoCusd: string, tasaCambio: string): string {
-  try {
-    const cop = Math.round(Number(montoCusd) * Number(tasaCambio));
-    return '$' + cop.toLocaleString('es-CO');
-  } catch {
-    return '$0';
+    return '$0.00';
   }
 }
 
@@ -207,15 +186,15 @@ export default function PanelPagos() {
 
       // 5. Prepare the transfer
       const platformWallet = getPlatformWalletAddressPublic();
-      const cusdAddress = getCusdContractAddress();
-      // CRITICAL: monto_cuota is in cUSD, must convert to wei (10^18)
+      const copmAddress = getCopmContractAddress();
+      // CRITICAL: monto_cuota is in COPm (decimal), must convert to wei (10^18)
       // before sending to the ERC-20 contract via MetaMask.
-      const amountWei = parseCusd(cuota.monto_cuota) as bigint;
+      const amountWei = parseWeiFromDb(cuota.monto_cuota) as bigint;
 
       // 6. Execute transfer via MetaMask
       setState('submitting');
       const txHash = await walletClient.writeContract({
-        address: cusdAddress,
+        address: copmAddress,
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [platformWallet, amountWei],
@@ -451,7 +430,7 @@ export default function PanelPagos() {
             <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-200">
-                  {formatCop(first.credito_monto_cop)} COP
+                  {formatCopm(first.credito_monto)} COPm
                 </p>
                 <p className="text-xs text-slate-400">
                   {first.total_cuotas} cuota{first.total_cuotas !== 1 ? 's' : ''}
@@ -484,31 +463,22 @@ export default function PanelPagos() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800 dark:text-gray-200">
                           {cuota.numero_cuota}
                         </td>
-                        {/* Cuota: COP grande + cUSD chiquito */}
+                        {/* Cuota: COPm */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-semibold text-slate-800 dark:text-gray-200">
-                            {cuotaCop(cuota.monto_cuota, cuota.credito_tasa_cambio)}
-                          </div>
-                          <div className="font-mono text-xs text-slate-400 dark:text-gray-500">
-                            {formatCusd(cuota.monto_cuota)} cUSD
+                            {formatCopm(cuota.monto_cuota)} COPm
                           </div>
                         </td>
-                        {/* Capital: COP grande + cUSD chiquito */}
+                        {/* Capital: COPm */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-medium text-slate-600 dark:text-gray-300">
-                            {cuotaCop(cuota.monto_capital, cuota.credito_tasa_cambio)}
-                          </div>
-                          <div className="font-mono text-xs text-slate-400 dark:text-gray-500">
-                            {formatCusd(cuota.monto_capital)} cUSD
+                            {formatCopm(cuota.monto_capital)} COPm
                           </div>
                         </td>
-                        {/* Interés: COP grande + cUSD chiquito */}
+                        {/* Interés: COPm */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-medium text-slate-600 dark:text-gray-300">
-                            {cuotaCop(cuota.monto_interes, cuota.credito_tasa_cambio)}
-                          </div>
-                          <div className="font-mono text-xs text-slate-400 dark:text-gray-500">
-                            {formatCusd(cuota.monto_interes)} cUSD
+                            {formatCopm(cuota.monto_interes)} COPm
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-slate-500 dark:text-gray-400">
