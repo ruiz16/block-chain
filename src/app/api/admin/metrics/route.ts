@@ -33,10 +33,6 @@ interface ScoreRow {
   score_reputacion: number;
 }
 
-interface CountRow {
-  count: number;
-}
-
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     // Step 1: Auth guard
@@ -46,11 +42,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     const supabase = getSupabaseClient();
 
     // Step 2: Total participantes
-    const { data: participanteCount } = await supabase
+    const { count: totalParticipantes } = await supabase
       .from('participantes')
-      .select('id', { count: 'exact', head: true });
-
-    const totalParticipantes = participanteCount?.length ?? 0;
+      .select('*', { count: 'exact', head: true });
 
     // Step 3: Average reputation score
     const { data: scores } = await supabase
@@ -103,7 +97,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // Step 6: Return metrics
     return NextResponse.json(
       {
-        totalParticipantes,
+        totalParticipantes: totalParticipantes ?? 0,
         totalCreditos,
         totalDesembolsado: String(totalDesembolsado),
         totalPagado: String(totalPagado),
