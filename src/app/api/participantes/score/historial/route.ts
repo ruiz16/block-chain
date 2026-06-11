@@ -11,9 +11,9 @@
 // =============================================================================
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { getServerUser } from '@/lib/supabase/auth-server';
+import { getServerClient } from '@/lib/supabase/auth-server';
+import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { HistorialScoreQuerySchema } from '@/lib/validations/score';
 import { obtenerHistorialScore } from '@/lib/score/calculator';
 
@@ -42,10 +42,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 2. Verify session
     // ------------------------------------------------------------------
-    const cookieStore = await cookies();
-    const user = await getServerUser(cookieStore);
+    const serverClient = getServerClient(request.cookies);
+    const { data: { user } } = await serverClient.auth.getUser();
+    const bearerResult = !user ? await getBearerUser(request) : null;
+    const authedUser = user ?? bearerResult?.user ?? null;
 
-    if (!user) {
+    if (!authedUser) {
       return NextResponse.json(
         { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión' },
         { status: 401 },
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { data: rawParticipante } = await supabase
       .from('participantes')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', authedUser.id)
       .single();
 
     const participante = rawParticipante;

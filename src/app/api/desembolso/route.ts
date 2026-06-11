@@ -21,7 +21,6 @@ import { DesembolsoSchema } from '@/lib/validations/desembolso';
 import { desembolsarCredito, BlockchainError } from '@/lib/blockchain/desembolsar';
 import { registrarAuditLog } from '@/lib/audit/logger';
 import { scoreEfectivo } from '@/lib/score/calculator';
-import { parseWeiFromDb } from '@/config/celo';
 import type { Address, Wei } from '@/types/database';
 import type { Database } from '@/types/supabase';
 
@@ -189,7 +188,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(walletAddress as Address, parseWeiFromDb(montoCusd));
+      const montoWei = (BigInt(montoCusd) * 10n ** 18n) as Wei;
+      txHash = await desembolsarCredito(walletAddress as Address, montoWei);
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
