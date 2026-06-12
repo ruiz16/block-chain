@@ -40,7 +40,18 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const supabase = getSupabaseClient();
 
-    const { data: grupos, count: total, error } = await supabase
+    type GrupoRow = {
+      id: string;
+      nombre: string;
+      descripcion: string | null;
+      codigo: string;
+      municipio: string | null;
+      activo: boolean;
+      created_at: string;
+      creador: { nombre: string } | { nombre: string }[] | null;
+    };
+
+    const { data: grupos, count: total, error } = await (supabase
       .from('grupos_gacc')
       .select(`
         id,
@@ -53,7 +64,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         creador:participantes!grupos_gacc_creador_id_fkey(nombre)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, to);
+      .range(from, to) as unknown as Promise<{ data: GrupoRow[] | null; count: number | null; error: { message: string } | null }>);
 
     if (error) {
       console.error('[admin/gacc] Error al consultar GACCs:', error.message);
