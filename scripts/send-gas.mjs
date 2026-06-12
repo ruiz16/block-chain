@@ -1,7 +1,7 @@
 // =============================================================================
 // Send CELO for gas to a wallet
 // =============================================================================
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();

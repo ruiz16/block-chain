@@ -142,7 +142,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: credito, error: creditoError } = await supabase
       .from('creditos')
-      .select('id, monto, estado, prestatario_id, expiracion_en')
+      .select('id, monto, estado, prestatario_id, expiracion_en, plazo_dias')
       .eq('id', credito_id)
       .single();
 
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       estado: string;
       prestatario_id: string;
       expiracion_en: string | null;
+      plazo_dias: number;
     };
 
     if (typedCredito.estado !== 'pendiente') {
@@ -295,7 +296,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 10. Check if 3 avales reached → transition to avalado
+    // 10. Check if 3 avales reached → auto-approve
     // ------------------------------------------------------------------
 
     // 10a. Count only avales from GACC members (excluding prestatario)
@@ -326,11 +327,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     let nuevoEstado = 'pendiente';
 
     if (umbralAlcanzado) {
-      nuevoEstado = 'avalado';
+      nuevoEstado = 'aprobado';
+
+      const fechaVencimiento = new Date(
+        Date.now() + typedCredito.plazo_dias * 24 * 60 * 60 * 1000,
+      ).toISOString();
 
       await supabase
         .from('creditos')
-        .update({ estado: 'avalado' } as never)
+        .update({
+          estado: 'aprobado',
+          fecha_vencimiento: fechaVencimiento,
+        } as never)
         .eq('id', typedCredito.id);
     }
 
@@ -350,6 +358,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         avales_actuales: avalCount,
         avales_minimos: AVALES_MINIMOS,
         umbral_alcanzado: umbralAlcanzado,
+        auto_aprobado: umbralAlcanzado,
       },
     });
 

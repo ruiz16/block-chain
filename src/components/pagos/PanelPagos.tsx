@@ -21,7 +21,7 @@ import { celoSepolia } from 'viem/chains';
 import { getCopmContractAddress, getPlatformWalletAddressPublic, parseWeiFromDb } from '@/config/celo';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
 import { LoadingSkeleton, EmptyState } from '@/components/ui';
-import type { EnrichedCuota } from '@/app/api/mis-cuotas/route';
+import type { CuotaAdmin } from '@/app/api/admin/cuotas/route';
 
 type PanelState = 'loading' | 'empty' | 'no-pending' | 'list' | 'connecting' | 'submitting' | 'success' | 'error';
 
@@ -68,7 +68,7 @@ function formatCopm(value: string): string {
 
 export default function PanelPagos() {
   const [state, setState] = useState<PanelState>('loading');
-  const [cuotas, setCuotas] = useState<EnrichedCuota[]>([]);
+  const [cuotas, setCuotas] = useState<CuotaAdmin[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeCuotaId, setActiveCuotaId] = useState<string | null>(null);
   const [showManualInput, setShowManualInput] = useState<string | null>(null);
@@ -76,7 +76,7 @@ export default function PanelPagos() {
   const [manualTxError, setManualTxError] = useState<string | null>(null);
 
   // ------------------------------------------------------------------
-  // Fetch cuotas on mount
+  // Fetch cuotas on mount — admin endpoint, returns ALL cuotas
   // ------------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
@@ -84,14 +84,14 @@ export default function PanelPagos() {
     async function fetchCuotas() {
       try {
         setState('loading');
-        const res = await fetch('/api/mis-cuotas');
+        const res = await fetch('/api/admin/cuotas?limit=100');
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
 
         const data = await res.json();
-        const rows = (data.cuotas ?? []) as EnrichedCuota[];
+        const rows = (data.data ?? []) as CuotaAdmin[];
 
         if (cancelled) return;
 
@@ -141,7 +141,7 @@ export default function PanelPagos() {
   // ------------------------------------------------------------------
   // MetaMask payment handler
   // ------------------------------------------------------------------
-  const handleMetaMaskPayment = useCallback(async (cuota: EnrichedCuota) => {
+  const handleMetaMaskPayment = useCallback(async (cuota: CuotaAdmin) => {
     setActiveCuotaId(cuota.id);
     setState('submitting');
     setErrorMsg(null);
@@ -251,7 +251,7 @@ export default function PanelPagos() {
     return null;
   }, []);
 
-  const handleManualSubmit = useCallback(async (cuota: EnrichedCuota) => {
+  const handleManualSubmit = useCallback(async (cuota: CuotaAdmin) => {
     const validationError = validateTxHash(manualTxHash);
     if (validationError) {
       setManualTxError(validationError);
@@ -415,7 +415,7 @@ export default function PanelPagos() {
   }
 
   // Group cuotas by credito_id for visual grouping
-  const groupedByCredit = pendientes.reduce<Record<string, EnrichedCuota[]>>((acc, c) => {
+  const groupedByCredit = pendientes.reduce<Record<string, CuotaAdmin[]>>((acc, c) => {
     if (!acc[c.credito_id]) acc[c.credito_id] = [];
     acc[c.credito_id]!.push(c);
     return acc;
@@ -437,11 +437,10 @@ export default function PanelPagos() {
             <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-200">
-                  {formatCopm(first.credito_monto)} COPm
+                  {first.prestatario_nombre}
                 </p>
                 <p className="text-xs text-slate-400">
                   {first.total_cuotas} cuota{first.total_cuotas !== 1 ? 's' : ''}
-                  {first.credito_descripcion && ` — ${first.credito_descripcion}`}
                 </p>
               </div>
             </div>

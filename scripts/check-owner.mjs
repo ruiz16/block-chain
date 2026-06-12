@@ -1,14 +1,14 @@
 // =============================================================================
 // Check: is our deployer key the owner of MockCopm?
 // =============================================================================
-const hre = require('hardhat');
+import { ethers } from 'hardhat';
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  const [deployer] = await ethers.getSigners();
 
   const MOCK_COPM = '0x58d5cd6f4f272f6C15Eb69a8bCc13F9416a36369';
 
-  const contract = await hre.ethers.getContractAt(
+  const contract = await ethers.getContractAt(
     ['function owner() view returns (address)', 'function symbol() view returns (string)'],
     MOCK_COPM,
     deployer,
@@ -27,7 +27,7 @@ async function main() {
   console.log('');
   console.log('¿Coinciden?   :', owner.toLowerCase() === deployer.address.toLowerCase() ? '✅ SÍ' : '❌ NO');
   console.log('');
-  console.log('TotalSupply   :', hre.ethers.formatUnits(await hre.ethers.provider.getStorage(MOCK_COPM, 0), 0));
+  console.log('TotalSupply   :', ethers.formatUnits(await ethers.provider.getStorage(MOCK_COPM, 0), 0));
 
   if (owner.toLowerCase() !== deployer.address.toLowerCase()) {
     console.log('▶ La wallet del .env.local NO es owner del contrato COPm.');

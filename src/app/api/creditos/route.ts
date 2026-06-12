@@ -17,6 +17,7 @@ import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser, PARTICIPANTE_AUTH_SELECT } from '@/lib/supabase/auth-bearer';
 import { SolicitarCreditoSchema } from '@/lib/validations/creditos';
 import { INTERES_PORCENTAJE } from '@/config/currency';
+import type { EstadoCredito } from '@/types/database';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
 // ---------------------------------------------------------------------------
@@ -112,6 +113,29 @@ export async function POST(request: Request): Promise<Response> {
           detail: 'Completa el módulo educativo antes de solicitar un crédito.',
         },
         { status: 403 },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 2d. Active credit check — one credit at a time
+    // ------------------------------------------------------------------
+    const ESTADOS_ACTIVOS: EstadoCredito[] = ['pendiente', 'avalado', 'aprobado', 'desembolsado'];
+
+    const { data: creditoActivo } = await supabase
+      .from('creditos')
+      .select('id, estado')
+      .eq('prestatario_id', typedParticipante.id)
+      .in('estado', ESTADOS_ACTIVOS)
+      .limit(1)
+      .maybeSingle();
+
+    if (creditoActivo) {
+      return NextResponse.json(
+        {
+          error: 'CREDITO_ACTIVO',
+          detail: `Ya tienes un crédito en estado "${creditoActivo.estado}". Debes completar el pago antes de solicitar uno nuevo.`,
+        },
+        { status: 409 },
       );
     }
 

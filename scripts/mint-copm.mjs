@@ -1,30 +1,30 @@
 // =============================================================================
-// Mint MockCusd to any wallet — Celo Sepolia
+// Mint MockCOPm to any wallet — Celo Sepolia
 // =============================================================================
 //
 // Usage:
-//   npx hardhat run scripts/mint-to-wallet.cjs --network celoSepolia
+//   npx hardhat run scripts/mint-copm.cjs --network celoSepolia
 // =============================================================================
 
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
-  const MOCK_CUSD = '0xb42aD227800bf1082A766Af8D2D221f43aE1e710';
-  const TARGET_WALLET = '0xfDF7e81A976E3c4079DA45e39f7014A4e27445f4';
-  const AMOUNT_CUSD = 1000; // 1000 cUSD
+  const MOCK_COPM     = '0x58d5cd6f4f272f6C15Eb69a8bCc13F9416a36369';
+  const TARGET_WALLET = '0xd1c87663206a2102cad58e6A34d0c91FeB8212f2';
+  const AMOUNT_COPM   = 200000; // 200.000 COPm
 
   const contract = await hre.ethers.getContractAt(
     ['function mint(address to, uint256 amount) external', 'function balanceOf(address) view returns (uint256)', 'function symbol() view returns (string)'],
-    MOCK_CUSD,
+    MOCK_COPM,
     deployer,
   );
 
   const symbol = await contract.symbol();
-  const amountWei = hre.ethers.parseUnits(String(AMOUNT_CUSD), 18);
+  const amountWei = hre.ethers.parseUnits(String(AMOUNT_COPM), 18);
 
-  console.log(`Minting ${AMOUNT_CUSD} ${symbol} to ${TARGET_WALLET}…`);
+  console.log(`Minting ${AMOUNT_COPM} ${symbol} to ${TARGET_WALLET}…`);
 
   const tx = await contract.mint(TARGET_WALLET, amountWei);
   await tx.wait();

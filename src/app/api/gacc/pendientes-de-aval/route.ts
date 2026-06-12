@@ -227,6 +227,7 @@ export async function GET(request: Request): Promise<Response> {
           avales_minimos: 3,
           avales_actuales: avalCount ?? 0,
           ya_avale: !!miAval,
+          es_propio: credito.prestatario_id === miId,
         };
       }),
     );
