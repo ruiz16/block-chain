@@ -252,7 +252,7 @@ export default function PanelPagos() {
       setCuotas((prev) =>
         prev.map((c) =>
           c.id === cuota.id
-            ? { ...c, estado: 'pagada' as const, tx_hash_pago: manualTxHash, fecha_pago: new Date().toISOString() }
+            ? { ...c, estado: 'pagada' as const, tx_hash_pago: txHash, fecha_pago: new Date().toISOString() }
             : c,
         ),
       );
