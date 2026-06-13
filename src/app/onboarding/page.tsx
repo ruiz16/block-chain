@@ -41,7 +41,7 @@ export default function OnboardingPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // ------------------------------------------------------------------------
-  // Check if user already has a profile on mount
+  // Redirect if user already has a profile (resolved from context)
   // ------------------------------------------------------------------------
   useEffect(() => {
     if (participanteLoading) return;
