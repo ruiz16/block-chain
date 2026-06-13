@@ -8,6 +8,7 @@
 require('dotenv').config({ path: '.env.local' });
 require('@nomicfoundation/hardhat-ethers');
 require('@nomicfoundation/hardhat-verify');
+require('@nomicfoundation/hardhat-chai-matchers');
 
 /** @type {import('hardhat/config').HardhatUserConfig} */
 module.exports = {
