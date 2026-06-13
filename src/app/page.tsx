@@ -1,69 +1,38 @@
 'use client';
 
-// =============================================================================
-// Root Page — Redirect Gateway (Client-Side)
-// =============================================================================
-//
-// Client-side redirect based on auth state:
-// - Authenticated: Redirects to the appropriate dashboard based on role
-// - Anonymous: Redirects to the login page (/login)
-//
-// The /api/participantes?check_existing=true endpoint handles session
-// verification server-side, so no SSR is needed here.
-// =============================================================================
-
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuthClient } from '@/lib/supabase/auth-client';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useParticipante } from '@/components/auth/ParticipanteProvider';
 
 export default function Home() {
   const router = useRouter();
-  const [status, setStatus] = useState<'checking' | 'redirecting'>('checking');
+  const { user, isLoading: authLoading } = useAuth();
+  const { participante, isLoading: participanteLoading } = useParticipante();
 
   useEffect(() => {
-    let cancelled = false;
+    if (authLoading || participanteLoading) return;
 
-    async function redirectBySession() {
-      const client = getAuthClient();
-      const { data: { session } } = await client.auth.getSession();
-
-      if (!session) {
-        if (!cancelled) {
-          setStatus('redirecting');
-          router.replace('/login');
-        }
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/participantes?check_existing=true');
-        const data = await res.json();
-
-        if (!cancelled) {
-          setStatus('redirecting');
-          if (data.exists && data.participante?.rol === 'usuario') {
-            // Usuarios without a GACC need to create/join one first
-            if (!data.participante.gacc_id) {
-              router.replace('/gacc');
-            } else {
-              router.replace('/mis-creditos');
-            }
-          } else {
-            // Admins, Avals, and Lenders go to the approval panel
-            router.replace('/aprobacion');
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setStatus('redirecting');
-          router.replace('/login');
-        }
-      }
+    if (!user) {
+      router.replace('/login');
+      return;
     }
 
-    redirectBySession();
-    return () => { cancelled = true; };
-  }, [router]);
+    if (!participante) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    if (participante.rol === 'usuario') {
+      if (!participante.gacc_id) {
+        router.replace('/gacc');
+      } else {
+        router.replace('/mis-creditos');
+      }
+    } else {
+      router.replace('/aprobacion');
+    }
+  }, [authLoading, participanteLoading, user, participante, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen" role="status">
@@ -81,9 +50,7 @@ export default function Home() {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <p className="text-sm text-gray-500">
-          {status === 'checking' ? 'Verificando sesión…' : 'Redirigiendo…'}
-        </p>
+        <p className="text-sm text-gray-500">Verificando sesión…</p>
       </div>
     </div>
   );
