@@ -38,6 +38,18 @@ export function getCopmContractAddress(): `0x${string}` {
 }
 
 /**
+ * Returns the configured LendingPool contract address.
+ * Throws if NEXT_PUBLIC_LENDING_POOL_CONTRACT is not set.
+ */
+export function getLendingPoolAddress(): `0x${string}` {
+  const address = process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT;
+  if (!address) {
+    throw new Error('Falta NEXT_PUBLIC_LENDING_POOL_CONTRACT en las variables de entorno');
+  }
+  return address as `0x${string}`;
+}
+
+/**
  * Returns the platform wallet address (public).
  * This is the address that receives payments — safe to expose to the frontend.
  * Throws if NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS is not set.
