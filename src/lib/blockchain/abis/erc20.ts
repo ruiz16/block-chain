@@ -1,8 +1,8 @@
 // =============================================================================
-// ERC-20 Minimal ABI — for MetaMask transfer() calls
+// ERC-20 Minimal ABI — for MetaMask transfer() and approve() calls
 // =============================================================================
 //
-// Only includes the `transfer` function we need for payment.
+// Includes `transfer` for direct payments and `approve` for pool repayments.
 // No need for the full ERC-20 ABI — keeps the bundle small.
 // =============================================================================
 
@@ -12,6 +12,16 @@ export const ERC20_ABI = [
     type: 'function',
     inputs: [
       { name: 'recipient', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
       { name: 'amount', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'bool' }],

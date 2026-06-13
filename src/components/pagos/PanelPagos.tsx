@@ -16,10 +16,12 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { createWalletClient, custom } from 'viem';
+import { createWalletClient, custom, createPublicClient, http } from 'viem';
 import { celoSepolia } from 'viem/chains';
-import { getCopmContractAddress, getPlatformWalletAddressPublic, parseWeiFromDb } from '@/config/celo';
+import { getCopmContractAddress, getPlatformWalletAddressPublic, getLendingPoolAddress, parseWeiFromDb } from '@/config/celo';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
+import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
+import { creditIdHash } from '@/lib/blockchain/credit-id';
 import { LoadingSkeleton, EmptyState } from '@/components/ui';
 import type { CuotaAdmin } from '@/app/api/admin/cuotas/route';
 
@@ -184,22 +186,49 @@ export default function PanelPagos() {
         }
       }
 
-      // 5. Prepare the transfer
-      const platformWallet = getPlatformWalletAddressPublic();
+      // 5-6. Ejecutar el pago según el modo del crédito
       const copmAddress = getCopmContractAddress();
       // CRITICAL: monto_cuota is in COPm (decimal), must convert to wei (10^18)
       // before sending to the ERC-20 contract via MetaMask.
       const amountWei = parseWeiFromDb(cuota.monto_cuota) as bigint;
+      let txHash: `0x${string}`;
 
-      // 6. Execute transfer via MetaMask
       setState('submitting');
-      const txHash = await walletClient.writeContract({
-        address: copmAddress,
-        abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [platformWallet, amountWei],
-        account: userAddress,
-      });
+
+      if (cuota.repayment_mode === 'pool') {
+        // Pool: approve(pool, amount) → repay(creditId, amount)  (2 transacciones)
+        const poolAddress = getLendingPoolAddress();
+        const creditId = creditIdHash(cuota.credito_id);
+
+        const approveTx = await walletClient.writeContract({
+          address: copmAddress,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [poolAddress, amountWei],
+          account: userAddress,
+        });
+
+        const publicClient = createPublicClient({ chain: celoSepolia, transport: http() });
+        await publicClient.waitForTransactionReceipt({ hash: approveTx, timeout: 60_000 });
+
+        txHash = await walletClient.writeContract({
+          address: poolAddress,
+          abi: LENDING_POOL_ABI,
+          functionName: 'repay',
+          args: [creditId, amountWei],
+          account: userAddress,
+        });
+      } else {
+        // Legacy: transfer directo a la platform wallet (1 transacción)
+        const platformWallet = getPlatformWalletAddressPublic();
+        txHash = await walletClient.writeContract({
+          address: copmAddress,
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [platformWallet, amountWei],
+          account: userAddress,
+        });
+      }
 
       // 7. Register payment in the backend
       const res = await fetch('/api/pago', {
