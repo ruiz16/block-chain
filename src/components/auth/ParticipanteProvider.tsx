@@ -36,7 +36,7 @@ interface ParticipanteProviderProps {
 export default function ParticipanteProvider({ children }: ParticipanteProviderProps) {
   const { user } = useAuth();
   const [participante, setParticipante] = useState<Participante | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => user !== null);
 
   useEffect(() => {
     if (!user) {
@@ -56,8 +56,9 @@ export default function ParticipanteProvider({ children }: ParticipanteProviderP
           setIsLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
+          console.error('[ParticipanteProvider] fetch failed:', err);
           setParticipante(null);
           setIsLoading(false);
         }
