@@ -28,7 +28,7 @@ import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
 import { verificarRepago } from '@/lib/blockchain/verificar-repago';
 import { barrerInteresesACuentaRaiz } from '@/lib/blockchain/barrer-intereses';
-import { parseWeiFromDb } from '@/config/celo';
+import { parseTokenAmount } from '@/config/celo';
 import { recalcularScore } from '@/lib/score/calculator';
 import { recalcularScoreRed } from '@/lib/referidos/score-red';
 import { verificarAtrasosRed } from '@/lib/referidos/semaforo';
@@ -258,7 +258,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     // 8. On-chain verification via verificarPago()
     //    Verify the amount sent is >= this cuota's amount
     // ------------------------------------------------------------------
-    const montoCuota = parseWeiFromDb(typedCuota.monto_cuota);
+    // monto_cuota está en COPm (pesos enteros) → escalar a wei (×10^18) para
+    // comparar contra el monto del evento on-chain, igual que el desembolso,
+    // el frontend (parseTokenAmount) y el barrido de intereses.
+    const montoCuota = parseTokenAmount(typedCuota.monto_cuota);
 
     const verification =
       creditoData.repayment_mode === 'pool'
