@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
+import ParticipanteProvider from "@/components/auth/ParticipanteProvider";
 import AppShell from "@/components/shared/AppShell";
 import ThemeInitializer from "@/components/shared/ThemeInitializer";
 
@@ -58,7 +59,9 @@ export default function RootLayout({
 
         <ThemeInitializer />
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <ParticipanteProvider>
+            <AppShell>{children}</AppShell>
+          </ParticipanteProvider>
         </AuthProvider>
       </body>
     </html>
