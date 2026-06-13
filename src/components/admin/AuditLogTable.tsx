@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import type { AuditLogAdmin } from '@/app/api/admin/audit-log/route';
 import { getCeloScanUrl } from '@/config/celo';
+import type { TxHash } from '@/types/database';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -296,7 +297,7 @@ export default function AuditLogTable({ entries }: AuditLogTableProps) {
                 return (
                   <div className="flex justify-end pt-1">
                     <a
-                      href={getCeloScanUrl(txHash)}
+                      href={getCeloScanUrl(txHash as TxHash)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200/60 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-150 cursor-pointer"

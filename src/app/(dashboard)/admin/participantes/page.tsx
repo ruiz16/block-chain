@@ -13,6 +13,7 @@ import {
   Pagination,
 } from '@/components/ui';
 import { getCeloScanAddressUrl } from '@/config/celo';
+import type { Address } from '@/types/database';
 
 const LIMIT = 20;
 
@@ -288,8 +289,7 @@ export default function AdminParticipantesPage() {
                       {selectedParticipant.wallet_address.slice(0, 6)}…${selectedParticipant.wallet_address.slice(-4)}
                     </span>
                     <a
-                      // @ts-expect-error - Ignoring type error for getCeloScanAddressUrl
-                      href={getCeloScanAddressUrl(selectedParticipant.wallet_address)}
+                      href={getCeloScanAddressUrl(selectedParticipant.wallet_address as Address)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200/60 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-150 cursor-pointer shrink-0"

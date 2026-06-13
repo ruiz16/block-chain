@@ -36,31 +36,26 @@ interface ParticipanteProviderProps {
 export default function ParticipanteProvider({ children }: ParticipanteProviderProps) {
   const { user } = useAuth();
   const [participante, setParticipante] = useState<Participante | null>(null);
-  const [isLoading, setIsLoading] = useState(() => user !== null);
+
+  // isLoading es DERIVADO, no estado — 0 setStates en el effect
+  const isLoading = participante === null && user !== null;
 
   useEffect(() => {
-    if (!user) {
-      setParticipante(null);
-      setIsLoading(false);
-      return;
-    }
+    if (!user) return;
 
     let cancelled = false;
-    setIsLoading(true);
 
     fetch('/api/participantes?check_existing=true')
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) {
           setParticipante(data.exists && data.participante ? data.participante : null);
-          setIsLoading(false);
         }
       })
       .catch((err) => {
         if (!cancelled) {
           console.error('[ParticipanteProvider] fetch failed:', err);
           setParticipante(null);
-          setIsLoading(false);
         }
       });
 
