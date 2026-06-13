@@ -101,6 +101,17 @@ export function getCeloScanUrl(txHash: TxHash): string {
   return `${base}/tx/${txHash}`;
 }
 
+/**
+ * Builds a full address URL on the block explorer from a wallet address.
+ *
+ * @param address - The wallet address (0x-prefixed)
+ * @returns Full URL like https://celo-sepolia.blockscout.com/address/0x...
+ */
+export function getCeloScanAddressUrl(address: Address): string {
+  const base = getCeloScanBaseUrl();
+  return `${base}/address/${address}`;
+}
+
 // =============================================================================
 // Wei utilities (generic — works for any 18-decimal token)
 // =============================================================================

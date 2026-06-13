@@ -305,7 +305,7 @@ export interface Database {
           nombre: string;
           descripcion?: string | null;
           codigo: string;
-          creador_id: string;
+          creador_id: string | null;
           activo?: boolean; // default true
           created_at?: string;
           municipio?: string;

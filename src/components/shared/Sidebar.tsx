@@ -36,8 +36,6 @@ interface SidebarProps {
 
 interface NavItemDef {
   label: string;
-  /** Label shown to admin users (e.g. "Todos los Créditos" vs "Mis Créditos") */
-  adminLabel?: string;
   href: string;
   icon: ReactNode;
   roles: RolParticipante[];
@@ -122,16 +120,10 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'Créditos',
     items: [
-      { label: 'Mis Créditos', adminLabel: 'Todos los Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['usuario', 'admin'] },
+      { label: 'Mis Créditos', href: '/mis-creditos', icon: Icons.list, roles: ['usuario'] },
       { label: 'Solicitar', href: '/solicitar', icon: Icons.plus, roles: ['usuario'] },
       { label: 'Mi GACC', href: '/gacc', icon: Icons.shield, roles: ['usuario'] },
-      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['usuario', 'admin'] },
-    ],
-  },
-  {
-    title: 'Gestión',
-    items: [
-      { label: 'Panel de Aprobación', href: '/aprobacion', icon: Icons.shield, roles: ['admin'] },
+      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['usuario'] },
     ],
   },
   {
@@ -143,6 +135,7 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
       { label: 'Créditos', href: '/admin/creditos', icon: Icons.list, roles: ['admin'] },
       { label: 'Desembolsos', href: '/admin/desembolsos', icon: Icons.money, roles: ['admin'] },
       { label: 'Cuotas', href: '/admin/cuotas', icon: Icons.chart, roles: ['admin'] },
+      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['admin'] },
     ],
   },
   {
@@ -161,13 +154,11 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
 const NavLink = memo(function NavLink({
   item,
   active,
-  role,
   notifCount,
   onClose,
 }: {
   item: NavItemDef;
   active: boolean;
-  role: RolParticipante;
   notifCount: number;
   onClose: () => void;
 }) {
@@ -191,7 +182,7 @@ const NavLink = memo(function NavLink({
       <span className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
         {item.icon}
       </span>
-      <span className="flex-1">{role === 'admin' && item.adminLabel ? item.adminLabel : item.label}</span>
+      <span className="flex-1">{item.label}</span>
       {isNotificaciones && notifCount > 0 && (
         <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
           {notifCount > 9 ? '9+' : notifCount}
@@ -280,6 +271,24 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
         </div>
       </div>
 
+      {/* Panel de Aprobación — botón destacado para admin */}
+      {role === 'admin' && (
+        <div className="px-3 pt-2 pb-1">
+          <Link
+            href="/aprobacion"
+            onClick={closeMobile}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold
+              bg-gradient-to-r from-amber-500 to-orange-600
+              hover:from-amber-600 hover:to-orange-700
+              text-white shadow-md hover:shadow-lg
+              transition-all duration-150 group"
+          >
+            <span className="shrink-0">{Icons.shield}</span>
+            <span>Panel de Aprobación</span>
+          </Link>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6" aria-label="Navegación principal">
         {visibleSections.map((section) => (
@@ -293,7 +302,6 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
                   key={item.href}
                   item={item}
                   active={isActive(item.href)}
-                  role={role}
                   notifCount={notifCount}
                   onClose={closeMobile}
                 />

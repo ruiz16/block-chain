@@ -64,10 +64,11 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const supabase = getSupabaseClient();
 
-    // Step 3: Fetch paginated participantes
+    // Step 3: Fetch paginated participantes (exclude admins)
     const { data: participantes, count: total } = await supabase
       .from('participantes')
       .select('*', { count: 'exact' })
+      .neq('rol', 'admin')
       .order('created_at', { ascending: false })
       .range(from, to);
 

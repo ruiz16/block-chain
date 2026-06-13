@@ -34,6 +34,7 @@ export default function LoginPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const redirectTo = searchParams?.get('redirect') ?? '/mis-creditos';
+  const reason = searchParams?.get('reason');
 
   // --------------------------------------------------------------------------
   // Auth guard: if already logged in, redirect immediately
@@ -103,6 +104,14 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
             Iniciar Sesión
           </h1>
+
+          {reason === 'admin_only' && (
+            <div className="mb-5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed">
+              <strong className="block text-sm font-bold mb-0.5">Acceso restringido</strong>
+              En esta fase solo los administradores pueden acceder al panel.
+              Si no tenés rol de administrador, contactá al equipo MANGLE.
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {/* Email */}

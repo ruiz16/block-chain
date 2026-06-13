@@ -2,12 +2,15 @@
 // Middleware — Route Protection + CORS for API
 // =============================================================================
 //
-// Two responsibilities:
-//   1. CORS: handles OPTIONS preflight and adds CORS headers to all API routes
-//   2. Auth protection: redirects unauthenticated dashboard users to /login
+// Three responsibilities:
+//   1. CORS: handles OPTIONS preflight and adds CORS headers to all responses
+//   2. Dashboard auth: redirects unauthenticated users to /login
+//   3. Admin-only dashboard: en esta fase, SOLO usuarios con rol 'admin'
+//      pueden acceder a las rutas del dashboard (solicitar, mis-creditos, etc.)
 //
-// IMPORTANT: Auth protection is a UX improvement, NOT a security boundary.
-// The real access control is in each API route handler (defense-in-depth).
+// IMPORTANT: This is defense-in-depth. The real access control is enforced
+// in each API route handler. The API routes are NOT modified — solo se
+// protege el frontend del dashboard.
 // =============================================================================
 
 import { createServerClient } from '@supabase/ssr';
@@ -35,7 +38,7 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   // ---------------------------------------------------------------------------
-  // Auth protection — only for non-API routes (API routes use Bearer/cookies)
+  // Dashboard protection — SOLO para rutas no-API
   // ---------------------------------------------------------------------------
   if (!isApiRoute) {
     const supabase = createServerClient(
@@ -59,50 +62,39 @@ export async function middleware(request: NextRequest) {
       },
     );
 
-    // Verify the user's JWT with the Supabase Auth server (auto-refreshes if needed)
+    // Verify the user's JWT with the Supabase Auth server
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // No session → redirect to /login with original path as redirect param
+    // No session → redirect to /login
     if (!user) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/login';
       loginUrl.searchParams.set('redirect', pathname);
-
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based route protection (defense-in-depth)
-    const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/api/admin');
-    const isAprobacionRoute = pathname.startsWith('/aprobacion');
+    // ── Admin-only phase ──────────────────────────────────────────────
+    //
+    // Fase actual: SOLO administradores pueden usar el dashboard.
+    // Buscamos el rol del usuario en la tabla participantes.
+    // Si no es 'admin', redirigimos a /login.
+    // ──────────────────────────────────────────────────────────────────
+    const { data: participante } = await supabase
+      .from('participantes')
+      .select('rol')
+      .eq('user_id', user.id)
+      .single();
 
-    if (isAdminRoute || isAprobacionRoute) {
-      // Use the SSR client (respects RLS — user can only read their own row)
-      const { data } = await supabase
-        .from('participantes')
-        .select('rol')
-        .eq('user_id', user.id)
-        .single();
+    const role = (participante as { rol: string } | null)?.rol;
 
-      const participante = data as { rol: string } | null;
-      const role = participante?.rol;
-
-      // Admin routes: exclusively for 'admin' role
-      if (isAdminRoute && role !== 'admin') {
-        const loginUrl = request.nextUrl.clone();
-        loginUrl.pathname = '/login';
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
-
-      // Aprobacion routes: blocked for 'usuario' role
-      if (isAprobacionRoute && (!role || role === 'usuario')) {
-        const loginUrl = request.nextUrl.clone();
-        loginUrl.pathname = '/login';
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
-      }
+    if (role !== 'admin') {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.searchParams.set('redirect', pathname);
+      loginUrl.searchParams.set('reason', 'admin_only');
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -125,13 +117,15 @@ export async function middleware(request: NextRequest) {
 // Protect dashboard routes AND handle CORS for API routes
 export const config = {
   matcher: [
-    // Dashboard routes (auth protection)
+    // Dashboard routes (auth + admin check)
     '/solicitar',
     '/mis-creditos',
     '/pagos',
     '/gacc',
     '/aprobacion',
     '/perfil',
+    '/notificaciones',
+    '/onboarding',
     '/admin/:path*',
     // API routes (CORS only — auth is per-route)
     '/api/:path*',

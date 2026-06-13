@@ -49,7 +49,7 @@ const USERS_TO_SEED = [
     password: 'Blockchain2026!',
     nombre: 'Administrador Sistema',
     rol: 'admin',
-    wallet_address: '0x1111111111111111111111111111111111111111',
+    wallet_address: 'N/A',
   }
 ];
 

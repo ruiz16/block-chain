@@ -18,6 +18,13 @@ export default function AdminGaccPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createState, setCreateState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [createNombre, setCreateNombre] = useState('');
+  const [createDescripcion, setCreateDescripcion] = useState('');
+  const [createMunicipio, setCreateMunicipio] = useState('');
+  const [codigoGenerado, setCodigoGenerado] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const limit = 20;
 
@@ -90,11 +97,24 @@ export default function AdminGaccPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <PageHeader
-        title="Gestión de GACCs"
-        subtitle={`${total} grupo${total !== 1 ? 's' : ''} registrado${total !== 1 ? 's' : ''}`}
-      />
+    <>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <PageHeader
+          title="Gestión de GACCs"
+          subtitle={`${total} grupo${total !== 1 ? 's' : ''} registrado${total !== 1 ? 's' : ''}`}
+        />
+        <button
+          type="button"
+          onClick={() => { setShowCreateModal(true); setCreateState('idle'); setCreateNombre(''); setCreateDescripcion(''); setCreateMunicipio(''); setCodigoGenerado(null); setCreateError(null); }}
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-150 cursor-pointer shadow-sm shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Crear GACC
+        </button>
+      </div>
 
       <SummaryGrid columns={3}>
         <SummaryCard
@@ -201,5 +221,200 @@ export default function AdminGaccPage() {
 
       <Pagination page={page} totalPages={totalPages} total={total} label="grupos" onPageChange={setPage} />
     </div>
+
+      {/* ── Create GACC Modal ── */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setShowCreateModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Crear GACC"
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 w-full max-w-lg max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-gray-100">Crear nuevo GACC</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 dark:text-gray-500 hover:bg-slate-100 dark:hover:bg-gray-700 hover:text-slate-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+
+              {/* Error state */}
+              {createState === 'error' && (
+                <div className="mb-5 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4" role="alert">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">Error al crear el GACC</p>
+                  {createError && <p className="text-sm text-red-600 dark:text-red-300 mt-1">{createError}</p>}
+                  <button
+                    onClick={() => setCreateState('idle')}
+                    className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:underline cursor-pointer"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              )}
+
+              {/* Success state */}
+              {createState === 'success' && codigoGenerado && (
+                <div className="text-center py-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-7 h-7 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-base font-bold text-slate-800 dark:text-gray-100 mb-1">GACC creado exitosamente</p>
+                  <p className="text-xs text-slate-400 dark:text-gray-500 mb-4">Comparte este código para que los participantes se unan:</p>
+                  <div className="inline-block bg-slate-100 dark:bg-gray-900/50 px-6 py-3 rounded-xl border border-slate-200 dark:border-gray-700">
+                    <span className="text-2xl font-bold tracking-widest text-slate-900 dark:text-white font-mono">
+                      {codigoGenerado}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateModal(false)}
+                    className="mt-6 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+
+              {/* Form */}
+              {createState !== 'success' && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setCreateState('submitting');
+                    setCreateError(null);
+                    try {
+                      const res = await fetch('/api/admin/gacc', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          nombre: createNombre.trim(),
+                          descripcion: createDescripcion.trim() || undefined,
+                          municipio: createMunicipio,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.detail ?? data.error ?? 'Error al crear GACC');
+                      setCodigoGenerado(data.grupo.codigo);
+                      setCreateState('success');
+                      fetchData();
+                    } catch (err) {
+                      setCreateError(err instanceof Error ? err.message : 'Error inesperado');
+                      setCreateState('error');
+                    }
+                  }}
+                  className="space-y-5"
+                >
+                  {/* Nombre */}
+                  <div>
+                    <label htmlFor="gacc-nombre-admin" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1.5">
+                      Nombre del grupo
+                    </label>
+                    <input
+                      id="gacc-nombre-admin"
+                      type="text"
+                      required
+                      value={createNombre}
+                      onChange={(e) => setCreateNombre(e.target.value)}
+                      disabled={createState === 'submitting'}
+                      minLength={3}
+                      maxLength={200}
+                      className="block w-full rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Ej: Ahorro Solidario Guapi"
+                    />
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label htmlFor="gacc-desc-admin" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1.5">
+                      Descripción <span className="text-slate-400 dark:text-gray-500 font-normal">(opcional)</span>
+                    </label>
+                    <textarea
+                      id="gacc-desc-admin"
+                      rows={3}
+                      maxLength={500}
+                      value={createDescripcion}
+                      onChange={(e) => setCreateDescripcion(e.target.value)}
+                      disabled={createState === 'submitting'}
+                      className="block w-full rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Propósito del grupo de ahorro"
+                    />
+                    <p className="mt-1 text-xs text-slate-400 dark:text-gray-500">{createDescripcion.length}/500</p>
+                  </div>
+
+                  {/* Municipio */}
+                  <div>
+                    <label htmlFor="gacc-municipio" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1.5">
+                      Municipio
+                    </label>
+                    <select
+                      id="gacc-municipio"
+                      required
+                      value={createMunicipio}
+                      onChange={(e) => setCreateMunicipio(e.target.value)}
+                      disabled={createState === 'submitting'}
+                      className="block w-full rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-slate-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="" disabled>Seleccionar municipio</option>
+                      <option value="guapi">Guapi</option>
+                      <option value="timbiqui">Timbiquí</option>
+                    </select>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateModal(false)}
+                      disabled={createState === 'submitting'}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-400 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createState === 'submitting'}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {createState === 'submitting' ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Creando…
+                        </>
+                      ) : 'Crear GACC'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

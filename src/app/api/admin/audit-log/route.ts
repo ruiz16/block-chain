@@ -37,6 +37,7 @@ interface AuditLogRow {
 interface ParticipanteIdRow {
   id: string;
   nombre: string;
+  wallet_address: string;
 }
 
 export interface AuditLogAdmin {
@@ -46,6 +47,7 @@ export interface AuditLogAdmin {
   entidad_id: string;
   participante_id: string | null;
   participante_nombre: string | null;
+  participante_wallet: string | null;
   detalles: Record<string, unknown>;
   fecha: string;
 }
@@ -101,35 +103,38 @@ export async function GET(request: NextRequest): Promise<Response> {
     // Deduplicate participante IDs
     const uniqueIds = [...new Set(participanteIds)];
 
-    // Fetch participante names in a single batch
-    const nombreMap = new Map<string, string>();
+    // Fetch participante names + wallets in a single batch
+    const participanteMap = new Map<string, { nombre: string; wallet_address: string }>();
 
     if (uniqueIds.length > 0) {
       const { data: participantes } = await supabase
         .from('participantes')
-        .select('id, nombre')
+        .select('id, nombre, wallet_address')
         .in('id', uniqueIds);
 
       if (participantes) {
         for (const p of participantes) {
-          nombreMap.set(p.id, p.nombre);
+          participanteMap.set(p.id, { nombre: p.nombre, wallet_address: p.wallet_address });
         }
       }
     }
 
     // Step 5: Build enriched response
-    const data: AuditLogAdmin[] = typedEntries.map((entry) => ({
-      id: entry.id,
-      accion: entry.accion,
-      entidad_tipo: entry.entidad_tipo,
-      entidad_id: entry.entidad_id,
-      participante_id: entry.participante_id,
-      participante_nombre: entry.participante_id
-        ? (nombreMap.get(entry.participante_id) ?? null)
-        : null,
-      detalles: entry.detalles,
-      fecha: entry.fecha,
-    }));
+    const data: AuditLogAdmin[] = typedEntries.map((entry) => {
+      const pdata = entry.participante_id ? participanteMap.get(entry.participante_id) ?? null : null;
+
+      return {
+        id: entry.id,
+        accion: entry.accion,
+        entidad_tipo: entry.entidad_tipo,
+        entidad_id: entry.entidad_id,
+        participante_id: entry.participante_id,
+        participante_nombre: pdata?.nombre ?? null,
+        participante_wallet: pdata?.wallet_address ?? null,
+        detalles: entry.detalles,
+        fecha: entry.fecha,
+      };
+    });
 
     // Step 6: Return response
     return NextResponse.json(

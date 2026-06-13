@@ -16,7 +16,7 @@ export interface AuditLogParams {
   accion: TipoAccion;
   entidadTipo: string;
   entidadId: string;
-  participanteId?: string;
+  participanteId?: string | null;
   detalles: Record<string, unknown>;
 }
 

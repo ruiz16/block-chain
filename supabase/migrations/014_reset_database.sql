@@ -78,7 +78,7 @@ DROP TYPE IF EXISTS rol_participante CASCADE;
 -- 001_schema.sql
 -- =============================================================================
 
-CREATE TYPE rol_participante AS ENUM ('prestamista', 'prestatario', 'aval', 'admin');
+CREATE TYPE rol_participante AS ENUM ('usuario', 'admin');
 
 CREATE TYPE estado_credito AS ENUM (
   'pendiente',
@@ -456,7 +456,7 @@ CREATE TABLE grupos_gacc (
   nombre      text NOT NULL CHECK (char_length(nombre) BETWEEN 3 AND 200),
   descripcion text CHECK (descripcion IS NULL OR char_length(descripcion) <= 500),
   codigo      text NOT NULL,
-  creador_id  uuid NOT NULL REFERENCES participantes (id) ON DELETE RESTRICT,
+  creador_id  uuid REFERENCES participantes (id) ON DELETE RESTRICT,
   activo      boolean NOT NULL DEFAULT true,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
@@ -521,8 +521,10 @@ CREATE POLICY "gacc_miembros_update_authenticated"
 CREATE OR REPLACE FUNCTION gacc_auto_add_creator()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO gacc_miembros (grupo_id, participante_id, validado_por, validado_en)
-    VALUES (NEW.id, NEW.creador_id, NEW.creador_id, now());
+  IF NEW.creador_id IS NOT NULL THEN
+    INSERT INTO gacc_miembros (grupo_id, participante_id, validado_por, validado_en)
+      VALUES (NEW.id, NEW.creador_id, NEW.creador_id, now());
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
