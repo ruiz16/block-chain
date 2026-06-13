@@ -124,6 +124,7 @@ export interface Database {
           fecha_solicitud: string;
           fecha_actualizacion: string;
           fecha_pago: string | null;
+          repayment_mode: string;
         };
         Insert: {
           id?: string;
@@ -142,6 +143,7 @@ export interface Database {
           fecha_solicitud?: string;
           fecha_actualizacion?: string;
           fecha_pago?: string | null;
+          repayment_mode?: string;
         };
         Update: {
           id?: string;
@@ -160,6 +162,7 @@ export interface Database {
           fecha_solicitud?: string;
           fecha_actualizacion?: string;
           fecha_pago?: string | null;
+          repayment_mode?: string;
         };
         Relationships: [];
       };

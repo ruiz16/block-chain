@@ -189,7 +189,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     try {
       const montoWei = (BigInt(montoCusd) * 10n ** 18n) as Wei;
-      txHash = await desembolsarCredito(walletAddress as Address, montoWei);
+      txHash = await desembolsarCredito(typedCredito.id, walletAddress as Address, montoWei);
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
@@ -230,6 +230,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .update({
         estado: 'desembolsado',
         tx_hash: txHash,
+        repayment_mode: 'pool',
       })
       .eq('id', typedCredito.id);
 

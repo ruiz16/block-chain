@@ -1,27 +1,11 @@
-// =============================================================================
-// desembolsarCredito — Core Blockchain Disbursement Operation
-// =============================================================================
-//
-// Orchestrates the full on-chain COPm transfer:
-//   1. Simulate (pre-flight check)
-//   2. Execute (write contract)
-//   3. Wait for receipt
-//   4. Verify receipt status
-//   5. Return TxHash
-// =============================================================================
-
-import { getContract } from 'viem';
 import { getPublicClient, getWalletClient } from '@/lib/blockchain/client';
-import { getCopmContractAddress } from '@/config/celo';
+import { getLendingPoolAddress } from '@/config/celo';
+import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
+import { creditIdHash } from '@/lib/blockchain/credit-id';
 import type { Address, TxHash, Wei } from '@/types/database';
-
-// =============================================================================
-// Custom Error
-// =============================================================================
 
 export class BlockchainError extends Error {
   public readonly code: string;
-
   constructor(code: string, message: string) {
     super(message);
     this.name = 'BlockchainError';
@@ -29,87 +13,45 @@ export class BlockchainError extends Error {
   }
 }
 
-// =============================================================================
-// Minimal ERC-20 ABI (only what we need)
-// =============================================================================
-
-const ERC20_ABI = [
-  {
-    type: 'function' as const,
-    name: 'transfer',
-    inputs: [
-      { name: 'to', type: 'address', internalType: 'address' },
-      { name: 'value', type: 'uint256', internalType: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'bool', internalType: 'bool' }],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function' as const,
-    name: 'decimals',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint8', internalType: 'uint8' }],
-    stateMutability: 'view',
-  },
-] as const;
-
-// =============================================================================
-// Disbursement Function
-// =============================================================================
-
 /**
- * Executes a COPm transfer to the specified address.
+ * Desembolsa un crédito a través del LendingPool.
  *
- * Flow:
- * 1. Simulate the transfer via `simulateContract` (catches revert reasons early)
- * 2. Execute via `writeContract`
- * 3. Wait for transaction receipt
- * 4. Verify receipt status
+ * @param creditoId - UUID del crédito (se convierte a bytes32 on-chain)
+ * @param to        - Wallet del prestatario
+ * @param monto     - Monto en wei
+ * @returns Hash de la transacción
  *
- * @param to - Recipient's Celo wallet address (branded)
- * @param monto - Amount in wei (branded)
- * @returns Transaction hash (branded)
- *
- * @throws {BlockchainError} With code:
- *   - `SIMULATION_FAILED` — contract simulation reverted
- *   - `TX_REVERTED` — transaction mined but reverted
- *   - `TX_TIMEOUT` — transaction receipt not received in time
+ * @throws {BlockchainError} SIMULATION_FAILED | TX_REVERTED | TX_TIMEOUT
  */
-export async function desembolsarCredito(to: Address, monto: Wei): Promise<TxHash> {
+export async function desembolsarCredito(
+  creditoId: string,
+  to: Address,
+  monto: Wei,
+): Promise<TxHash> {
   const publicClient = getPublicClient();
   const walletClient = getWalletClient();
+  const poolAddress = getLendingPoolAddress();
+  const creditId = creditIdHash(creditoId);
 
-  const copmAddress = getCopmContractAddress();
-
-  // ------------------------------------------------------------------
-  // 1. Simulate the transfer (pre-flight check)
-  // ------------------------------------------------------------------
-  // NOTE: We do NOT catch errors from simulateContract — the route handler
-  // needs them to detect RPC failures and audit appropriately.
+  // 1. Simular (pre-flight). NO atrapamos el error: el route lo necesita.
   const { request } = await publicClient.simulateContract({
-    address: copmAddress,
-    abi: ERC20_ABI,
-    functionName: 'transfer',
-    args: [to as `0x${string}`, monto as bigint],
+    address: poolAddress,
+    abi: LENDING_POOL_ABI,
+    functionName: 'disburse',
+    args: [creditId, to as `0x${string}`, monto as bigint],
     account: walletClient.account!,
   });
 
-  // ------------------------------------------------------------------
-  // 2. Execute the transfer
-  // ------------------------------------------------------------------
+  // 2. Ejecutar
   const txHash = await walletClient.writeContract(request);
 
-  // ------------------------------------------------------------------
-  // 3. Wait for transaction receipt
-  // ------------------------------------------------------------------
+  // 3. Esperar recibo
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: txHash,
-    timeout: 60_000, // 60 seconds
+    timeout: 60_000,
   });
 
-  // ------------------------------------------------------------------
-  // 4. Verify receipt status
-  // ------------------------------------------------------------------
+  // 4. Verificar estado
   if (receipt.status === 'reverted') {
     throw new BlockchainError(
       'TX_REVERTED',
