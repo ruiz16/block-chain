@@ -34,6 +34,7 @@ export interface EnrichedCuota {
   credito_id: string;
   credito_monto: string;     // COPm total
   credito_estado: string;
+  credito_repayment_mode: string;
   credito_descripcion: string | null;
   numero_cuota: number;
   total_cuotas: number;
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: creditos } = await supabase
       .from('creditos')
-      .select('id, monto, estado, descripcion, numero_cuotas')
+      .select('id, monto, estado, descripcion, numero_cuotas, repayment_mode')
       .eq('prestatario_id', typedParticipante.id)
       .order('fecha_solicitud', { ascending: false });
 
@@ -125,6 +126,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         credito_id: cuota.credito_id,
         credito_monto: credito?.monto ?? '0',
         credito_estado: credito?.estado ?? 'desconocido',
+        credito_repayment_mode: credito?.repayment_mode ?? 'direct',
         credito_descripcion: credito?.descripcion ?? null,
         numero_cuota: cuota.numero_cuota,
         total_cuotas: credito?.numero_cuotas ?? 1,

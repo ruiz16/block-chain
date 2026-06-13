@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { NextResponse } from 'next/server';
-import { getCopmContractAddress, getPlatformWalletAddressPublic } from '@/config/celo';
+import { getCopmContractAddress, getLendingPoolAddress, getPlatformWalletAddressPublic } from '@/config/celo';
 
 export async function GET(): Promise<Response> {
   try {
@@ -19,6 +19,7 @@ export async function GET(): Promise<Response> {
       {
         copmAddress: getCopmContractAddress(),
         platformWallet: getPlatformWalletAddressPublic(),
+        lendingPoolAddress: getLendingPoolAddress(),
       },
       { status: 200 },
     );

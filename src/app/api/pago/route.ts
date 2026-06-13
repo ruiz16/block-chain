@@ -22,6 +22,7 @@ import { getServerClient } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
+import { verificarRepago } from '@/lib/blockchain/verificar-repago';
 import { parseWeiFromDb } from '@/config/celo';
 import { recalcularScore } from '@/lib/score/calculator';
 import { recalcularScoreRed } from '@/lib/referidos/score-red';
@@ -44,6 +45,7 @@ interface CuotaConCredito {
   credito: {
     id: string;
     estado: string;
+    repayment_mode: string;
   };
 }
 
@@ -127,7 +129,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         fecha_vencimiento,
         credito:credito_id (
           id,
-          estado
+          estado,
+          repayment_mode
         )
       `)
       .eq('id', cuota_id)
@@ -252,10 +255,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const montoCuota = parseWeiFromDb(typedCuota.monto_cuota);
 
-    const verification = await verificarPago(
-      tx_hash as `0x${string}`,
-      montoCuota,
-    );
+    const verification =
+      creditoData.repayment_mode === 'pool'
+        ? await verificarRepago(tx_hash as `0x${string}`, creditoData.id, montoCuota)
+        : await verificarPago(tx_hash as `0x${string}`, montoCuota);
 
     if (!verification.valid) {
       // RPC errors are server-side (timeout/network) → 500

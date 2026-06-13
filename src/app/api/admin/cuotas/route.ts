@@ -27,6 +27,7 @@ import type { DbEstadoCuota } from '@/types/supabase';
 export interface CuotaAdmin {
   id: string;
   credito_id: string;
+  repayment_mode: string;
   prestatario_nombre: string;
   numero_cuota: number;
   total_cuotas: number;
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const { data: creditos } = await supabase
       .from('creditos')
-      .select('id, prestatario_id, numero_cuotas')
+      .select('id, prestatario_id, numero_cuotas, repayment_mode')
       .in('id', creditoIds);
 
     const typedCreditos = (creditos ?? []) as any[];
@@ -116,6 +117,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       return {
         id: c.id,
         credito_id: c.credito_id,
+        repayment_mode: cred?.repayment_mode ?? 'direct',
         prestatario_nombre: nombreMap.get(cred?.prestatario_id) ?? 'Desconocido',
         numero_cuota: c.numero_cuota,
         total_cuotas: cred?.numero_cuotas ?? 1,
