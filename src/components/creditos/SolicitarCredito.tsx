@@ -60,7 +60,7 @@ export default function SolicitarCredito() {
       }
     }
 
-    setState('idle');
+    setState(prev => prev === 'checking' ? 'idle' : prev);
   }, [participanteLoading, participante, router]);
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
