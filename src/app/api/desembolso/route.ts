@@ -183,7 +183,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 7. Execute blockchain transfer (COPm on Celo)
     // ------------------------------------------------------------------
-    const montoWei = typedCredito.monto;
+    const montoWei = BigInt(typedCredito.monto);
 
     let txHash: string;
 
