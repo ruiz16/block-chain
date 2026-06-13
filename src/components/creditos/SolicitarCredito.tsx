@@ -18,6 +18,7 @@
 
 import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useParticipante } from '@/components/auth/ParticipanteProvider';
 
 type FormState = 'checking' | 'idle' | 'submitting' | 'success' | 'error';
 
@@ -38,6 +39,7 @@ const CUOTA_OPTIONS = [
 
 export default function SolicitarCredito() {
   const router = useRouter();
+  const { participante, isLoading: participanteLoading } = useParticipante();
   const [state, setState] = useState<FormState>('checking');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [monto, setMonto] = useState('');
@@ -49,41 +51,17 @@ export default function SolicitarCredito() {
   // GACC guard: redirect to /gacc if not validated
   // ------------------------------------------------------------------
   useEffect(() => {
-    let cancelled = false;
+    if (participanteLoading) return;
 
-    async function checkGacc() {
-      try {
-        const res = await fetch('/api/participantes?check_existing=true');
-
-        if (!res.ok) {
-          if (!cancelled) setState('idle');
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!cancelled) {
-          if (data.exists && data.participante?.rol === 'usuario') {
-            const gaccId = data.participante.gacc_id;
-            const validado = data.participante.validado_gacc;
-
-            if (!gaccId || !validado) {
-              // Redirect to GACC page to create or complete membership
-              router.replace('/gacc');
-              return;
-            }
-          }
-          setState('idle');
-        }
-      } catch {
-        if (!cancelled) setState('idle');
+    if (participante?.rol === 'usuario') {
+      if (!participante.gacc_id || !participante.validado_gacc) {
+        router.replace('/gacc');
+        return;
       }
     }
 
-    checkGacc();
-
-    return () => { cancelled = true; };
-  }, [router]);
+    setState('idle');
+  }, [participanteLoading, participante, router]);
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove all non-digits
