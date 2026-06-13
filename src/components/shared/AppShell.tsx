@@ -14,9 +14,10 @@
 // hierarchy, but only activates on the routes that need it.
 // =============================================================================
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useParticipante } from '@/components/auth/ParticipanteProvider';
 import Sidebar from '@/components/shared/Sidebar';
 
 // ---------------------------------------------------------------------------
@@ -37,17 +38,6 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Profile data needed by the Sidebar + wallet guard
-// ---------------------------------------------------------------------------
-
-interface ProfileData {
-  id: string;
-  nombre: string;
-  rol: string;
-  wallet_address: string;
-}
-
-// ---------------------------------------------------------------------------
 // AppShell
 // ---------------------------------------------------------------------------
 
@@ -58,47 +48,10 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { user, isLoading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const { participante: profile } = useParticipante();
   const [walletWarningDismissed, setWalletWarningDismissed] = useState(false);
 
   const isPublic = isPublicRoute(pathname);
-
-  // Fetch participant profile when on a dashboard route and authenticated.
-  // Also resets profile when navigating to public routes or after logout.
-  useEffect(() => {
-    if (isPublic || !user) {
-      setProfile(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    fetch('/api/participantes?check_existing=true')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          if (data.exists && data.participante) {
-            setProfile({
-              id: data.participante.id,
-              nombre: data.participante.nombre,
-              rol: data.participante.rol,
-              wallet_address: data.participante.wallet_address ?? '',
-            });
-          } else {
-            setProfile(null);
-          }
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setProfile(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isPublic, user]);
 
   // Determine whether to show wallet warning
   const needsWallet = profile?.rol === 'usuario' && !profile.wallet_address && !walletWarningDismissed;
