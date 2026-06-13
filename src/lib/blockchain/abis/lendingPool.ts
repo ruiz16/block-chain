@@ -25,6 +25,16 @@ export const LENDING_POOL_ABI = [
     outputs: [],
   },
   {
+    type: 'function',
+    name: 'withdraw',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
     type: 'event',
     name: 'Repaid',
     anonymous: false,

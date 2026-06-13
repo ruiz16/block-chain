@@ -15,7 +15,8 @@
 // 7. Call verificarPago() with cuota.monto_cuota for on-chain verification
 // 8. UPDATE cuota: estado='pagada', tx_hash_pago, fecha_pago=NOW()
 // 9. If all cuotas are now paid → UPDATE credito: estado='pagado', fecha_pago=NOW()
-// 10. Return 200 { status: 'pagado', cuota_id, credito_id }
+// 10. If pool mode → barrerInteresesACuentaRaiz() (no bloqueante, el crédito ya cerró)
+// 11. Return 200 { status: 'pagado', cuota_id, credito_id }
 // =============================================================================
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -26,6 +27,7 @@ import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { PagoSchema } from '@/lib/validations/pago';
 import { verificarPago } from '@/lib/blockchain/verificar-pago';
 import { verificarRepago } from '@/lib/blockchain/verificar-repago';
+import { barrerInteresesACuentaRaiz } from '@/lib/blockchain/barrer-intereses';
 import { parseWeiFromDb } from '@/config/celo';
 import { recalcularScore } from '@/lib/score/calculator';
 import { recalcularScoreRed } from '@/lib/referidos/score-red';
@@ -350,6 +352,17 @@ export async function POST(request: NextRequest): Promise<Response> {
           updateCreditoError.message,
           { credito_id: creditoData.id },
         );
+      }
+
+      // Si es pool mode → barrer intereses acumulados a la wallet raíz
+      if (creditoData.repayment_mode === 'pool') {
+        barrerInteresesACuentaRaiz(creditoData.id).then((txHash) => {
+          if (txHash) {
+            console.log('[pago] Barrido de intereses exitoso:', { credito_id: creditoData.id, txHash });
+          } else {
+            console.warn('[pago] Barrido de intereses falló (no bloqueante):', { credito_id: creditoData.id });
+          }
+        });
       }
     }
 

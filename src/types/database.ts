@@ -71,6 +71,7 @@ export type TipoAccion =
   | 'desembolso'
   | 'desembolso_fallo'
   | 'pago_recibido'
+  | 'interes_barrido'
   | 'default_registrado'
   | 'aval_agregado'
   | 'aval_revocado'
