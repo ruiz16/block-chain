@@ -20,6 +20,7 @@ import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import WalletConnectButton from '@/components/auth/WalletConnectButton';
 import { ErrorAlert, LoadingSkeleton } from '@/components/ui';
+import { useParticipante } from '@/components/auth/ParticipanteProvider';
 
 type PageState = 'loading' | 'form-idle' | 'form-submit' | 'error' | 'redirecting';
 
@@ -30,6 +31,7 @@ interface FieldErrors {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { participante, isLoading: participanteLoading } = useParticipante();
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [nombre, setNombre] = useState('');
@@ -42,46 +44,19 @@ export default function OnboardingPage() {
   // Check if user already has a profile on mount
   // ------------------------------------------------------------------------
   useEffect(() => {
-    let cancelled = false;
+    if (participanteLoading) return;
 
-    async function checkExisting() {
-      try {
-        const res = await fetch('/api/participantes?check_existing=true');
-
-        if (!res.ok) {
-          // API error — still show the form (maybe session issue)
-          setPageState('form-idle');
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!cancelled) {
-          if (data.exists) {
-            // User already has a profile — redirect to dashboard based on role
-            if (data.participante?.rol === 'usuario') {
-              router.push('/mis-creditos');
-            } else {
-              router.push('/aprobacion');
-            }
-          } else {
-            setPageState('form-idle');
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          // Network error — still show the form
-          setPageState('form-idle');
-        }
+    if (participante) {
+      if (participante.rol === 'usuario') {
+        router.push('/mis-creditos');
+      } else {
+        router.push('/aprobacion');
       }
+      return;
     }
 
-    checkExisting();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+    setPageState('form-idle');
+  }, [participanteLoading, participante, router]);
 
   // ------------------------------------------------------------------------
   // Client-side validation
