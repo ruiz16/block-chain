@@ -23,11 +23,10 @@ contract LendingPool is Ownable, ReentrancyGuard {
     uint256 public maxDisbursement;
 
     struct Credit {
-        uint256 amount;
+        uint256 amount;       // principal desembolsado (lo que se transfiere al prestatario)
         address borrower;
-        uint256 totalRepaid;
+        uint256 totalRepaid;  // COPm repagado acumulado — PUEDE superar el principal por intereses
         bool exists;
-        bool fullyRepaid;
     }
 
     mapping(bytes32 => Credit) public credits;
@@ -37,6 +36,7 @@ contract LendingPool is Ownable, ReentrancyGuard {
     event Repaid(bytes32 indexed creditId, address indexed payer, uint256 amount, uint256 totalRepaid);
     event DisburserChanged(address indexed previous, address indexed current);
     event MaxDisbursementChanged(uint256 previous, uint256 current);
+    event Withdrawn(address indexed to, uint256 amount);
 
     error NotDisburser();
     error CreditAlreadyExists();
@@ -45,7 +45,6 @@ contract LendingPool is Ownable, ReentrancyGuard {
     error ZeroAddress();
     error AmountExceedsCap();
     error InsufficientPoolBalance();
-    error AlreadyFullyRepaid();
 
     modifier onlyDisburser() {
         if (msg.sender != disburser) revert NotDisburser();
@@ -88,8 +87,7 @@ contract LendingPool is Ownable, ReentrancyGuard {
             amount: amount,
             borrower: borrower,
             totalRepaid: 0,
-            exists: true,
-            fullyRepaid: false
+            exists: true
         });
 
         emit Disbursed(creditId, borrower, amount);
@@ -97,16 +95,16 @@ contract LendingPool is Ownable, ReentrancyGuard {
     }
 
     /// @notice Repaga un crédito. Requiere approve(pool, amount) previo.
+    /// @dev    Acumula `totalRepaid` y NO bloquea sobre-pagos: en un crédito con
+    ///         intereses la suma de cuotas supera el principal, así que totalRepaid
+    ///         puede exceder `amount`. El cierre del crédito se decide off-chain
+    ///         (cuotas en DB), NO en el contrato.
     function repay(bytes32 creditId, uint256 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
         Credit storage c = credits[creditId];
         if (!c.exists) revert CreditNotFound();
-        if (c.fullyRepaid) revert AlreadyFullyRepaid();
 
         c.totalRepaid += amount;
-        if (c.totalRepaid >= c.amount) {
-            c.fullyRepaid = true;
-        }
 
         emit Repaid(creditId, msg.sender, amount, c.totalRepaid);
         copm.safeTransferFrom(msg.sender, address(this), amount);
@@ -123,9 +121,11 @@ contract LendingPool is Ownable, ReentrancyGuard {
         maxDisbursement = _max;
     }
 
-    /// @notice Retiro de emergencia (solo owner/multisig).
+    /// @notice Retiro de emergencia (solo owner/multisig). Emite Withdrawn para auditoría.
     function withdraw(address to, uint256 amount) external onlyOwner nonReentrant {
         if (to == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+        emit Withdrawn(to, amount);
         copm.safeTransfer(to, amount);
     }
 }
