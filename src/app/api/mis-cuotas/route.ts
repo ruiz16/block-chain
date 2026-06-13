@@ -32,16 +32,16 @@ interface ParticipanteRow {
 export interface EnrichedCuota {
   id: string;
   credito_id: string;
-  credito_monto: string;     // COPm total
+  credito_monto: string;     // COPm total (human-readable, COPm = COP 1:1)
   credito_estado: string;
   credito_repayment_mode: string;
   credito_descripcion: string | null;
   numero_cuota: number;
   total_cuotas: number;
-  monto_capital: string;  // COPm (wei)
-  monto_interes: string;  // COPm (wei)
-  monto_cuota: string;    // COPm (wei)
-  saldo_restante: string; // COPm (wei)
+  monto_capital: string;  // COPm wei
+  monto_interes: string;  // COPm wei
+  monto_cuota: string;    // COPm wei
+  saldo_restante: string; // COPm wei
   fecha_vencimiento: string;
   estado: 'pendiente' | 'pagada' | 'vencida';
   tx_hash_pago: string | null;

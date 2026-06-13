@@ -92,7 +92,7 @@ export function getAccount(): PrivateKeyAccount {
 
 /**
  * Returns the platform wallet address (derived from CELO_PRIVATE_KEY).
- * Used for verifying cUSD payment recipients in the repayment flow.
+ * Used for verifying COPm payment recipients in the repayment flow.
  */
 export function getPlatformWalletAddress(): `0x${string}` {
   return getAccount().address;

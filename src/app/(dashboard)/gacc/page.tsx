@@ -24,7 +24,7 @@ import ValidationBadge from '@/components/gacc/ValidationBadge';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatCopm(monto: string): string {
+function formatCop(monto: string): string {
   const num = parseFloat(monto);
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num) + ' COPm';
 }
@@ -418,7 +418,7 @@ export default function GaccPage() {
                           )}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {formatCopm(cred.monto)} — {cred.descripcion ?? 'Sin descripción'}
+                          {formatCop(cred.monto)} — {cred.descripcion ?? 'Sin descripción'}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                           {cred.avales_actuales} de {cred.total_necesarios} avales

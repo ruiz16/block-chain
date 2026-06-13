@@ -9,6 +9,9 @@
 // CRITICAL: For ERC-20 COPm transfers, the transaction `to` is the COPm
 // contract, NOT the platform wallet. We must parse `Transfer` event logs
 // from the receipt to find the actual recipient and amount.
+//
+// COPm (Mento Colombian Peso) is an 18-decimal ERC-20, identical to cUSD
+// in interface — only the contract address changes.
 // =============================================================================
 
 import { decodeEventLog } from 'viem';

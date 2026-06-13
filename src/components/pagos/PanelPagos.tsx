@@ -4,6 +4,16 @@
 // PanelPagos — Per-Cuota Payment Dashboard with MetaMask
 // =============================================================================
 //
+// COPm (Mento Colombian Peso) is used for all payments.
+// COPm is an ERC-20 with 18 decimals — same interface as cUSD.
+//
+// Payment options:
+// 1. MetaMask — sends COPm directly from user's wallet (needs CELO for gas)
+// 2. Manual — user pays from MiniPay/Valora and pastes the tx hash
+//
+// For the best UX, recommend users to pay via MiniPay (pays gas in COPm)
+// and paste the hash in the Manual field.
+//
 // States:
 //   loading       — Spinner while fetching cuotas from API
 //   empty         — No cuotas at all
@@ -18,7 +28,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createWalletClient, custom, createPublicClient, http } from 'viem';
 import { celoSepolia } from 'viem/chains';
-import { getCopmContractAddress, getPlatformWalletAddressPublic, getLendingPoolAddress, parseWeiFromDb } from '@/config/celo';
+import { getCopmContractAddress, getPlatformWalletAddressPublic, getLendingPoolAddress, parseTokenAmount } from '@/config/celo';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { creditIdHash } from '@/lib/blockchain/credit-id';
@@ -47,20 +57,21 @@ const NETWORK_ERROR = 'Error de conexión. Verifica tu conexión a internet';
 const TX_HASH_REGEX = /^0x[a-f0-9]{64}$/i;
 
 // =============================================================================
-// Helper: format COPm with locale
+// Helper: format COPm with 2 decimals
 //
-// CRITICAL: The values in cuotas.monto_cuota / credito.monto
-// are already in COPm (raw decimal, NOT wei).
-// We must NOT divide by 10^18 here — that's only for blockchain amounts.
+// The values in cuotas.monto_cuota / credito.monto are in COPm.
+// COPm = COP (pegged 1:1), so COPm amount IS the peso amount.
+// No conversion needed — unlike the old cUSD system.
 // =============================================================================
 
-function formatCopm(value: string): string {
+/** Format COPm/COP with locale formatting */
+function formatCop(value: string): string {
   try {
     const num = Number(value);
-    if (isNaN(num)) return '$0.00';
-    return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (isNaN(num)) return '$0';
+    return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 2 });
   } catch {
-    return '$0.00';
+    return '$0';
   }
 }
 
@@ -190,7 +201,7 @@ export default function PanelPagos() {
       const copmAddress = getCopmContractAddress();
       // CRITICAL: monto_cuota is in COPm (decimal), must convert to wei (10^18)
       // before sending to the ERC-20 contract via MetaMask.
-      const amountWei = parseWeiFromDb(cuota.monto_cuota) as bigint;
+      const amountWei = parseTokenAmount(cuota.monto_cuota) as bigint;
       let txHash: `0x${string}`;
 
       setState('submitting');
@@ -498,22 +509,22 @@ export default function PanelPagos() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800 dark:text-gray-200">
                           {cuota.numero_cuota}
                         </td>
-                        {/* Cuota: COPm */}
+                        {/* Cuota: COPm (directo, sin conversión) */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-semibold text-slate-800 dark:text-gray-200">
-                            {formatCopm(cuota.monto_cuota)} COPm
+                            {formatCop(cuota.monto_cuota)} COPm
                           </div>
                         </td>
                         {/* Capital: COPm */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-medium text-slate-600 dark:text-gray-300">
-                            {formatCopm(cuota.monto_capital)} COPm
+                            {formatCop(cuota.monto_capital)} COPm
                           </div>
                         </td>
                         {/* Interés: COPm */}
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="font-mono text-sm font-medium text-slate-600 dark:text-gray-300">
-                            {formatCopm(cuota.monto_interes)} COPm
+                            {formatCop(cuota.monto_interes)} COPm
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-slate-500 dark:text-gray-400">

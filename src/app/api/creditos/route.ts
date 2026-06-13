@@ -166,7 +166,10 @@ export async function POST(request: Request): Promise<Response> {
     const { monto: montoCop, uso, descripcion, plazo_dias, numero_cuotas } = validation.data;
 
     // ------------------------------------------------------------------
-    // 4. Save credit — monto is in COPm (wei)
+    // 4. Save COPm amount directly (COPm = COP 1:1).
+    //    monto stores the human-readable COPm value (e.g., "1000000" for 1M COPm).
+    //    Wei conversion only happens at the blockchain boundary:
+    //    disbursement and payment verification.
     // ------------------------------------------------------------------
     const interesPorcentaje = INTERES_PORCENTAJE;
 
@@ -177,8 +180,6 @@ export async function POST(request: Request): Promise<Response> {
       .insert({
         prestatario_id: typedParticipante.id,
         monto: montoCop.toString(),
-        moneda: 'COPm',
-        uso,
         descripcion: descripcion ?? null,
         estado: 'pendiente' as never,
         interes_porcentaje: interesPorcentaje,

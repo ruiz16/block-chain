@@ -16,7 +16,7 @@ import type { ReactNode } from 'react';
 export interface MetricCardProps {
   /** Display label (e.g. "Total Participantes") */
   label: string;
-  /** Formatted value (e.g. "42" or "12,500 cUSD") */
+  /** Formatted value (e.g. "42" or "12,500 COPm") */
   value: string | number;
   /** Optional icon element rendered top-left */
   icon?: ReactNode;

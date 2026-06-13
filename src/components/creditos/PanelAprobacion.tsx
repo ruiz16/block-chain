@@ -378,7 +378,7 @@ function PanelRow({
   return (
     <tr className="transition-colors duration-150 hover:bg-slate-50/70 dark:hover:bg-gray-700/50">
       <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-950 dark:text-white font-bold">
-        {credito.monto.toLocaleString('es-CO')} cUSD
+        {credito.monto.toLocaleString('es-CO')} COPm
       </td>
       <td className="px-6 py-4.5 whitespace-nowrap text-sm text-slate-700 dark:text-gray-200 font-semibold">
         {credito.solicitante}

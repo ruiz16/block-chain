@@ -1,3 +1,15 @@
+// =============================================================================
+// desembolsarCredito — Core Blockchain Disbursement via LendingPool
+// =============================================================================
+//
+// Orchestrates the full on-chain COPm disbursement through LendingPool:
+//   1. Simulate (pre-flight check via LendingPool.disburse)
+//   2. Execute (write contract via LendingPool)
+//   3. Wait for receipt
+//   4. Verify receipt status
+//   5. Return TxHash
+// =============================================================================
+
 import { getPublicClient, getWalletClient } from '@/lib/blockchain/client';
 import { getLendingPoolAddress } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';

@@ -12,7 +12,7 @@
  */
 export type Brand<K, T> = K & { __brand: T };
 
-/** COPm amount in wei (smallest unit, 18 decimals) */
+/** Token amount in wei (smallest unit, 18 decimals — used for COPm) */
 export type Wei = Brand<bigint, 'Wei'>;
 
 /** Celo wallet address (0x-prefixed hex string) */
@@ -112,9 +112,7 @@ export type MonedaCredito = 'COPm';
 export interface CreditoRow {
   id: string;
   prestatario_id: string;
-  monto: string; // NUMERIC from Postgres — COPm (wei)
-  moneda: MonedaCredito;
-  uso: string;
+  monto: string; // NUMERIC(40,0) from Postgres — COPm value (human-readable)
   descripcion: string | null;
   estado: EstadoCredito;
   interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
@@ -142,10 +140,10 @@ export interface CuotaRow {
   id: string;
   credito_id: string;
   numero_cuota: number;
-  monto_capital: string; // NUMERIC(40,0) from Postgres — COPm (wei)
-  monto_interes: string; // NUMERIC(40,0) — COPm (wei)
-  monto_cuota: string; // NUMERIC(40,0) — capital + interest, COPm (wei)
-  saldo_restante: string; // NUMERIC(40,0) — COPm (wei)
+  monto_capital: string; // NUMERIC(40,0) from Postgres — COPm value (human-readable)
+  monto_interes: string; // NUMERIC(40,0) — COPm value (human-readable)
+  monto_cuota: string; // NUMERIC(40,0) — capital + interest, COPm value (human-readable)
+  saldo_restante: string; // NUMERIC(40,0) — COPm value (human-readable)
   fecha_vencimiento: string;
   estado: 'pendiente' | 'pagada' | 'vencida';
   tx_hash_pago: string | null;

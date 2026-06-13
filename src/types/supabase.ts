@@ -110,9 +110,7 @@ export interface Database {
         Row: {
           id: string;
           prestatario_id: string;
-          monto: string; // numeric(40,0) — COPm (wei)
-          moneda: string; // 'COPm'
-          uso: string;
+          monto: string; // numeric(40,0) — COPm value (human-readable)
           descripcion: string | null;
           estado: DbEstadoCredito;
           interes_porcentaje: number; // numeric(5,2)
@@ -129,9 +127,7 @@ export interface Database {
         Insert: {
           id?: string;
           prestatario_id: string;
-          monto: string; // COPm (wei)
-          moneda?: string; // default 'COPm'
-          uso: string;
+          monto: string; // COPm value (human-readable)
           descripcion?: string | null;
           estado?: DbEstadoCredito; // default 'pendiente'
           interes_porcentaje?: number; // default 0
@@ -149,8 +145,6 @@ export interface Database {
           id?: string;
           prestatario_id?: string;
           monto?: string;
-          moneda?: string;
-          uso?: string;
           descripcion?: string | null;
           estado?: DbEstadoCredito;
           interes_porcentaje?: number;

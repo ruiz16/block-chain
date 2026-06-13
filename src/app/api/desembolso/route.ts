@@ -181,15 +181,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 7. Execute blockchain transfer
+    // 7. Execute blockchain transfer (COPm on Celo)
     // ------------------------------------------------------------------
-    const montoCusd = typedCredito.monto;
+    const montoWei = typedCredito.monto;
 
     let txHash: string;
 
     try {
-      const montoWei = (BigInt(montoCusd) * 10n ** 18n) as Wei;
-      txHash = await desembolsarCredito(typedCredito.id, walletAddress as Address, montoWei);
+      txHash = await desembolsarCredito(typedCredito.id, walletAddress as Address, montoWei as Wei);
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({

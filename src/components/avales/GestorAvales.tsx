@@ -41,7 +41,7 @@ function truncateWallet(wallet: string): string {
 function formatMonto(monto: string): string {
   const num = Number(monto);
   if (isNaN(num)) return monto;
-  return `${num.toLocaleString('es-CO')} cUSD`;
+  return `${num.toLocaleString('es-CO')} COPm`;
 }
 
 export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange }: GestorAvalesProps) {
