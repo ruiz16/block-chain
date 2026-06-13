@@ -2,7 +2,7 @@
 // Supabase Database Types — generated manually from supabase/migrations/
 // =============================================================================
 //
-// Covers all 11 migrations (001 → 011). Matches the Postgres schema exactly.
+// Covers all 28 migrations (001 → 028). Matches the Postgres schema exactly.
 //
 // Usage:
 //   import { createClient } from '@supabase/supabase-js'
@@ -56,11 +56,10 @@ export interface Database {
           wallet_address: string;
           nombre: string;
           rol: DbRolParticipante;
-          oficio: string;
+          oficio: string | null;
           user_id: string;
           score_reputacion: number;
           activo: boolean;
-          estado: string;
           codigo_referido: string | null;
           auth_password: string | null;
           gacc_id: string | null;
@@ -74,11 +73,10 @@ export interface Database {
           wallet_address: string;
           nombre: string;
           rol: DbRolParticipante;
-          oficio?: string;
+          oficio?: string | null;
           user_id: string;
           score_reputacion?: number; // default 50
           activo?: boolean; // default true
-          estado?: string;
           codigo_referido?: string | null;
           auth_password?: string | null;
           gacc_id?: string | null;
@@ -92,11 +90,10 @@ export interface Database {
           wallet_address?: string;
           nombre?: string;
           rol?: DbRolParticipante;
-          oficio?: string;
+          oficio?: string | null;
           user_id?: string;
           score_reputacion?: number;
           activo?: boolean;
-          estado?: string;
           codigo_referido?: string | null;
           auth_password?: string | null;
           gacc_id?: string | null;
@@ -113,16 +110,19 @@ export interface Database {
           monto: string; // numeric(40,0) — COPm value (human-readable)
           descripcion: string | null;
           estado: DbEstadoCredito;
+          uso: string;              // Propósito del crédito — mig 022
+          moneda: string;           // Siempre 'COPm' — mig 017
           interes_porcentaje: number; // numeric(5,2)
           plazo_dias: number;
           numero_cuotas: number;
           fecha_vencimiento: string | null;
+          expiracion_en: string | null; // Fecha de expiración — mig 023
+          repayment_mode: string;       // 'legacy' | 'pool' — mig 024
           tx_hash: string | null;
           tx_hash_pago: string | null;
           fecha_solicitud: string;
           fecha_actualizacion: string;
           fecha_pago: string | null;
-          repayment_mode: string;
         };
         Insert: {
           id?: string;
@@ -130,16 +130,19 @@ export interface Database {
           monto: string; // COPm value (human-readable)
           descripcion?: string | null;
           estado?: DbEstadoCredito; // default 'pendiente'
+          uso?: string;             // default ''
+          moneda?: string;          // default 'COPm'
           interes_porcentaje?: number; // default 0
           plazo_dias: number;
           numero_cuotas?: number; // default 1
           fecha_vencimiento?: string | null;
+          expiracion_en?: string | null;
+          repayment_mode?: string;  // default 'legacy'
           tx_hash?: string | null;
           tx_hash_pago?: string | null;
           fecha_solicitud?: string;
           fecha_actualizacion?: string;
           fecha_pago?: string | null;
-          repayment_mode?: string;
         };
         Update: {
           id?: string;
@@ -147,16 +150,19 @@ export interface Database {
           monto?: string;
           descripcion?: string | null;
           estado?: DbEstadoCredito;
+          uso?: string;
+          moneda?: string;
           interes_porcentaje?: number;
           plazo_dias?: number;
           numero_cuotas?: number;
           fecha_vencimiento?: string | null;
+          expiracion_en?: string | null;
+          repayment_mode?: string;
           tx_hash?: string | null;
           tx_hash_pago?: string | null;
           fecha_solicitud?: string;
           fecha_actualizacion?: string;
           fecha_pago?: string | null;
-          repayment_mode?: string;
         };
         Relationships: [];
       };
@@ -295,29 +301,30 @@ export interface Database {
           nombre: string;
           descripcion: string | null;
           codigo: string;
-          creador_id: string;
+          creador_id: string | null; // Nullable — admin GACCs don't have a creator
           activo: boolean;
           created_at: string;
-          municipio: string;
+          municipio: string | null;  // Municipio donde opera — mig 026
         };
         Insert: {
           id?: string;
           nombre: string;
           descripcion?: string | null;
           codigo: string;
-          creador_id: string | null;
+          creador_id?: string | null;
           activo?: boolean; // default true
           created_at?: string;
-          municipio?: string;
+          municipio?: string | null;
         };
         Update: {
           id?: string;
           nombre?: string;
           descripcion?: string | null;
           codigo?: string;
-          creador_id?: string;
+          creador_id?: string | null;
           activo?: boolean;
           created_at?: string;
+          municipio?: string | null;
         };
         Relationships: [];
       };
@@ -432,6 +439,142 @@ export interface Database {
           referencia_tipo?: string | null;
           referencia_id?: string | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      // Migration 012 — Referidos y Redes de Apoyo
+      referidos: {
+        Row: {
+          id: string;
+          referidor_id: string;
+          referido_id: string;
+          created_at: string;
+          activo: boolean;
+        };
+        Insert: {
+          id?: string;
+          referidor_id: string;
+          referido_id: string;
+          created_at?: string;
+          activo?: boolean;
+        };
+        Update: {
+          id?: string;
+          referidor_id?: string;
+          referido_id?: string;
+          created_at?: string;
+          activo?: boolean;
+        };
+        Relationships: [];
+      };
+      redes_apoyo: {
+        Row: {
+          id: string;
+          nombre: string;
+          score_red: number;
+          estado: string; // 'verde' | 'amarillo' | 'rojo'
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          nombre: string;
+          score_red?: number;
+          estado?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          nombre?: string;
+          score_red?: number;
+          estado?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      red_miembros: {
+        Row: {
+          id: string;
+          red_id: string;
+          participante_id: string;
+          es_referidora: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          red_id: string;
+          participante_id: string;
+          es_referidora?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          red_id?: string;
+          participante_id?: string;
+          es_referidora?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      notificaciones: {
+        Row: {
+          id: string;
+          participante_id: string;
+          tipo: string; // 'bienvenida_red' | 'score_red_mejoro' | etc.
+          titulo: string;
+          cuerpo: string;
+          leida: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          participante_id: string;
+          tipo: string;
+          titulo: string;
+          cuerpo: string;
+          leida?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          participante_id?: string;
+          tipo?: string;
+          titulo?: string;
+          cuerpo?: string;
+          leida?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      cola_email: {
+        Row: {
+          id: string;
+          para: string;
+          asunto: string;
+          cuerpo_html: string;
+          estado: string; // 'pendiente' | 'enviado' | 'fallido'
+          error: string | null;
+          created_at: string;
+          enviado_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          para: string;
+          asunto: string;
+          cuerpo_html: string;
+          estado?: string;
+          error?: string | null;
+          created_at?: string;
+          enviado_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          para?: string;
+          asunto?: string;
+          cuerpo_html?: string;
+          estado?: string;
+          error?: string | null;
+          created_at?: string;
+          enviado_at?: string | null;
         };
         Relationships: [];
       };

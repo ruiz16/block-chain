@@ -48,7 +48,7 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { user, isLoading: authLoading } = useAuth();
-  const { participante: profile } = useParticipante();
+  const { participante: profile, isLoading: profileLoading } = useParticipante();
   const [walletWarningDismissed, setWalletWarningDismissed] = useState(false);
 
   const isPublic = isPublicRoute(pathname);
@@ -68,8 +68,15 @@ export default function AppShell({ children }: AppShellProps) {
   // Auth loading: show children without sidebar (layout flash guard)
   // -----------------------------------------------------------------------
 
-  if (authLoading) {
-    return <>{children}</>;
+  if (authLoading || profileLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
+        {/* Puedes cambiar esto por un componente Spinner real */}
+        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 animate-pulse">
+          Cargando aplicación...
+        </div>
+      </div>
+    );
   }
 
   // -----------------------------------------------------------------------
@@ -90,6 +97,7 @@ export default function AppShell({ children }: AppShellProps) {
   if (!profile) {
     return <>{children}</>;
   }
+
 
   // -----------------------------------------------------------------------
   // Authenticated + profile loaded: show sidebar

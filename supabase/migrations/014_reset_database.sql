@@ -6,13 +6,17 @@
 -- Run this ONLY on a fresh/development database. All existing data will
 -- be permanently deleted.
 --
+-- Includes all migrations 001 → 028 (the three latest add municipio, oficio,
+-- and missing enum values).
+--
 -- Usage (Supabase CLI):
 --   supabase db reset
 --
 -- Or manually:
 --   1. Connect to your database
 --   2. Run this file
---   3. Then run all migrations 001-013 in order
+--   3. Then run all remaining migrations 015-028 in order (or just this file
+--      which already includes everything)
 -- =============================================================================
 
 -- =============================================================================
@@ -47,6 +51,10 @@ DROP TABLE IF EXISTS eventos_score CASCADE;
 
 -- Migration 008 — Cuotas
 DROP TABLE IF EXISTS cuotas CASCADE;
+
+-- Migration 021 — Educación
+DROP TABLE IF EXISTS progreso_educacion CASCADE;
+DROP TABLE IF EXISTS modulos_educativos CASCADE;
 
 -- Migration 010 — GACC
 DROP TABLE IF EXISTS gacc_miembros CASCADE;
@@ -737,6 +745,262 @@ CREATE POLICY "cola_email_update_service_role"
   USING (true)
   WITH CHECK (true);
 
+-- 015_indexes.sql
 -- =============================================================================
--- DONE — Schema reset complete
+
+CREATE INDEX IF NOT EXISTS idx_avales_aval_id
+  ON avales (aval_id);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_participante_id
+  ON audit_log (participante_id);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_entidad_id
+  ON audit_log (entidad_id);
+
+-- 016_remove_roles.sql
+-- =============================================================================
+
+BEGIN;
+
+  -- 1. Drop policies that depend on the old type (they reference rol column)
+  DROP POLICY IF EXISTS "participantes_select_authenticated" ON participantes;
+  DROP POLICY IF EXISTS "participantes_insert_own" ON participantes;
+  DROP POLICY IF EXISTS "participantes_update_own" ON participantes;
+  DROP POLICY IF EXISTS "audit_log_select_admin_only" ON audit_log;
+
+  -- 2. Recreate the enum with only active roles
+  ALTER TYPE rol_participante RENAME TO rol_participante_old;
+
+  CREATE TYPE rol_participante AS ENUM ('usuario', 'admin');
+
+  -- 3. Alter column type, migrating old role values to 'usuario'
+  ALTER TABLE participantes
+    ALTER COLUMN rol TYPE rol_participante
+    USING (
+      CASE rol::text
+        WHEN 'prestamista' THEN 'usuario'::rol_participante
+        WHEN 'aval'       THEN 'usuario'::rol_participante
+        WHEN 'prestatario' THEN 'usuario'::rol_participante
+        ELSE rol::text::rol_participante
+      END
+    );
+
+  DROP TYPE rol_participante_old;
+
+  -- 4. Recreate policies
+  CREATE POLICY "participantes_select_authenticated"
+    ON participantes FOR SELECT
+    TO authenticated
+    USING (auth.uid() = user_id OR rol = 'admin');
+
+  CREATE POLICY "participantes_insert_own"
+    ON participantes FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = user_id);
+
+  CREATE POLICY "participantes_update_own"
+    ON participantes FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+  CREATE POLICY "audit_log_select_admin_only"
+    ON audit_log FOR SELECT
+    TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM participantes
+        WHERE user_id = auth.uid() AND rol = 'admin'
+      )
+    );
+
+COMMIT;
+
+-- 017_copm.sql
+-- =============================================================================
+
+ALTER TABLE creditos
+  DROP COLUMN IF EXISTS tasa_cambio;
+
+ALTER TABLE creditos
+  DROP COLUMN IF EXISTS monto_cop;
+
+COMMENT ON COLUMN creditos.monto IS 'Monto en COPm (human-readable, COPm = COP 1:1) — único campo de valor';
+
+-- 017_moneda.sql
+-- =============================================================================
+
+ALTER TABLE creditos
+  ADD COLUMN IF NOT EXISTS moneda text NOT NULL DEFAULT 'COPm';
+
+COMMENT ON COLUMN creditos.moneda IS 'Moneda de origen: COPm (Colombian Pesos) o cUSD (Celo Dollar)';
+
+-- 018_telefono.sql
+-- =============================================================================
+
+ALTER TABLE participantes
+  ADD COLUMN IF NOT EXISTS telefono text NOT NULL DEFAULT '';
+
+COMMENT ON COLUMN participantes.telefono IS
+  'Número de celular del participante, formato libre (+57 310...)';
+
+-- 019_email_column.sql
+-- =============================================================================
+
+ALTER TABLE participantes ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+
+-- 020_purge_usd.sql
+-- =============================================================================
+
+ALTER TABLE creditos DROP COLUMN IF EXISTS monto_cop;
+ALTER TABLE creditos DROP COLUMN IF EXISTS tasa_cambio;
+
+COMMENT ON COLUMN creditos.monto      IS 'Monto en COPm (wei, 18 decimales)';
+COMMENT ON COLUMN creditos.moneda     IS 'Siempre COPm — única moneda del sistema';
+COMMENT ON COLUMN cuotas.monto_capital  IS 'Capital en COPm (wei)';
+COMMENT ON COLUMN cuotas.monto_interes  IS 'Interés en COPm (wei)';
+COMMENT ON COLUMN cuotas.monto_cuota    IS 'Cuota total (capital + interés) en COPm (wei)';
+COMMENT ON COLUMN cuotas.saldo_restante IS 'Saldo pendiente en COPm (wei)';
+COMMENT ON COLUMN cuotas.tx_hash_pago   IS 'Tx hash del pago en COPm';
+COMMENT ON COLUMN creditos.tx_hash      IS 'Tx hash del desembolso en COPm';
+COMMENT ON COLUMN creditos.tx_hash_pago IS 'Tx hash del pago total (créditos de 1 cuota) en COPm';
+
+-- 021_educacion.sql
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS modulos_educativos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  orden INTEGER NOT NULL CHECK (orden > 0),
+  sender TEXT NOT NULL CHECK (sender IN ('system', 'whatsapp_fld')),
+  mensaje TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_modulos_orden ON modulos_educativos (orden);
+
+INSERT INTO modulos_educativos (orden, sender, mensaje) VALUES
+  (1, 'system',
+    'Has iniciado tu proceso formativo. ¡Bienvenida a tu camino de autonomía!'
+  ),
+  (2, 'whatsapp_fld',
+    '🍃 **Lección 1:** El GACC es un fondo común. Si una persona del grupo presenta dificultad, las demás brindamos apoyo. No hay cobradores externos, nos respaldamos entre nosotras.'
+  ),
+  (3, 'whatsapp_fld',
+    '💡 **Lección 2:** El pago oportuno mejora tu *Score de Confianza* (Credencial NFT), permitiendo que todo tu grupo acceda a montos más altos en el siguiente ciclo.'
+  ),
+  (4, 'whatsapp_fld',
+    '¡Felicidades! Has completado el módulo. Ahora estás lista para ingresar el monto del microcrédito que necesitas para tu negocio.'
+  )
+ON CONFLICT (orden) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS progreso_educacion (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participante_id UUID NOT NULL REFERENCES participantes(id) ON DELETE CASCADE,
+  modulo_actual INTEGER NOT NULL DEFAULT 1,
+  completado BOOLEAN NOT NULL DEFAULT false,
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT progreso_educacion_participante_unique UNIQUE (participante_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_progreso_participante ON progreso_educacion (participante_id);
+
+-- 022_uso_column.sql
+-- =============================================================================
+
+ALTER TABLE creditos ADD COLUMN IF NOT EXISTS uso text NOT NULL DEFAULT '';
+
+COMMENT ON COLUMN creditos.uso IS 'Propósito del crédito (insumos, herramientas, mercancía, etc.)';
+
+-- 023_expiracion_avales.sql
+-- =============================================================================
+
+ALTER TYPE estado_credito ADD VALUE IF NOT EXISTS 'expirado';
+
+ALTER TABLE creditos ADD COLUMN IF NOT EXISTS expiracion_en timestamptz;
+
+COMMENT ON COLUMN creditos.expiracion_en IS 'Fecha de expiración (7 días después de la solicitud). Si no tiene avales suficientes para esa fecha, se marca como expirado.';
+
+DROP INDEX IF EXISTS avales_prestatario_id_credito_id_key;
+ALTER TABLE avales DROP CONSTRAINT IF EXISTS avales_prestatario_id_credito_id_key;
+ALTER TABLE avales ADD UNIQUE (aval_id, credito_id);
+
+-- 024_lending_pool.sql
+-- =============================================================================
+
+ALTER TABLE creditos
+  ADD COLUMN IF NOT EXISTS repayment_mode TEXT NOT NULL DEFAULT 'legacy'
+  CHECK (repayment_mode IN ('legacy', 'pool'));
+
+COMMENT ON COLUMN creditos.repayment_mode IS
+  'legacy = Transfer a platform wallet; pool = evento Repaid del LendingPool';
+
+-- 025_admin_gacc_creador_nullable.sql
+-- =============================================================================
+
+ALTER TABLE grupos_gacc ALTER COLUMN creador_id DROP NOT NULL;
+
+DROP TRIGGER IF EXISTS trg_gacc_auto_add_creator ON grupos_gacc;
+DROP FUNCTION IF EXISTS gacc_auto_add_creator();
+
+CREATE OR REPLACE FUNCTION gacc_auto_add_creator()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.creador_id IS NOT NULL THEN
+    INSERT INTO gacc_miembros (grupo_id, participante_id, validado_por, validado_en)
+      VALUES (NEW.id, NEW.creador_id, NEW.creador_id, now());
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_gacc_auto_add_creator
+  AFTER INSERT ON grupos_gacc
+  FOR EACH ROW
+  EXECUTE FUNCTION gacc_auto_add_creator();
+
+-- 026_gacc_municipio.sql
+-- =============================================================================
+
+ALTER TABLE grupos_gacc
+  ADD COLUMN IF NOT EXISTS municipio text;
+
+COMMENT ON COLUMN grupos_gacc.municipio IS
+  'Municipio donde opera el GACC (guapi, timbiqui, etc.)';
+
+-- 027_participantes_oficio.sql
+-- =============================================================================
+
+ALTER TABLE participantes
+  ADD COLUMN IF NOT EXISTS oficio text;
+
+COMMENT ON COLUMN participantes.oficio IS
+  'Oficio u ocupación del participante (ej. agricultura, comercio, etc.)';
+
+-- 028_fix_enums.sql
+-- =============================================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumlabel = 'interes_barrido'
+      AND enumtypid = 'tipo_accion'::regtype
+  ) THEN
+    ALTER TYPE tipo_accion ADD VALUE 'interes_barrido';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumlabel = 'score_actualizado'
+      AND enumtypid = 'tipo_accion'::regtype
+  ) THEN
+    ALTER TYPE tipo_accion ADD VALUE 'score_actualizado';
+  END IF;
+END $$;
+
+-- =============================================================================
+-- DONE — Schema reset complete (all 28 migrations)
 -- =============================================================================

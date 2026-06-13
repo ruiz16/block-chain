@@ -180,6 +180,7 @@ export async function POST(request: Request): Promise<Response> {
       .insert({
         prestatario_id: typedParticipante.id,
         monto: montoCop.toString(),
+        uso: uso,
         descripcion: descripcion ?? null,
         estado: 'pendiente' as never,
         interes_porcentaje: interesPorcentaje,

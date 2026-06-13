@@ -34,33 +34,50 @@ interface ParticipanteProviderProps {
 }
 
 export default function ParticipanteProvider({ children }: ParticipanteProviderProps) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [participante, setParticipante] = useState<Participante | null>(null);
-
-  // isLoading es DERIVADO, no estado — 0 setStates en el effect
-  const isLoading = participante === null && user !== null;
+  
+  // Flag para saber si la API de participantes ya fue consultada con éxito
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    // Si la autenticación sigue cargando, no hacemos nada todavía
+    if (authLoading) return;
+
+    // Si terminó la autenticación y no hay usuario, limpiamos el estado silenciosamente
+    if (!user) {
+      return;
+    }
 
     let cancelled = false;
 
     fetch('/api/participantes?check_existing=true')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al obtener datos');
+        return res.json();
+      })
       .then((data) => {
         if (!cancelled) {
           setParticipante(data.exists && data.participante ? data.participante : null);
+          setHasFetched(true); // Cambiamos el estado de manera asíncrona tras la respuesta
         }
       })
       .catch((err) => {
         if (!cancelled) {
           console.error('[ParticipanteProvider] fetch failed:', err);
           setParticipante(null);
+          setHasFetched(true); // Marcamos como finalizado incluso si falla
         }
       });
 
-    return () => { cancelled = true; };
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
+
+  // LA MAGIA: El estado de carga se calcula en base a la lógica del flujo, 
+  // previniendo cualquier setState síncrono que rompa a React.
+  const isLoading = authLoading || (user !== null && !hasFetched);
 
   return (
     <ParticipanteContext.Provider value={{ participante, isLoading }}>

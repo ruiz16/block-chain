@@ -33,7 +33,8 @@ export type EstadoCredito =
   | 'aprobado'
   | 'desembolsado'
   | 'pagado'
-  | 'default';
+  | 'default'
+  | 'expirado';
 
 /**
  * Possible audit log action values.
@@ -73,6 +74,7 @@ export type TipoAccion =
   | 'pago_recibido'
   | 'interes_barrido'
   | 'default_registrado'
+  | 'score_actualizado'
   | 'aval_agregado'
   | 'aval_revocado'
   | 'gacc_creado'
@@ -89,7 +91,8 @@ export interface ParticipanteRow {
   wallet_address: string;
   nombre: string;
   rol: RolParticipante;
-  user_id: string;       // FK to auth.users(id) — added in migration 003
+  oficio: string | null;         // Oficio/ocupación — added in migration 027
+  user_id: string;               // FK to auth.users(id) — added in migration 003
   score_reputacion: number;
   activo: boolean;
   auth_password?: string | null; // Auto-generated SIWE password — added in migration 007
@@ -116,10 +119,14 @@ export interface CreditoRow {
   monto: string; // NUMERIC(40,0) from Postgres — COPm value (human-readable)
   descripcion: string | null;
   estado: EstadoCredito;
+  uso: string;                   // Propósito del crédito — added in migration 022
+  moneda: string;                // Moneda (siempre 'COPm') — added in migration 017
   interes_porcentaje: number | string; // NUMERIC(5,2) from Postgres
   plazo_dias: number;
   numero_cuotas: number;
   fecha_vencimiento: string | null;
+  expiracion_en: string | null;  // Fecha de expiración — added in migration 023
+  repayment_mode: string;        // 'legacy' | 'pool' — added in migration 024
   tx_hash: string | null;
   tx_hash_pago: string | null;
   fecha_solicitud: string;
@@ -157,9 +164,10 @@ export interface GrupoGaccRow {
   nombre: string;
   descripcion: string | null;
   codigo: string;
-  creador_id: string;
+  creador_id: string | null;     // Nullable — admin can create GACCs without belonging
   activo: boolean;
   created_at: string;
+  municipio: string | null;      // Municipio donde opera — added in migration 026
 }
 
 export interface GaccMiembroRow {

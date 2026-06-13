@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// CORRECCIÓN DE RUTAS: Cada proveedor debe venir de su propio archivo
 import AuthProvider from "@/components/auth/AuthProvider";
-import ParticipanteProvider from "@/components/auth/ParticipanteProvider";
+import ParticipanteProvider from "@/components/auth/ParticipanteProvider"; // <-- Verifica que esta ruta sea exacta
 import AppShell from "@/components/shared/AppShell";
 import ThemeInitializer from "@/components/shared/ThemeInitializer";
 
@@ -52,7 +53,7 @@ export default function RootLayout({
         {/* Skip link — visible on keyboard focus, lets users skip navigation */}
         <a
           href="#main-content"
-          className="absolute -top-10 left-4 z-[100] rounded-b-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all focus:top-0 focus:outline-none focus:ring-2 focus:ring-white/50"
+          className="absolute -top-10 left-4 z-100 rounded-b-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all focus:top-0 focus:outline-none focus:ring-2 focus:ring-white/50"
         >
           Saltar al contenido principal
         </a>
