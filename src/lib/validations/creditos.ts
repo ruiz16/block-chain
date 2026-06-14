@@ -34,6 +34,12 @@ import { z } from 'zod';
 export const SolicitarCreditoSchema = z.object({
   monto: z.number().positive('El monto debe ser mayor a 0 (en COP)'),
   uso: z.string().min(1, 'Selecciona el uso del crédito'),
+  // Referadora elegida por transacción (modelo GACC): miembro del mismo grupo
+  // que otorgará el aval 1/2. Obligatoria por cada solicitud.
+  referadora_id: z
+    .string()
+    .min(1, 'Debes elegir una referadora para este crédito')
+    .uuid('referadora_id debe ser un UUID válido'),
   descripcion: z.string().max(500, 'La descripción no puede exceder 500 caracteres').optional(),
   plazo_dias: z
     .number()

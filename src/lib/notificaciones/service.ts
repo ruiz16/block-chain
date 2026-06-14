@@ -8,7 +8,20 @@
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 
-type TipoNotificacion = 'bienvenida_red' | 'score_red_mejoro' | 'score_red_empeoro' | 'alerta_48h' | 'alerta_7d' | 'referido_nuevo';
+export type TipoNotificacion =
+  // Heredados (modelo referidos/redes)
+  | 'bienvenida_red'
+  | 'score_red_mejoro'
+  | 'score_red_empeoro'
+  | 'alerta_48h'
+  | 'alerta_7d'
+  | 'referido_nuevo'
+  // Modelo GACC
+  | 'aval_requerido'        // a la referadora: "Avalá a Juan"
+  | 'aval_lider_requerido'  // al líder social: falta tu aval 2/2
+  | 'mora_referadora'       // a la referadora del crédito en mora
+  | 'mora_lider'            // al líder social del GACC con mora
+  | 'gacc_restringido';     // al grupo: score bajo → restricciones
 
 export async function crearNotificacion(params: {
   participanteId: string;

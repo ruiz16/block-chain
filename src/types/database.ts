@@ -116,6 +116,7 @@ export type MonedaCredito = 'COPm';
 export interface CreditoRow {
   id: string;
   prestatario_id: string;
+  referadora_id: string | null; // Referadora elegida por crédito (aval 1/2) — migration 029
   monto: string; // NUMERIC(40,0) from Postgres — COPm value (human-readable)
   descripcion: string | null;
   estado: EstadoCredito;
@@ -142,6 +143,7 @@ export interface AvalRow {
   monto_maximo: string; // NUMERIC from Postgres
   fecha_creacion: string;
   activo: boolean;
+  rol_aval: 'referadora' | 'lider' | null; // Rol en el circuito GACC — migration 029
 }
 
 export interface CuotaRow {
@@ -168,6 +170,10 @@ export interface GrupoGaccRow {
   activo: boolean;
   created_at: string;
   municipio: string | null;      // Municipio donde opera — added in migration 026
+  email_lider: string | null;    // Correo del Líder Social pre-asignado por el FLD — migration 029
+  lider_id: string | null;       // Participante resuelto como Líder Social — migration 029
+  score_gacc: number | string;   // NUMERIC(5,2) — media de scores del grupo — migration 029
+  estado: 'activo' | 'restringido' | 'inactivo'; // Estado operativo — migration 029
 }
 
 export interface GaccMiembroRow {

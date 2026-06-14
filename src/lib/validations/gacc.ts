@@ -33,6 +33,14 @@ export const CrearGaccSchema = z.object({
   municipio: z.enum(['guapi', 'timbiqui'], {
     message: 'El municipio debe ser guapi o timbiqui',
   }),
+  // Correo del Líder Social pre-asignado por el FLD (modelo GACC).
+  // Opcional a nivel de schema porque el flujo de usuario (/api/gacc) no lo usa;
+  // el flujo del FLD (/api/admin/gacc) lo persiste para el match al unirse.
+  email_lider: z
+    .string()
+    .email('El correo del líder no es válido')
+    .optional()
+    .or(z.literal('')),
 }).strict();
 
 export type CrearGaccInput = z.infer<typeof CrearGaccSchema>;

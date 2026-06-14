@@ -1,13 +1,18 @@
 // =============================================================================
 // GET  /api/avales         — Listar avales (filtro por credito / participante)
-// POST /api/avales         — Asignar aval a un crédito
+// POST /api/avales         — Otorgar un aval del circuito GACC (referadora|lider)
 // =============================================================================
 //
-// Follows the same pattern as /api/desembolso:
-// - Zod validation at the boundary (400 on failure)
-// - Business logic checks with descriptive error codes
-// - Supabase service-role client for all DB operations
-// - Audit log via registrarAuditLog
+// Modelo GACC (Especificación de Arquitectura): cada crédito requiere DOS avales
+// con roles fijos y secuenciales:
+//   - Aval 1/2: la referadora elegida por el solicitante (creditos.referadora_id).
+//     El crédito permanece en 'pendiente' y se notifica al Líder Social.
+//   - Aval 2/2: el Líder Social del grupo (grupos_gacc.lider_id). Requiere que el
+//     aval 1/2 ya exista. Al completarse, el crédito pasa a 'avalado'.
+// Cualquier otro participante NO puede avalar. El rol se infiere de la sesión.
+//
+// Patrón: Zod en el borde, lógica de negocio con códigos de error en español,
+// service-role client, audit log y notificaciones in-app.
 // =============================================================================
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -16,22 +21,13 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { requireRoles } from '@/lib/auth-guards';
-import {
-  AsignarAvalSchema,
-  AvalQuerySchema,
-} from '@/lib/validations/avales';
+import { AsignarAvalSchema, AvalQuerySchema } from '@/lib/validations/avales';
 import { registrarAuditLog } from '@/lib/audit/logger';
+import { decidirAval } from '@/lib/avales/circuito';
 
 // ---------------------------------------------------------------------------
 // Types for Supabase query results (no generated types available)
 // ---------------------------------------------------------------------------
-interface CreditoRowSimple {
-  id: string;
-  monto: string;
-  estado: string;
-  prestatario_id: string;
-}
-
 interface ParticipanteRowSimple {
   id: string;
   nombre: string;
@@ -52,30 +48,14 @@ interface AvalJoinRow {
   participantes: ParticipanteRowSimple | ParticipanteRowSimple[];
 }
 
-interface GaccMiembroRow {
-  participante_id: string;
-}
-
-interface AvalCountRow {
-  aval_id: string;
-}
-
 // =============================================================================
-// POST /api/avales — Avalar un crédito desde el GACC
-// =============================================================================
-//
-// Nuevo modelo (Junio 2026):
-// - El rol 'aval' ya no existe. Cualquier miembro activo de un GACC puede
-//   avalar los créditos de sus compañeros de grupo.
-// - El crédito SOLO pasa a 'avalado' cuando TODOS los miembros del GACC
-//   (excepto el prestatario) han avalado.
-// - El avalador_id se obtiene de la sesión autenticada (no se acepta en el body).
+// POST /api/avales — Otorgar un aval del circuito GACC
 // =============================================================================
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     // ------------------------------------------------------------------
-    // 1. Verify session
+    // 1. Verify session (cookies → Bearer token fallback for mobile)
     // ------------------------------------------------------------------
     const cookieStore = await cookies();
     const cookieUser = await getServerUser(cookieStore);
@@ -92,7 +72,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const supabase = getSupabaseClient();
 
     // ------------------------------------------------------------------
-    // 2. Look up current user's participante row
+    // 2. Current user's participante row (the avalador)
     // ------------------------------------------------------------------
     const { data: rawAvalador } = await supabase
       .from('participantes')
@@ -100,16 +80,14 @@ export async function POST(request: NextRequest): Promise<Response> {
       .eq('user_id', user.id)
       .single();
 
-    const typedAvalador = rawAvalador as unknown as ParticipanteRowSimple | null;
+    const avalador = rawAvalador as unknown as ParticipanteRowSimple | null;
 
-    if (!typedAvalador) {
+    if (!avalador) {
       return NextResponse.json(
         { error: 'PARTICIPANTE_NO_ENCONTRADO', detail: 'No tienes un perfil de participante' },
         { status: 404 },
       );
     }
-
-    const avalador_id = typedAvalador.id;
 
     // ------------------------------------------------------------------
     // 3. Parse and validate body (only credito_id)
@@ -140,44 +118,45 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 4. Fetch credit — must exist, be in 'pendiente', and not expired
     // ------------------------------------------------------------------
-    const { data: credito, error: creditoError } = await supabase
+    const { data: rawCredito, error: creditoError } = await supabase
       .from('creditos')
-      .select('id, monto, estado, prestatario_id, expiracion_en, plazo_dias')
+      .select('id, monto, estado, prestatario_id, referadora_id, expiracion_en, plazo_dias')
       .eq('id', credito_id)
       .single();
 
-    if (creditoError || !credito) {
+    if (creditoError || !rawCredito) {
       return NextResponse.json(
         { error: 'CREDITO_NO_ENCONTRADO', detail: 'No se encontró el crédito especificado' },
         { status: 404 },
       );
     }
 
-    const typedCredito = credito as unknown as {
+    const credito = rawCredito as unknown as {
       id: string;
       monto: string;
       estado: string;
       prestatario_id: string;
+      referadora_id: string | null;
       expiracion_en: string | null;
       plazo_dias: number;
     };
 
-    if (typedCredito.estado !== 'pendiente') {
+    if (credito.estado !== 'pendiente') {
       return NextResponse.json(
         {
           error: 'ESTADO_INCORRECTO',
-          detail: `El crédito está en estado "${typedCredito.estado}", debe estar en "pendiente"`,
+          detail: `El crédito está en estado "${credito.estado}", debe estar en "pendiente"`,
         },
         { status: 409 },
       );
     }
 
     // Lazy expiration: if past expiracion_en, mark as expirado and reject
-    if (typedCredito.expiracion_en && new Date(typedCredito.expiracion_en) < new Date()) {
+    if (credito.expiracion_en && new Date(credito.expiracion_en) < new Date()) {
       await supabase
         .from('creditos')
         .update({ estado: 'expirado' } as never)
-        .eq('id', typedCredito.id);
+        .eq('id', credito.id);
 
       return NextResponse.json(
         {
@@ -189,10 +168,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 5. Check self-assignment (no te puedes avalar a ti mismo)
+    // 5. No self-aval
     // ------------------------------------------------------------------
-    // ------------------------------------------------------------------
-    if (avalador_id === typedCredito.prestatario_id) {
+    if (avalador.id === credito.prestatario_id) {
       return NextResponse.json(
         { error: 'AUTOVAL_INVALIDO', detail: 'No puedes avalar tu propio crédito' },
         { status: 400 },
@@ -200,19 +178,17 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 6. Verify GACC membership
-    //    Both the prestatario and the avalador must belong to the same
-    //    active GACC, and both must be validated GACC members.
+    // 6. Fetch prestatario (gacc_id) and the group's Líder Social
     // ------------------------------------------------------------------
-
-    // 6a. Get prestatario's participante (with gacc_id)
     const { data: rawPrestatario } = await supabase
       .from('participantes')
-      .select('id, gacc_id, validado_gacc')
-      .eq('id', typedCredito.prestatario_id)
+      .select('id, nombre, gacc_id, validado_gacc')
+      .eq('id', credito.prestatario_id)
       .single();
 
-    const prestatario = rawPrestatario as unknown as ParticipanteRowSimple | null;
+    const prestatario = rawPrestatario as unknown as
+      | { id: string; nombre: string; gacc_id: string | null; validado_gacc: boolean }
+      | null;
 
     if (!prestatario || !prestatario.gacc_id) {
       return NextResponse.json(
@@ -221,74 +197,92 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    if (!prestatario.validado_gacc) {
+    const { data: rawGrupo } = await supabase
+      .from('grupos_gacc')
+      .select('id, lider_id, estado')
+      .eq('id', prestatario.gacc_id)
+      .single();
+
+    const grupo = rawGrupo as unknown as
+      | { id: string; lider_id: string | null; estado: string }
+      | null;
+
+    if (!grupo) {
       return NextResponse.json(
-        { error: 'GACC_NO_VALIDADO', detail: 'El prestatario no ha sido validado en el GACC' },
-        { status: 403 },
+        { error: 'GACC_NO_ENCONTRADO', detail: 'No se encontró el GACC del prestatario' },
+        { status: 404 },
       );
     }
-
-    if (typedAvalador.gacc_id !== prestatario.gacc_id) {
-      return NextResponse.json(
-        { error: 'GACC_DIFERENTE', detail: 'No perteneces al mismo GACC que el prestatario' },
-        { status: 403 },
-      );
-    }
-
-    if (!typedAvalador.validado_gacc) {
-      return NextResponse.json(
-        { error: 'AVALADOR_NO_VALIDADO', detail: 'Debes ser validado en el GACC para poder avalar créditos' },
-        { status: 403 },
-      );
-    }
-
-    const grupoId = prestatario.gacc_id;
 
     // ------------------------------------------------------------------
-    // 7. Check no duplicate active aval (same avalador + same credit)
+    // 7. Defensive: avalador must be a validated member of the same GACC
     // ------------------------------------------------------------------
-    const { data: existingAval, error: existingError } = await supabase
+    if (avalador.gacc_id !== prestatario.gacc_id || !avalador.validado_gacc) {
+      return NextResponse.json(
+        { error: 'AVALADOR_NO_VALIDADO', detail: 'Debes ser miembro validado del GACC para avalar.' },
+        { status: 403 },
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 8. Inspect existing active avales for this credit
+    // ------------------------------------------------------------------
+    const { data: rawAvales } = await supabase
       .from('avales')
-      .select('id')
-      .eq('aval_id', avalador_id)
-      .eq('credito_id', credito_id)
-      .eq('activo', true)
-      .maybeSingle();
+      .select('id, aval_id, rol_aval')
+      .eq('credito_id', credito.id)
+      .eq('activo', true);
 
-    if (existingError) {
-      console.warn('[avales] Error al verificar aval duplicado:', existingError.message);
-    }
+    const avalesActivos = (rawAvales ?? []) as unknown as {
+      id: string;
+      aval_id: string;
+      rol_aval: string | null;
+    }[];
 
-    if (existingAval) {
+    const tieneAvalReferadora = avalesActivos.some((a) => a.rol_aval === 'referadora');
+    const tieneAvalLider = avalesActivos.some((a) => a.rol_aval === 'lider');
+    const yaAvalo = avalesActivos.some((a) => a.aval_id === avalador.id);
+
+    // ------------------------------------------------------------------
+    // 9. Decide role + sequence (pure logic — see lib/avales/circuito.ts)
+    // ------------------------------------------------------------------
+    const decision = decidirAval({
+      avaladorId: avalador.id,
+      prestatarioId: credito.prestatario_id,
+      referadoraId: credito.referadora_id,
+      liderId: grupo.lider_id,
+      tieneAvalReferadora,
+      tieneAvalLider,
+      yaAvalo,
+    });
+
+    if (!decision.ok) {
       return NextResponse.json(
-        { error: 'AVAL_DUPLICADO', detail: 'Ya has avalado este crédito' },
-        { status: 409 },
+        { error: decision.error, detail: decision.detail },
+        { status: decision.status },
       );
     }
 
-    // ------------------------------------------------------------------
-    // 8. Get credit monto to use as default monto_maximo
-    // ------------------------------------------------------------------
-    const montoMaximo = typedCredito.monto;
+    const rolAval = decision.rolAval;
 
     // ------------------------------------------------------------------
-    // 9. INSERT aval row
+    // 10. Insert aval row (with its role)
     // ------------------------------------------------------------------
     const { data: newAval, error: insertError } = await supabase
       .from('avales')
       .insert({
-        aval_id: avalador_id,
-        prestatario_id: typedCredito.prestatario_id,
-        credito_id: typedCredito.id,
-        monto_maximo: montoMaximo,
+        aval_id: avalador.id,
+        prestatario_id: credito.prestatario_id,
+        credito_id: credito.id,
+        monto_maximo: credito.monto,
         activo: true,
-      })
+        rol_aval: rolAval,
+      } as never)
       .select()
       .single();
 
     if (insertError || !newAval) {
       console.error('[avales] Error al insertar aval:', insertError?.message);
-
       return NextResponse.json(
         { error: 'ERROR_INTERNO', detail: 'Error al registrar el aval en la base de datos' },
         { status: 500 },
@@ -296,83 +290,55 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
-    // 10. Check if 3 avales reached → auto-approve
+    // 11. State transition (referadora 1/2 → 'pendiente'; lider 2/2 → 'avalado')
     // ------------------------------------------------------------------
+    let creditoEstado = 'pendiente';
 
-    // 10a. Count only avales from GACC members (excluding prestatario)
-    const { data: miembros } = await supabase
-      .from('gacc_miembros')
-      .select('participante_id')
-      .eq('grupo_id', grupoId)
-      .eq('activo', true)
-      .not('participante_id', 'eq', typedCredito.prestatario_id);
-
-    const avaladorIds = (miembros ?? []).map((m: GaccMiembroRow) => m.participante_id);
-
-    const AVALES_MINIMOS = 3;
-    let avalCount = 0;
-
-    if (avaladorIds.length > 0) {
-      const { count } = await supabase
-        .from('avales')
-        .select('id', { count: 'exact', head: true })
-        .eq('credito_id', credito_id)
-        .eq('activo', true)
-        .in('aval_id', avaladorIds);
-
-      avalCount = count ?? 0;
-    }
-
-    const umbralAlcanzado = avalCount >= AVALES_MINIMOS;
-    let nuevoEstado = 'pendiente';
-
-    if (umbralAlcanzado) {
-      nuevoEstado = 'aprobado';
-
+    if (rolAval === 'lider') {
+      // El aval del Líder Social (2/2) completa el circuito → 'avalado'
       const fechaVencimiento = new Date(
-        Date.now() + typedCredito.plazo_dias * 24 * 60 * 60 * 1000,
+        Date.now() + credito.plazo_dias * 24 * 60 * 60 * 1000,
       ).toISOString();
 
       await supabase
         .from('creditos')
-        .update({
-          estado: 'aprobado',
-          fecha_vencimiento: fechaVencimiento,
-        } as never)
-        .eq('id', typedCredito.id);
+        .update({ estado: 'avalado', fecha_vencimiento: fechaVencimiento } as never)
+        .eq('id', credito.id);
+
+      creditoEstado = 'avalado';
     }
+    // Si rolAval === 'referadora' (1/2), el crédito permanece 'pendiente'.
 
     // ------------------------------------------------------------------
-    // 11. Audit log
+    // 12. Audit log
     // ------------------------------------------------------------------
     await registrarAuditLog({
       accion: 'aval_agregado',
       entidadTipo: 'credito',
-      entidadId: typedCredito.id,
-      participanteId: avalador_id,
+      entidadId: credito.id,
+      participanteId: avalador.id,
       detalles: {
-        aval_id: avalador_id,
-        avalador_nombre: typedAvalador.nombre,
-        credito_id: typedCredito.id,
-        monto_maximo: montoMaximo,
-        avales_actuales: avalCount,
-        avales_minimos: AVALES_MINIMOS,
-        umbral_alcanzado: umbralAlcanzado,
-        auto_aprobado: umbralAlcanzado,
+        aval_id: avalador.id,
+        avalador_nombre: avalador.nombre,
+        rol_aval: rolAval,
+        credito_id: credito.id,
+        circuito_completo: rolAval === 'lider',
       },
     });
 
     // ------------------------------------------------------------------
-    // 12. Return 201
+    // 13. Return 201
     // ------------------------------------------------------------------
     return NextResponse.json(
       {
         status: 'aval_asignado' as const,
         aval: newAval,
-        credito_estado: nuevoEstado,
-        avales_minimos: AVALES_MINIMOS,
-        avales_actuales: avalCount,
-        umbral_alcanzado: umbralAlcanzado,
+        rol_aval: rolAval,
+        credito_estado: creditoEstado,
+        circuito: {
+          referadora: rolAval === 'referadora' || tieneAvalReferadora,
+          lider: rolAval === 'lider',
+        },
       },
       { status: 201 },
     );
@@ -430,6 +396,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         monto_maximo,
         fecha_creacion,
         activo,
+        rol_aval,
         participantes!avales_aval_id_fkey (
           nombre,
           wallet_address
@@ -456,7 +423,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // Map to response format with avalador info
-    const rawRows = (data ?? []) as AvalJoinRow[];
+    const rawRows = (data ?? []) as unknown as (AvalJoinRow & { rol_aval: string | null })[];
 
     const avales = rawRows.map((row) => {
       const rawParticipante = row.participantes;
@@ -470,6 +437,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         monto_maximo: row.monto_maximo,
         fecha_creacion: row.fecha_creacion,
         activo: row.activo,
+        rol_aval: row.rol_aval ?? null,
         avalador_nombre: avalador?.nombre ?? 'Desconocido',
         avalador_wallet: avalador?.wallet_address ?? '',
       };

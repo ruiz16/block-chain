@@ -24,7 +24,7 @@ import type { User } from '@supabase/supabase-js';
  * Use this in every fallback `.select()` that assigns to typedParticipante.
  */
 export const PARTICIPANTE_AUTH_SELECT =
-  'id, gacc_id, validado_gacc, nombre, wallet_address' as const;
+  'id, gacc_id, validado_gacc, nombre, wallet_address, email' as const;
 
 export interface BearerAuthResult {
   user: User;
@@ -34,6 +34,7 @@ export interface BearerAuthResult {
     validado_gacc: boolean;
     nombre: string;
     wallet_address: string;
+    email: string;
   } | null;
 }
 

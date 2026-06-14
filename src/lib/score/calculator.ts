@@ -17,6 +17,7 @@
 // =============================================================================
 
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { recalcularScoreGacc } from '@/lib/gacc/semaforo';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +29,7 @@ interface ParticipanteScore {
   id: string;
   score_reputacion: number;
   created_at: string;
+  gacc_id?: string | null;
 }
 
 interface RecalcularParams {
@@ -147,11 +149,11 @@ export async function recalcularScore(params: RecalcularParams): Promise<number>
   // 1. Get current participante
   const { data: rawParticipante } = await supabase
     .from('participantes')
-    .select('id, score_reputacion, created_at')
+    .select('id, score_reputacion, created_at, gacc_id')
     .eq('id', params.participanteId)
     .single();
 
-  const participante = rawParticipante;
+  const participante = rawParticipante as ParticipanteScore | null;
 
   if (!participante) {
     throw new Error(`Participante no encontrado: ${params.participanteId}`);
@@ -201,6 +203,15 @@ export async function recalcularScore(params: RecalcularParams): Promise<number>
 
   if (updateError) {
     console.error('[score] Error al actualizar score_reputacion:', updateError.message);
+  }
+
+  // 6. Recalcular score grupal + penalización colectiva del GACC (best-effort)
+  if (participante.gacc_id) {
+    try {
+      await recalcularScoreGacc(participante.gacc_id);
+    } catch (err) {
+      console.warn('[score] Error al recalcular score_gacc:', err instanceof Error ? err.message : err);
+    }
   }
 
   return scoreEfectivo(scoreNuevo, participante.created_at);

@@ -76,7 +76,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { nombre, descripcion, municipio } = validation.data;
+    const { nombre, descripcion, municipio, email_lider } = validation.data;
 
     // 2. Generate unique code
     let codigo = generarCodigo();
@@ -101,6 +101,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         codigo,
         creador_id: null,
         municipio,
+        email_lider: email_lider ? email_lider.toLowerCase().trim() : null,
       })
       .select()
       .single();
@@ -132,6 +133,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           codigo: grupo.codigo,
           descripcion: grupo.descripcion,
           municipio: grupo.municipio,
+          email_lider: grupo.email_lider ?? null,
         },
       },
       { status: 201 },

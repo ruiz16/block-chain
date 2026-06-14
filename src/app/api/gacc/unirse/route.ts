@@ -17,6 +17,45 @@ import { getBearerUser, PARTICIPANTE_AUTH_SELECT } from '@/lib/supabase/auth-bea
 import { UnirseGaccSchema, validateUnirseGacc } from '@/lib/validations/gacc';
 import { registrarAuditLog } from '@/lib/audit/logger';
 
+// ---------------------------------------------------------------------------
+// Resolución del Líder Social (modelo GACC)
+// ---------------------------------------------------------------------------
+
+/**
+ * Si el email del participante coincide con grupos_gacc.email_lider (pre-asignado
+ * por el FLD) y el grupo aún no tiene lider_id, lo marca como Líder Social.
+ * El `.is('lider_id', null)` actúa como guard contra condiciones de carrera:
+ * solo un participante puede ganar la asignación.
+ *
+ * @returns true si el participante quedó (o ya era) el Líder Social del grupo.
+ */
+async function resolverLiderSocial(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  grupo: { id: string; email_lider: string | null; lider_id: string | null },
+  participante: { id: string; email: string },
+): Promise<boolean> {
+  if (grupo.lider_id) return grupo.lider_id === participante.id;
+  if (!grupo.email_lider) return false;
+
+  const emailParticipante = (participante.email ?? '').toLowerCase().trim();
+  const emailLider = grupo.email_lider.toLowerCase().trim();
+
+  if (!emailParticipante || emailParticipante !== emailLider) return false;
+
+  const { error } = await supabase
+    .from('grupos_gacc')
+    .update({ lider_id: participante.id } as never)
+    .eq('id', grupo.id)
+    .is('lider_id', null);
+
+  if (error) {
+    console.warn('[gacc/unirse] Error al asignar líder social:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     // ------------------------------------------------------------------
@@ -96,7 +135,7 @@ export async function POST(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: grupo } = await supabase
       .from('grupos_gacc')
-      .select('id, nombre, activo, municipio, creador_id')
+      .select('id, nombre, activo, municipio, creador_id, email_lider, lider_id')
       .eq('codigo', codigo.toUpperCase().trim())
       .single();
 
@@ -143,8 +182,18 @@ export async function POST(request: Request): Promise<Response> {
           .eq('id', typedMember.id);
       }
 
+      const esLider = await resolverLiderSocial(
+        supabase,
+        { id: typedGrupo.id, email_lider: typedGrupo.email_lider, lider_id: typedGrupo.lider_id },
+        { id: typedParticipante.id, email: (typedParticipante as { email?: string | null }).email ?? '' },
+      );
+
       return NextResponse.json(
-        { status: 'ya_eras_miembro', grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio } },
+        {
+          status: 'ya_eras_miembro',
+          es_lider: esLider,
+          grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
+        },
         { status: 200 },
       );
     }
@@ -184,6 +233,15 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
+    // 6c. Resolver Líder Social si el email coincide con email_lider
+    // ------------------------------------------------------------------
+    const esLider = await resolverLiderSocial(
+      supabase,
+      { id: typedGrupo.id, email_lider: typedGrupo.email_lider, lider_id: typedGrupo.lider_id },
+      { id: typedParticipante.id, email: (typedParticipante as { email?: string | null }).email ?? '' },
+    );
+
+    // ------------------------------------------------------------------
     // 7. Audit log
     // ------------------------------------------------------------------
     await registrarAuditLog({
@@ -191,7 +249,7 @@ export async function POST(request: Request): Promise<Response> {
       entidadTipo: 'gacc_miembro',
       entidadId: typedParticipante.id,
       participanteId: typedParticipante.id,
-      detalles: { grupo_id: typedGrupo.id, grupo_nombre: typedGrupo.nombre },
+      detalles: { grupo_id: typedGrupo.id, grupo_nombre: typedGrupo.nombre, es_lider: esLider },
     });
 
     // ------------------------------------------------------------------
@@ -200,8 +258,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       {
         status: 'validado',
+        es_lider: esLider,
         grupo: { id: typedGrupo.id, nombre: typedGrupo.nombre, municipio: typedGrupo.municipio },
-        detail: 'Te has unido al GACC y fuiste validado automáticamente.',
+        detail: esLider
+          ? 'Te has unido al GACC como Líder Social.'
+          : 'Te has unido al GACC y fuiste validado automáticamente.',
       },
       { status: 201 },
     );

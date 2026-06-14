@@ -77,6 +77,7 @@ export default function GestorAvales({ creditoId, prestatarioId, onEstadoChange 
         monto_maximo: item.monto_maximo,
         fecha_creacion: item.fecha_creacion,
         activo: item.activo,
+        rol_aval: item.rol_aval,
         avalador_nombre: item.avalador_nombre,
         avalador_wallet: item.avalador_wallet,
       }));

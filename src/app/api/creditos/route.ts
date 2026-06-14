@@ -98,6 +98,27 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // ------------------------------------------------------------------
+    // 2b-bis. GACC no debe estar restringido (penalización colectiva)
+    // ------------------------------------------------------------------
+    const { data: rawGrupoEstado } = await supabase
+      .from('grupos_gacc')
+      .select('estado')
+      .eq('id', typedParticipante.gacc_id)
+      .maybeSingle();
+
+    const grupoEstado = (rawGrupoEstado as { estado?: string } | null)?.estado;
+
+    if (grupoEstado === 'restringido') {
+      return NextResponse.json(
+        {
+          error: 'GACC_RESTRINGIDO',
+          detail: 'Tu GACC está restringido por bajo puntaje colectivo. No puede solicitar nuevos créditos hasta recuperar el score.',
+        },
+        { status: 403 },
+      );
+    }
+
+    // ------------------------------------------------------------------
     // 2c. Education completion check
     // ------------------------------------------------------------------
     const { data: edu } = await supabase
@@ -163,7 +184,49 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const { monto: montoCop, uso, descripcion, plazo_dias, numero_cuotas } = validation.data;
+    const { monto: montoCop, uso, descripcion, plazo_dias, numero_cuotas, referadora_id } = validation.data;
+
+    // ------------------------------------------------------------------
+    // 3b. Validar la referadora elegida (modelo GACC)
+    //     Debe ser un miembro validado del MISMO GACC y distinta del solicitante.
+    // ------------------------------------------------------------------
+    if (referadora_id === typedParticipante.id) {
+      return NextResponse.json(
+        { error: 'REFERADORA_INVALIDA', detail: 'No puedes elegirte a ti misma como referadora' },
+        { status: 400 },
+      );
+    }
+
+    const { data: rawReferadora } = await supabase
+      .from('participantes')
+      .select('id, nombre, gacc_id, validado_gacc')
+      .eq('id', referadora_id)
+      .maybeSingle();
+
+    const referadora = rawReferadora as
+      | { id: string; nombre: string; gacc_id: string | null; validado_gacc: boolean }
+      | null;
+
+    if (!referadora) {
+      return NextResponse.json(
+        { error: 'REFERADORA_NO_ENCONTRADA', detail: 'La referadora seleccionada no existe' },
+        { status: 404 },
+      );
+    }
+
+    if (referadora.gacc_id !== typedParticipante.gacc_id) {
+      return NextResponse.json(
+        { error: 'REFERADORA_OTRO_GACC', detail: 'La referadora debe pertenecer a tu mismo GACC' },
+        { status: 403 },
+      );
+    }
+
+    if (!referadora.validado_gacc) {
+      return NextResponse.json(
+        { error: 'REFERADORA_NO_VALIDADA', detail: 'La referadora aún no ha sido validada en el GACC' },
+        { status: 403 },
+      );
+    }
 
     // ------------------------------------------------------------------
     // 4. Save COPm amount directly (COPm = COP 1:1).
@@ -179,6 +242,7 @@ export async function POST(request: Request): Promise<Response> {
       .from('creditos')
       .insert({
         prestatario_id: typedParticipante.id,
+        referadora_id: referadora_id,
         monto: montoCop.toString(),
         uso: uso,
         descripcion: descripcion ?? null,

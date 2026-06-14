@@ -1,19 +1,23 @@
 'use client';
 
 // =============================================================================
-// SolicitarCredito — Credit Request Form
+// SolicitarCredito — Credit Request Form (modelo GACC)
 // =============================================================================
 //
 // A client component with 5 explicit states:
 //
-//   checking   — Verifying GACC membership on mount
-//   idle       — Form with monto, descripcion, plazo_dias fields
+//   checking   — Verifying GACC membership + loading referadoras on mount
+//   idle       — Form with monto, uso, referadora, plazo_dias, cuotas fields
 //   submitting — Form disabled with spinner on the submit button
 //   success    — Confirmation message with link to /mis-creditos
 //   error      — Error message with retry button
 //
 // On mount, checks that the user has a validated GACC membership.
 // If not, redirects to /gacc so they can create or join a group first.
+//
+// Modelo GACC: por cada crédito el solicitante DEBE elegir una "referadora"
+// (miembro validado de su mismo GACC, distinta de sí misma) que otorgará el
+// aval 1/2. El selector se puebla desde GET /api/gacc/mi-grupo.
 // =============================================================================
 
 import { useState, useCallback, useEffect, type FormEvent } from 'react';
@@ -37,18 +41,50 @@ const CUOTA_OPTIONS = [
   { value: 12, label: '12 cuotas' },
 ] as const;
 
+const USO_OPTIONS = [
+  { value: 'capital_trabajo', label: 'Capital de trabajo' },
+  { value: 'inventario', label: 'Compra de inventario / mercancía' },
+  { value: 'equipo', label: 'Herramientas o equipo' },
+  { value: 'emprendimiento', label: 'Emprendimiento / negocio nuevo' },
+  { value: 'emergencia', label: 'Emergencia familiar' },
+  { value: 'otro', label: 'Otro' },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Tipos del shape de GET /api/gacc/mi-grupo (solo lo que necesitamos)
+// ---------------------------------------------------------------------------
+
+interface MiGrupoMiembro {
+  participante_id: string;
+  validado_en: string | null;
+  participante: {
+    nombre: string;
+  } | null;
+}
+
+interface ReferadoraOption {
+  id: string;
+  nombre: string;
+}
+
 export default function SolicitarCredito() {
   const router = useRouter();
   const { participante, isLoading: participanteLoading } = useParticipante();
   const [state, setState] = useState<FormState>('checking');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [monto, setMonto] = useState('');
+  const [uso, setUso] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [plazoDias, setPlazoDias] = useState(30);
   const [numeroCuotas, setNumeroCuotas] = useState(1);
 
+  // Referadora selector (modelo GACC)
+  const [referadoraId, setReferadoraId] = useState('');
+  const [referadoras, setReferadoras] = useState<ReferadoraOption[]>([]);
+  const [referadorasError, setReferadorasError] = useState<string | null>(null);
+
   // ------------------------------------------------------------------
-  // GACC guard: redirect to /gacc if not validated
+  // GACC guard + carga de referadoras
   // ------------------------------------------------------------------
   useEffect(() => {
     if (participanteLoading) return;
@@ -60,13 +96,52 @@ export default function SolicitarCredito() {
       }
     }
 
-    setState(prev => prev === 'checking' ? 'idle' : prev);
+    let cancelled = false;
+
+    // Cargar miembros del GACC para poblar el selector de referadora.
+    // Excluimos al propio usuario y mostramos solo miembros validados.
+    (async () => {
+      try {
+        const res = await fetch('/api/gacc/mi-grupo');
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail ?? 'No se pudieron cargar los miembros de tu GACC');
+        }
+        const data = await res.json();
+        const selfId: string | undefined = data?.miembro?.id;
+        const miembros: MiGrupoMiembro[] = data?.miembros ?? [];
+
+        const opciones = miembros
+          .filter((m) => m.validado_en !== null && m.participante_id !== selfId)
+          .map<ReferadoraOption>((m) => ({
+            id: m.participante_id,
+            nombre: m.participante?.nombre ?? 'Miembro del GACC',
+          }));
+
+        if (!cancelled) {
+          setReferadoras(opciones);
+          setReferadorasError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setReferadorasError(err instanceof Error ? err.message : 'Error al cargar referadoras');
+        }
+      } finally {
+        if (!cancelled) {
+          setState((prev) => (prev === 'checking' ? 'idle' : prev));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [participanteLoading, participante, router]);
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove all non-digits
     const rawValue = e.target.value.replace(/\D/g, '');
-    
+
     if (!rawValue) {
       setMonto('');
       return;
@@ -89,6 +164,8 @@ export default function SolicitarCredito() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             monto: Number(monto.replace(/\D/g, '')),
+            uso,
+            referadora_id: referadoraId,
             descripcion: descripcion.trim() || undefined,
             plazo_dias: plazoDias,
             numero_cuotas: numeroCuotas,
@@ -98,6 +175,9 @@ export default function SolicitarCredito() {
         const data = await response.json();
 
         if (!response.ok) {
+          // El backend devuelve un `detail` en español para todos los códigos
+          // (REFERADORA_INVALIDA, REFERADORA_NO_ENCONTRADA, REFERADORA_OTRO_GACC,
+          //  REFERADORA_NO_VALIDADA, GACC_RESTRINGIDO, etc.). Lo mostramos tal cual.
           throw new Error(data.detail ?? data.error ?? 'Error al solicitar el crédito');
         }
 
@@ -109,7 +189,7 @@ export default function SolicitarCredito() {
         setState('error');
       }
     },
-    [monto, descripcion, plazoDias, numeroCuotas, router],
+    [monto, uso, referadoraId, descripcion, plazoDias, numeroCuotas, router],
   );
 
   const handleRetry = useCallback(() => {
@@ -212,6 +292,13 @@ export default function SolicitarCredito() {
   // Render: idle / submitting state
   // ==========================================================================
   const isSubmitting = state === 'submitting';
+  const noReferadoras = referadoras.length === 0;
+  // Submit deshabilitado si falta monto, uso o referadora elegida.
+  const canSubmit =
+    !isSubmitting &&
+    monto.replace(/\D/g, '').length > 0 &&
+    uso !== '' &&
+    referadoraId !== '';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
@@ -242,6 +329,69 @@ export default function SolicitarCredito() {
         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
           Valor en pesos colombianos
         </p>
+      </div>
+
+      {/* Uso del crédito */}
+      <div>
+        <label
+          htmlFor="uso"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Uso del crédito
+        </label>
+        <select
+          id="uso"
+          required
+          value={uso}
+          onChange={(e) => setUso(e.target.value)}
+          disabled={isSubmitting}
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option value="" disabled>Selecciona el uso</option>
+          {USO_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Referadora (modelo GACC) */}
+      <div>
+        <label
+          htmlFor="referadora"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Referadora
+        </label>
+        <select
+          id="referadora"
+          required
+          value={referadoraId}
+          onChange={(e) => setReferadoraId(e.target.value)}
+          disabled={isSubmitting || noReferadoras}
+          className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option value="" disabled>
+            {noReferadoras ? 'No hay miembros validados disponibles' : 'Selecciona una referadora'}
+          </option>
+          {referadoras.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.nombre}
+            </option>
+          ))}
+        </select>
+        {referadorasError ? (
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{referadorasError}</p>
+        ) : noReferadoras ? (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            Aún no hay otros miembros validados en tu GACC que puedan referirte. Pide que validen a más miembros del grupo.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Un miembro validado de tu GACC que otorgará el aval 1/2 de tu crédito.
+          </p>
+        )}
       </div>
 
       {/* Plazo */}
@@ -321,7 +471,7 @@ export default function SolicitarCredito() {
       {/* Submit button */}
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={!canSubmit}
         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (

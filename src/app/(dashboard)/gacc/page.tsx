@@ -19,6 +19,7 @@ import CrearGaccForm from '@/components/gacc/CrearGaccForm';
 import UnirseGaccForm from '@/components/gacc/UnirseGaccForm';
 import MiembroList from '@/components/gacc/MiembroList';
 import ValidationBadge from '@/components/gacc/ValidationBadge';
+import SemaforoGacc from '@/components/gacc/SemaforoGacc';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,12 +77,18 @@ interface PendienteAval {
   prestatario_id: string;
   prestatario_nombre: string;
   prestatario_score_efectivo: number | null;
+  referadora_nombre: string | null;
   monto: string;
   descripcion: string | null;
   fecha_solicitud: string;
   total_necesarios: number;
   avales_actuales: number;
+  aval_referadora_hecho: boolean;
+  aval_lider_hecho: boolean;
+  mi_rol: 'referadora' | 'lider' | null;
+  puedo_avalar: boolean;
   ya_avale: boolean;
+  es_propio: boolean;
 }
 
 // =============================================================================
@@ -324,6 +331,9 @@ export default function GaccPage() {
         )}
       </div>
 
+      {/* Score grupal + semáforo de mora del GACC */}
+      <SemaforoGacc />
+
       {/* Group code card */}
       {isCreator && grupo && (
         <div className="mb-8 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -395,8 +405,8 @@ export default function GaccPage() {
             <CardSection title={`Créditos pendientes de aval (${pendientes.length})`}>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {pendientes.map((cred) => {
-                  const completado = cred.avales_actuales >= cred.total_necesarios;
-                  const puedeAvalar = !cred.ya_avale && !completado;
+                  const completado = cred.aval_referadora_hecho && cred.aval_lider_hecho;
+                  const etiquetaBoton = cred.mi_rol === 'lider' ? 'Avalar (2/2)' : 'Avalar (1/2)';
 
                   return (
                     <div key={cred.id} className="p-4 flex items-center justify-between gap-4">
@@ -420,20 +430,26 @@ export default function GaccPage() {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {formatCop(cred.monto)} — {cred.descripcion ?? 'Sin descripción'}
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                          {cred.avales_actuales} de {cred.total_necesarios} avales
-                        </p>
+                        {/* Circuito de avales: referadora (1/2) → líder social (2/2) */}
+                        <div className="flex items-center gap-3 mt-1 text-xs">
+                          <span className={cred.aval_referadora_hecho ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-gray-400 dark:text-gray-500'}>
+                            {cred.aval_referadora_hecho ? '✓' : '○'} Referadora{cred.referadora_nombre ? ` · ${cred.referadora_nombre}` : ''}
+                          </span>
+                          <span className={cred.aval_lider_hecho ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-gray-400 dark:text-gray-500'}>
+                            {cred.aval_lider_hecho ? '✓' : '○'} Líder Social
+                          </span>
+                        </div>
                       </div>
                       <div className="shrink-0">
                         {cred.ya_avale ? (
                           <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
-                            ✓ Avalado
+                            ✓ Avalaste
                           </span>
                         ) : completado ? (
                           <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
-                            Completado
+                            Avalado (2/2)
                           </span>
-                        ) : (
+                        ) : cred.puedo_avalar ? (
                           <button
                             onClick={() => handleAvalar(cred.id)}
                             disabled={avalingId === cred.id}
@@ -448,9 +464,16 @@ export default function GaccPage() {
                                 Avalando…
                               </>
                             ) : (
-                              'Avalar'
+                              etiquetaBoton
                             )}
                           </button>
+                        ) : (
+                          <span
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+                            title={cred.mi_rol === 'lider' && !cred.aval_referadora_hecho ? 'La referadora debe avalar primero (1/2)' : 'Este crédito lo avalan su referadora y el Líder Social'}
+                          >
+                            {cred.mi_rol === 'lider' && !cred.aval_referadora_hecho ? 'Falta referadora' : 'En proceso'}
+                          </span>
                         )}
                       </div>
                     </div>

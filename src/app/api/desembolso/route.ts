@@ -115,7 +115,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const typedCredito = credito as CreditoConPrestatario;
+    const typedCredito = credito as unknown as CreditoConPrestatario;
 
     // Extract prestatario info from the join
     const rawPrestatario = typedCredito.participantes;

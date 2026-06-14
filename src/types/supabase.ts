@@ -107,6 +107,7 @@ export interface Database {
         Row: {
           id: string;
           prestatario_id: string;
+          referadora_id: string | null; // Referadora elegida (aval 1/2) — mig 029
           monto: string; // numeric(40,0) — COPm value (human-readable)
           descripcion: string | null;
           estado: DbEstadoCredito;
@@ -127,6 +128,7 @@ export interface Database {
         Insert: {
           id?: string;
           prestatario_id: string;
+          referadora_id?: string | null;
           monto: string; // COPm value (human-readable)
           descripcion?: string | null;
           estado?: DbEstadoCredito; // default 'pendiente'
@@ -147,6 +149,7 @@ export interface Database {
         Update: {
           id?: string;
           prestatario_id?: string;
+          referadora_id?: string | null;
           monto?: string;
           descripcion?: string | null;
           estado?: DbEstadoCredito;
@@ -175,6 +178,7 @@ export interface Database {
           monto_maximo: string; // numeric(40,0)
           fecha_creacion: string;
           activo: boolean;
+          rol_aval: string | null; // 'referadora'|'lider' — mig 029
         };
         Insert: {
           id?: string;
@@ -184,6 +188,7 @@ export interface Database {
           monto_maximo: string;
           fecha_creacion?: string;
           activo?: boolean; // default true
+          rol_aval?: string | null;
         };
         Update: {
           id?: string;
@@ -193,6 +198,7 @@ export interface Database {
           monto_maximo?: string;
           fecha_creacion?: string;
           activo?: boolean;
+          rol_aval?: string | null;
         };
         Relationships: [];
       };
@@ -305,6 +311,10 @@ export interface Database {
           activo: boolean;
           created_at: string;
           municipio: string | null;  // Municipio donde opera — mig 026
+          email_lider: string | null; // Correo del Líder Social — mig 029
+          lider_id: string | null;    // Líder Social resuelto — mig 029
+          score_gacc: number;         // numeric(5,2) media del grupo — mig 029
+          estado: string;             // 'activo'|'restringido'|'inactivo' — mig 029
         };
         Insert: {
           id?: string;
@@ -315,6 +325,10 @@ export interface Database {
           activo?: boolean; // default true
           created_at?: string;
           municipio?: string | null;
+          email_lider?: string | null;
+          lider_id?: string | null;
+          score_gacc?: number; // default 0
+          estado?: string;     // default 'activo'
         };
         Update: {
           id?: string;
@@ -325,6 +339,10 @@ export interface Database {
           activo?: boolean;
           created_at?: string;
           municipio?: string | null;
+          email_lider?: string | null;
+          lider_id?: string | null;
+          score_gacc?: number;
+          estado?: string;
         };
         Relationships: [];
       };
@@ -580,7 +598,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      recalcular_score_gacc: {
+        Args: { grupo: string };
+        Returns: number;
+      };
+    };
     Enums: {
       rol_participante: DbRolParticipante;
       estado_credito: DbEstadoCredito;

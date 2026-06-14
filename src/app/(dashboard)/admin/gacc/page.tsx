@@ -23,6 +23,7 @@ export default function AdminGaccPage() {
   const [createNombre, setCreateNombre] = useState('');
   const [createDescripcion, setCreateDescripcion] = useState('');
   const [createMunicipio, setCreateMunicipio] = useState('');
+  const [createEmailLider, setCreateEmailLider] = useState('');
   const [codigoGenerado, setCodigoGenerado] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -74,6 +75,7 @@ export default function AdminGaccPage() {
     setCreateNombre('');
     setCreateDescripcion('');
     setCreateMunicipio('');
+    setCreateEmailLider('');
     setCodigoGenerado(null);
     setCreateError(null);
   }
@@ -321,6 +323,7 @@ export default function AdminGaccPage() {
                           nombre: createNombre.trim(),
                           descripcion: createDescripcion.trim() || undefined,
                           municipio: createMunicipio,
+                          email_lider: createEmailLider.trim() || undefined,
                         }),
                       });
                       const data = await res.json();
@@ -389,6 +392,26 @@ export default function AdminGaccPage() {
                       <option value="guapi">Guapi</option>
                       <option value="timbiqui">Timbiquí</option>
                     </select>
+                  </div>
+
+                  {/* Correo del Líder Social */}
+                  <div>
+                    <label htmlFor="gacc-email-lider" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1.5">
+                      Correo del Líder Social <span className="text-slate-400 dark:text-gray-500 font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      id="gacc-email-lider"
+                      type="email"
+                      value={createEmailLider}
+                      onChange={(e) => setCreateEmailLider(e.target.value)}
+                      disabled={createState === 'submitting'}
+                      autoComplete="off"
+                      className="block w-full rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-slate-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="lider.social@ejemplo.org"
+                    />
+                    <p className="mt-1 text-xs text-slate-400 dark:text-gray-500">
+                      Correo del Líder Social pre-asignado que otorgará el aval 2/2 en este GACC.
+                    </p>
                   </div>
 
                   {/* Submit */}

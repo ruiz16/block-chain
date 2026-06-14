@@ -2,20 +2,13 @@
 // GET /api/gacc/pendientes-de-aval — Créditos pendientes de aval en mi GACC
 // =============================================================================
 //
-// Devuelve todos los créditos en estado 'pendiente' solicitados por miembros
-// del GACC al que pertenece el usuario autenticado.
+// Modelo GACC (circuito de 2 avales con roles):
+//   - Aval 1/2: la referadora elegida por el solicitante (creditos.referadora_id)
+//   - Aval 2/2: el Líder Social del grupo (grupos_gacc.lider_id)
 //
-// Para cada crédito incluye:
-//   - Datos del crédito (monto, descripción, fecha)
-//   - Datos del prestatario (nombre, score)
-//   - Total de miembros del GACC que deben avalar (excluyendo al prestatario)
-//   - Cuántos ya avalaron
-//   - Si el usuario actual ya avaló este crédito
-//
-// Nuevo modelo (Junio 2026):
-//   - El rol 'aval' ya no existe.
-//   - Los miembros del GACC avalan los créditos de sus compañeros.
-//   - Se necesita que TODOS los miembros (excepto el prestatario) avalen.
+// Para cada crédito pendiente devuelve el estado del circuito y el ROL del
+// usuario actual respecto a ese crédito, para que la UI muestre el aval correcto
+// (1/2 o 2/2) y habilite el botón solo a quien corresponde.
 // =============================================================================
 
 import { NextResponse } from 'next/server';
@@ -25,22 +18,17 @@ import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { scoreEfectivo } from '@/lib/score/calculator';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface ParticipanteInfo {
+interface MeRow {
   id: string;
   nombre: string;
   gacc_id: string | null;
   validado_gacc: boolean;
-  score_reputacion?: number;
-  created_at?: string;
 }
 
 interface CreditoRow {
   id: string;
   prestatario_id: string;
+  referadora_id: string | null;
   monto: string;
   descripcion: string | null;
   fecha_solicitud: string;
@@ -49,113 +37,91 @@ interface CreditoRow {
 }
 
 interface AvalRow {
+  credito_id: string;
   aval_id: string;
+  rol_aval: string | null;
 }
 
-interface MiembroRow {
-  participante_id: string;
-}
-
-interface PrestatarioInfo {
+interface ParticipanteInfo {
+  id: string;
   nombre: string;
   score_reputacion: number;
   created_at: string;
 }
 
-// =============================================================================
-// GET
-// =============================================================================
-
 export async function GET(request: Request): Promise<Response> {
   try {
-    // ------------------------------------------------------------------
     // 1. Verify session (cookies → Bearer token fallback for mobile)
-    // ------------------------------------------------------------------
     const cookieStore = await cookies();
     const cookieUser = await getServerUser(cookieStore);
     const bearerResult = !cookieUser ? await getBearerUser(request) : null;
     const user = cookieUser ?? bearerResult?.user ?? null;
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión' },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: 'NO_AUTENTICADO', detail: 'Debes iniciar sesión' }, { status: 401 });
     }
 
     const supabase = getSupabaseClient();
 
-    // ------------------------------------------------------------------
-    // 2. Look up current user's participante
-    // ------------------------------------------------------------------
+    // 2. Current user's participante
     const { data: rawMe } = await supabase
       .from('participantes')
       .select('id, nombre, gacc_id, validado_gacc')
       .eq('user_id', user.id)
       .single();
 
-    const me = rawMe as unknown as ParticipanteInfo | null;
+    const me = rawMe as unknown as MeRow | null;
 
     if (!me) {
-      return NextResponse.json(
-        { error: 'SIN_PERFIL', detail: 'No tienes un perfil de participante' },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: 'SIN_PERFIL', detail: 'No tienes un perfil de participante' }, { status: 404 });
     }
-
     if (!me.gacc_id) {
-      return NextResponse.json(
-        { error: 'SIN_GACC', detail: 'No perteneces a un GACC' },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: 'SIN_GACC', detail: 'No perteneces a un GACC' }, { status: 403 });
     }
-
     if (!me.validado_gacc) {
-      return NextResponse.json(
-        { error: 'GACC_NO_VALIDADO', detail: 'Debes ser validado en el GACC para ver y avalar créditos' },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: 'GACC_NO_VALIDADO', detail: 'Debes ser validado en el GACC para ver y avalar créditos' }, { status: 403 });
     }
 
     const grupoId = me.gacc_id;
     const miId = me.id;
 
-    // ------------------------------------------------------------------
-    // 3. Get all active GACC members (excluding current user)
-    // ------------------------------------------------------------------
+    // 3. Líder Social del grupo
+    const { data: rawGrupo } = await supabase
+      .from('grupos_gacc')
+      .select('lider_id')
+      .eq('id', grupoId)
+      .single();
+    const liderId = (rawGrupo as unknown as { lider_id: string | null } | null)?.lider_id ?? null;
+
+    // 4. Members of the group (to scope credits)
     const { data: miembros } = await supabase
       .from('gacc_miembros')
       .select('participante_id')
       .eq('grupo_id', grupoId)
       .eq('activo', true);
+    const miembroIds = (miembros ?? []).map((m: { participante_id: string }) => m.participante_id);
 
-    const todosLosMiembros = (miembros ?? []).map((m: MiembroRow) => m.participante_id);
+    if (miembroIds.length === 0) {
+      return NextResponse.json({ creditos: [] }, { status: 200 });
+    }
 
-    // ------------------------------------------------------------------
-    // 4. Find all credits from GACC members in 'pendiente' state
-    // ------------------------------------------------------------------
+    // 5. Pending credits from group members
     const { data: creditos, error: creditosError } = await supabase
       .from('creditos')
-      .select('id, prestatario_id, monto, descripcion, fecha_solicitud, estado, expiracion_en')
-      .in('prestatario_id', todosLosMiembros)
+      .select('id, prestatario_id, referadora_id, monto, descripcion, fecha_solicitud, estado, expiracion_en')
+      .in('prestatario_id', miembroIds)
       .eq('estado', 'pendiente')
       .order('fecha_solicitud', { ascending: false });
 
     if (creditosError) {
       console.error('[gacc/pendientes-de-aval] Error al consultar créditos:', creditosError.message);
-      return NextResponse.json(
-        { error: 'ERROR_INTERNO', detail: 'Error al consultar créditos pendientes' },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: 'ERROR_INTERNO', detail: 'Error al consultar créditos pendientes' }, { status: 500 });
     }
 
-    if (!creditos || creditos.length === 0) {
-      return NextResponse.json({ creditos: [] }, { status: 200 });
-    }
-
-    const typedCreditos = (creditos as unknown as CreditoRow[]).filter((c) => {
-      // Lazy expiration: if past expiracion_en, mark as expirado and exclude
-      if (c.expiracion_en && new Date(c.expiracion_en) < new Date()) {
+    const ahora = new Date();
+    const typedCreditos = ((creditos as unknown as CreditoRow[]) ?? []).filter((c) => {
+      // Lazy expiration
+      if (c.expiracion_en && new Date(c.expiracion_en) < ahora) {
         supabase.from('creditos').update({ estado: 'expirado' } as never).eq('id', c.id);
         return false;
       }
@@ -166,76 +132,78 @@ export async function GET(request: Request): Promise<Response> {
       return NextResponse.json({ creditos: [] }, { status: 200 });
     }
 
-    // ------------------------------------------------------------------
-    // 5. For each credit, count avales and check if current user avaled
-    // ------------------------------------------------------------------
+    const creditoIds = typedCreditos.map((c) => c.id);
 
-    // 5a. Fetch prestatario info for all credits (names + scores)
-    const prestatarioIds = [...new Set(typedCreditos.map((c) => c.prestatario_id))];
+    // 6. Active avales for those credits (with role)
+    const { data: rawAvales } = await supabase
+      .from('avales')
+      .select('credito_id, aval_id, rol_aval')
+      .in('credito_id', creditoIds)
+      .eq('activo', true);
+    const avales = (rawAvales ?? []) as unknown as AvalRow[];
 
-    const { data: prestatarios } = await supabase
+    // 7. Names + scores for prestatarios and referadoras
+    const idsParaNombre = [
+      ...new Set([
+        ...typedCreditos.map((c) => c.prestatario_id),
+        ...typedCreditos.map((c) => c.referadora_id).filter((x): x is string => !!x),
+      ]),
+    ];
+    const { data: personas } = await supabase
       .from('participantes')
       .select('id, nombre, score_reputacion, created_at')
-      .in('id', prestatarioIds);
-
-    const prestatarioMap = new Map<string, PrestatarioInfo>();
-    for (const p of (prestatarios ?? [])) {
-      const typed = p as unknown as PrestatarioInfo;
-      prestatarioMap.set((p as unknown as { id: string }).id, typed);
+      .in('id', idsParaNombre);
+    const personaMap = new Map<string, ParticipanteInfo>();
+    for (const p of personas ?? []) {
+      const tp = p as unknown as ParticipanteInfo;
+      personaMap.set(tp.id, tp);
     }
 
-    // 5b. For each credit, count avales from GACC members
-    //     and check if current user already avaled
-    const creditosConAvales = await Promise.all(
-      typedCreditos.map(async (credito) => {
-        // All GACC members except prestatario can aval
-        const miembrosQueAvalan = todosLosMiembros.filter(
-          (pid) => pid !== credito.prestatario_id,
-        );
+    // 8. Build circuit state per credit
+    const creditosOut = typedCreditos.map((c) => {
+      const avalesCredito = avales.filter((a) => a.credito_id === c.id);
+      const avalReferadoraHecho = avalesCredito.some((a) => a.rol_aval === 'referadora');
+      const avalLiderHecho = avalesCredito.some((a) => a.rol_aval === 'lider');
+      const yaAvale = avalesCredito.some((a) => a.aval_id === miId);
 
-        const { count: avalCount } = await supabase
-          .from('avales')
-          .select('id', { count: 'exact', head: true })
-          .eq('credito_id', credito.id)
-          .eq('activo', true)
-          .in('aval_id', miembrosQueAvalan);
+      let miRol: 'referadora' | 'lider' | null = null;
+      if (c.referadora_id && miId === c.referadora_id) miRol = 'referadora';
+      else if (liderId && miId === liderId) miRol = 'lider';
 
-        // Check if current user already avaled this credit
-        const { data: miAval } = await supabase
-          .from('avales')
-          .select('id')
-          .eq('credito_id', credito.id)
-          .eq('aval_id', miId)
-          .eq('activo', true)
-          .maybeSingle();
+      const puedoAvalar =
+        !yaAvale &&
+        miId !== c.prestatario_id &&
+        ((miRol === 'referadora' && !avalReferadoraHecho) ||
+          (miRol === 'lider' && avalReferadoraHecho && !avalLiderHecho));
 
-        const prestatarioInfo = prestatarioMap.get(credito.prestatario_id);
+      const prest = personaMap.get(c.prestatario_id);
+      const refer = c.referadora_id ? personaMap.get(c.referadora_id) : null;
+      const avalesActuales = (avalReferadoraHecho ? 1 : 0) + (avalLiderHecho ? 1 : 0);
 
-        return {
-          id: credito.id,
-          prestatario_id: credito.prestatario_id,
-          prestatario_nombre: prestatarioInfo?.nombre ?? 'Desconocido',
-          prestatario_score_efectivo: prestatarioInfo
-            ? scoreEfectivo(
-                prestatarioInfo.score_reputacion,
-                prestatarioInfo.created_at,
-              )
-            : null,
-          monto: credito.monto,
-          descripcion: credito.descripcion,
-          fecha_solicitud: credito.fecha_solicitud,
-          avales_minimos: 3,
-          avales_actuales: avalCount ?? 0,
-          ya_avale: !!miAval,
-          es_propio: credito.prestatario_id === miId,
-        };
-      }),
-    );
+      return {
+        id: c.id,
+        prestatario_id: c.prestatario_id,
+        prestatario_nombre: prest?.nombre ?? 'Desconocido',
+        prestatario_score_efectivo: prest ? scoreEfectivo(prest.score_reputacion, prest.created_at) : null,
+        referadora_id: c.referadora_id,
+        referadora_nombre: refer?.nombre ?? null,
+        monto: c.monto,
+        descripcion: c.descripcion,
+        fecha_solicitud: c.fecha_solicitud,
+        // Estado del circuito GACC
+        aval_referadora_hecho: avalReferadoraHecho,
+        aval_lider_hecho: avalLiderHecho,
+        avales_actuales: avalesActuales,
+        total_necesarios: 2,
+        avales_minimos: 2, // compat con clientes que aún leen este campo
+        mi_rol: miRol,
+        puedo_avalar: puedoAvalar,
+        ya_avale: yaAvale,
+        es_propio: c.prestatario_id === miId,
+      };
+    });
 
-    // ------------------------------------------------------------------
-    // 6. Return
-    // ------------------------------------------------------------------
-    return NextResponse.json({ creditos: creditosConAvales }, { status: 200 });
+    return NextResponse.json({ creditos: creditosOut }, { status: 200 });
   } catch (err) {
     console.error('[gacc/pendientes-de-aval] Error inesperado:', err);
     return NextResponse.json(

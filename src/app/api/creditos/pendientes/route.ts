@@ -75,7 +75,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 3. Fetch aval counts in batch
     // ------------------------------------------------------------------
-    const rawRows = data as CreditoRowWithPrestatario[];
+    const rawRows = data as unknown as CreditoRowWithPrestatario[];
     const creditIds = rawRows.map((r) => r.id);
 
     const { data: avalCounts } = await supabase
