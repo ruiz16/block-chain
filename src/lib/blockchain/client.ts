@@ -1,39 +1,37 @@
 // =============================================================================
-// Viem Singleton Clients — Celo Sepolia
+// Viem Singleton Clients — red activa según NEXT_PUBLIC_CELO_NETWORK
 // =============================================================================
 //
-// This module creates and exports singleton viem clients for interacting
-// with the Celo Sepolia testnet (replaces deprecated Celo Alfajores).
+// La chain ya NO está hardcodeada: se resuelve con getActiveChain() desde
+// config/network.ts. Antes de FIRMAR cualquier transacción, assertActiveChain()
+// verifica que el chainId real del RPC coincide con la red esperada — falla
+// cerrado si no coinciden (evita firmar en la red equivocada con fondos reales).
 //
 // The private key (CELO_PRIVATE_KEY) is loaded from environment variables
 // and is NEVER logged, stringified, or exposed outside this module.
 // =============================================================================
 
 import { createPublicClient, createWalletClient, http } from 'viem';
-import { celoSepolia } from 'viem/chains';
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import { getCeloRpcUrl } from '@/config/celo';
-
-// Module-level cache — singleton pattern.
-// Types use ReturnType<typeof fn> to stay in sync with whatever viem exports.
+import { getActiveChain } from '@/config/network';
 
 type PublicClientType = ReturnType<typeof createPublicClient>;
 type WalletClientType = ReturnType<typeof createWalletClient>;
 
 let publicClient: PublicClientType | null = null;
-
 let walletClient: WalletClientType | null = null;
-
 let account: PrivateKeyAccount | null = null;
+let chainAsserted = false;
 
 /**
- * Returns a singleton public (read-only) viem client for Celo Sepolia.
+ * Returns a singleton public (read-only) viem client for the ACTIVE network.
  */
 export function getPublicClient(): PublicClientType {
   if (publicClient) return publicClient;
 
   publicClient = createPublicClient({
-    chain: celoSepolia,
+    chain: getActiveChain(),
     transport: http(getCeloRpcUrl()),
   }) as PublicClientType;
 
@@ -41,7 +39,36 @@ export function getPublicClient(): PublicClientType {
 }
 
 /**
- * Returns a singleton wallet (write-capable) viem client for Celo Sepolia.
+ * GUARD — verifica que el RPC apunta a la red esperada ANTES de firmar.
+ *
+ * El chainId configurado (getActiveChain().id) debe coincidir con el chainId
+ * REAL que reporta el RPC. Si NEXT_PUBLIC_CELO_NETWORK dice 'mainnet' pero el
+ * RPC es de Sepolia (o viceversa), esto lanza y NO se firma nada.
+ *
+ * Memoizado: solo consulta el RPC la primera vez. Llamar al inicio de todo
+ * flujo que escriba on-chain (desembolso, barrido de intereses, etc.).
+ *
+ * @throws Error si el chainId del RPC no coincide con la red configurada.
+ */
+export async function assertActiveChain(): Promise<void> {
+  if (chainAsserted) return;
+
+  const expected = getActiveChain();
+  const actual = await getPublicClient().getChainId();
+
+  if (actual !== expected.id) {
+    throw new Error(
+      `Mismatch de red: NEXT_PUBLIC_CELO_NETWORK espera ${expected.name} ` +
+        `(chainId ${expected.id}) pero el RPC reporta chainId ${actual}. ` +
+        'Revisá CELO_MAINNET_RPC / CELO_SEPOLIA_RPC. NO se firmará ninguna transacción.',
+    );
+  }
+
+  chainAsserted = true;
+}
+
+/**
+ * Returns a singleton wallet (write-capable) viem client for the ACTIVE network.
  * The private key is derived from CELO_PRIVATE_KEY env var.
  *
  * Throws if CELO_PRIVATE_KEY is not set.
@@ -65,7 +92,7 @@ export function getWalletClient(): WalletClientType {
   account = acc;
 
   walletClient = createWalletClient({
-    chain: celoSepolia,
+    chain: getActiveChain(),
     transport: http(getCeloRpcUrl()),
     account: acc,
   });

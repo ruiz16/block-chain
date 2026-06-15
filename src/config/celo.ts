@@ -5,52 +5,44 @@
 // ALL environment variables are REQUIRED — there are NO defaults.
 // If a variable is missing, the app will throw an error at startup.
 //
+// Las direcciones/RPC por red viven en config/network.ts (fuente de verdad).
 // Required vars (see .env.example):
-//   CELO_RPC_URL                        — Celo RPC endpoint
-//   NEXT_PUBLIC_COPM_CONTRACT           — COPm token contract address (Mento Colombian Peso)
+//   NEXT_PUBLIC_CELO_NETWORK            — 'mainnet' | 'sepolia'
+//   CELO_MAINNET_RPC / CELO_SEPOLIA_RPC — Celo RPC endpoint (server-only)
+//   NEXT_PUBLIC_COPM_{MAINNET,SEPOLIA}  — COPm token contract address (Mento Colombian Peso)
+//   NEXT_PUBLIC_LENDING_POOL_{MAINNET,SEPOLIA} — LendingPool contract address
 //   NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS — Platform wallet (receives payments)
-//   NEXT_PUBLIC_LENDING_POOL_CONTRACT   — LendingPool contract address
 //   NEXT_PUBLIC_CELOSCAN_BASE_URL       — Block explorer base URL
 // =============================================================================
 
 import type { Address, TxHash, Wei } from '@/types/database';
+import { getRpcUrl, getCopmAddress, getLendingPoolAddr } from '@/config/network';
 
 /**
- * Returns the configured Celo RPC URL.
- * Throws if CELO_RPC_URL is not set.
+ * Returns the RPC URL for the ACTIVE network. SERVER-ONLY.
+ * Resolved from network.ts (per-network, fail-fast: lanza si falta).
  */
 export function getCeloRpcUrl(): string {
-  const url = process.env.CELO_RPC_URL;
-  if (!url) throw new Error('Falta CELO_RPC_URL en las variables de entorno');
-  return url;
+  return getRpcUrl();
 }
 
 /**
- * Returns the configured COPm (Mento Colombian Peso) contract address.
- * Uses NEXT_PUBLIC_ prefix because it's needed in Client Components (PanelPagos).
- * Throws if NEXT_PUBLIC_COPM_CONTRACT is not set.
+ * Returns the COPm (Mento Colombian Peso) contract address for the ACTIVE network.
+ * Resolved from network.ts — la dirección depende de NEXT_PUBLIC_CELO_NETWORK.
  *
  * COPm = Mento Colombian Peso stablecoin, pegged 1:1 to COP.
  * https://docs.mento.org/mento-v3/
  */
 export function getCopmContractAddress(): `0x${string}` {
-  const address = process.env.NEXT_PUBLIC_COPM_CONTRACT;
-  if (!address) {
-    throw new Error('Falta NEXT_PUBLIC_COPM_CONTRACT en las variables de entorno');
-  }
-  return address as `0x${string}`;
+  return getCopmAddress();
 }
 
 /**
- * Returns the configured LendingPool contract address.
- * Throws if NEXT_PUBLIC_LENDING_POOL_CONTRACT is not set.
+ * Returns the LendingPool contract address for the ACTIVE network.
+ * Resolved from network.ts — la dirección depende de NEXT_PUBLIC_CELO_NETWORK.
  */
 export function getLendingPoolAddress(): `0x${string}` {
-  const address = process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT;
-  if (!address) {
-    throw new Error('Falta NEXT_PUBLIC_LENDING_POOL_CONTRACT en las variables de entorno');
-  }
-  return address as `0x${string}`;
+  return getLendingPoolAddr();
 }
 
 /**

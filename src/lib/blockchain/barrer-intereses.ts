@@ -16,7 +16,7 @@
 // Se reintenta manualmente desde el panel de admin.
 // =============================================================================
 
-import { getPublicClient, getWalletClient, getAccount } from '@/lib/blockchain/client';
+import { getPublicClient, getWalletClient, getAccount, assertActiveChain } from '@/lib/blockchain/client';
 import { getLendingPoolAddress, parseTokenAmount } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -74,6 +74,9 @@ export async function barrerInteresesACuentaRaiz(
     // ------------------------------------------------------------------
     // 3. Ejecutar withdraw() on-chain
     // ------------------------------------------------------------------
+    // GUARD: aborta si el RPC no está en la red esperada (antes de firmar).
+    await assertActiveChain();
+
     const publicClient = getPublicClient();
     const walletClient = getWalletClient();
     const poolAddress = getLendingPoolAddress();

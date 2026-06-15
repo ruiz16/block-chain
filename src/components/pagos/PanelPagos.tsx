@@ -28,8 +28,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createWalletClient, custom, createPublicClient, http } from 'viem';
-import { celoSepolia } from 'viem/chains';
 import { getCopmContractAddress, getPlatformWalletAddressPublic, getLendingPoolAddress, parseTokenAmount } from '@/config/celo';
+import { getActiveChain } from '@/config/network';
 import { ERC20_ABI } from '@/lib/blockchain/abis/erc20';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { creditIdHash } from '@/lib/blockchain/credit-id';
@@ -213,19 +213,20 @@ export default function PanelPagos() {
 
       const userAddress = accounts[0] as `0x${string}`;
 
-      // 3. Create wallet client connected to MetaMask
+      // 3. Create wallet client connected to MetaMask (red activa, NO hardcoded)
+      const activeChain = getActiveChain();
       const walletClient = createWalletClient({
-        chain: celoSepolia,
+        chain: activeChain,
         transport: custom(ethereum),
       });
 
-      // 4. Switch to Celo Sepolia if not already on it
+      // 4. Switch to the active Celo network if not already on it
       try {
-        await walletClient.switchChain({ id: celoSepolia.id });
+        await walletClient.switchChain({ id: activeChain.id });
       } catch (switchError: any) {
         // 4902 = chain not added to MetaMask
         if (switchError.code === 4902) {
-          await walletClient.addChain({ chain: celoSepolia });
+          await walletClient.addChain({ chain: activeChain });
         } else {
           throw switchError;
         }
@@ -244,7 +245,7 @@ export default function PanelPagos() {
         // Pool: approve(pool, amount) → repay(creditId, amount)  (2 transacciones)
         const poolAddress = getLendingPoolAddress();
         const creditId = creditIdHash(cuota.credito_id);
-        const publicClient = createPublicClient({ chain: celoSepolia, transport: http() });
+        const publicClient = createPublicClient({ chain: activeChain, transport: http() });
 
         // 5a. Aprobar solo si el allowance actual no alcanza. Evita una tx
         //     innecesaria cuando ya hay permiso suficiente.

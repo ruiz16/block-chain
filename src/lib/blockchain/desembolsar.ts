@@ -10,7 +10,7 @@
 //   5. Return TxHash
 // =============================================================================
 
-import { getPublicClient, getWalletClient } from '@/lib/blockchain/client';
+import { getPublicClient, getWalletClient, assertActiveChain } from '@/lib/blockchain/client';
 import { getLendingPoolAddress } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { creditIdHash } from '@/lib/blockchain/credit-id';
@@ -40,6 +40,9 @@ export async function desembolsarCredito(
   to: Address,
   monto: Wei,
 ): Promise<TxHash> {
+  // GUARD: aborta si el RPC no está en la red esperada (antes de firmar fondos).
+  await assertActiveChain();
+
   const publicClient = getPublicClient();
   const walletClient = getWalletClient();
   const poolAddress = getLendingPoolAddress();
