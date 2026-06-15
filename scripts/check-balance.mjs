@@ -6,7 +6,7 @@ config({ path: '.env.local' });
 
 const client = createPublicClient({
   chain: celoSepolia,
-  transport: http(process.env.CELO_RPC_URL ?? 'https://forno.celo-sepolia.celo-testnet.org'),
+  transport: http(process.env.CELO_RPC_URL),
 });
 
 const contract = process.env.NEXT_PUBLIC_COPM_CONTRACT;

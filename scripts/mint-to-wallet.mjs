@@ -11,8 +11,8 @@ import hre from 'hardhat';
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
-  const MOCK_CUSD = '0xb42aD227800bf1082A766Af8D2D221f43aE1e710';
-  const TARGET_WALLET = '0xfDF7e81A976E3c4079DA45e39f7014A4e27445f4';
+  const MOCK_CUSD = ''; //Contrato Moneda CUSD
+  const TARGET_WALLET = ''; //Wallet de destino
   const AMOUNT_CUSD = 1000; // 1000 cUSD
 
   const contract = await hre.ethers.getContractAt(

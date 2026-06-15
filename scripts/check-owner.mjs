@@ -6,7 +6,7 @@ import { ethers } from 'hardhat';
 async function main() {
   const [deployer] = await ethers.getSigners();
 
-  const MOCK_COPM = '0x58d5cd6f4f272f6C15Eb69a8bCc13F9416a36369';
+  const MOCK_COPM = process.env.MOCK_COPM;
 
   const contract = await ethers.getContractAt(
     ['function owner() view returns (address)', 'function symbol() view returns (string)'],

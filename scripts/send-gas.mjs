@@ -5,7 +5,7 @@ import hre from 'hardhat';
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  const target = '0x872a34f6320f8ab2394C7D0E205d83d6eEf77911';
+  const target = ''; //Wallet de destino
 
   const tx = await deployer.sendTransaction({
     to: target,

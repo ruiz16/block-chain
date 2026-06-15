@@ -11,8 +11,8 @@ import hre from 'hardhat';
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
-  const MOCK_COPM     = '0x58d5cd6f4f272f6C15Eb69a8bCc13F9416a36369';
-  const TARGET_WALLET = '0xd1c87663206a2102cad58e6A34d0c91FeB8212f2';
+  const MOCK_COPM     = process.env.MOCK_COPM;
+  const TARGET_WALLET = '0xC37B88e18B769Bdf0Ac8086741a2c522520634a2';
   const AMOUNT_COPM   = 200000; // 200.000 COPm
 
   const contract = await hre.ethers.getContractAt(

@@ -21,9 +21,8 @@
 
 import hre from 'hardhat';
 import { createClient } from '@supabase/supabase-js';
-import { createPublicClient, createWalletClient, http, getContract, keccak256, toHex } from 'viem';
+import { createPublicClient, http, keccak256, toHex } from 'viem';
 import { celoSepolia } from 'viem/chains';
-import { randomUUID } from 'crypto';
 import 'dotenv/config';
 
 const {
@@ -32,6 +31,7 @@ const {
   NEXT_PUBLIC_COPM_CONTRACT,
   NEXT_PUBLIC_LENDING_POOL_CONTRACT,
   CELO_PRIVATE_KEY,
+  NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS,
 } = process.env;
 
 if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -51,7 +51,7 @@ const [deployer] = await hre.ethers.getSigners();
 
 // Wallet de prueba (quien va a pagar)
 const TEST_BORROWER = '0xC37B88e18B769Bdf0Ac8086741a2c522520634a2';
-const ROOT_WALLET = '0x6C84eeaB621A521484D51Bc82d9E58a65336fc53'; // owner/disburser
+const ROOT_WALLET = NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS; // owner/disburser
 
 console.log('\n╔════════════════════════════════════════════════════════╗');
 console.log('║  Smoke Test: LendingPool E2E                           ║');
@@ -60,10 +60,10 @@ console.log('╚═════════════════════�
 // ============================================================================
 // PASO 1: Crear participante (simplificado — usa wallet como ID)
 // ============================================================================
-console.log('📋 [1] Creando participante (Pedro Perez)…');
+console.log('📋 [1] Creando participante (Pedro Perez)');
 
 // Buscar participante por wallet
-const { data: existingParticipants, error: searchError } = await supabase
+const { data: existingParticipants } = await supabase
   .from('participantes')
   .select('id')
   .eq('wallet_address', TEST_BORROWER.toLowerCase());
