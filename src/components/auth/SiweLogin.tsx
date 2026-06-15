@@ -55,7 +55,7 @@ export default function SiweLogin() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
-  const redirectTo = searchParams?.get('redirect') ?? '/aprobacion';
+  const redirectTo = searchParams?.get('redirect') ?? '/admin/dashboard';
 
   const [state, setState] = useState<SiweState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

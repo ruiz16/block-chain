@@ -229,9 +229,6 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
 
   // Determine if a path is active (exact match or sub-path)
   const isActive = (href: string) => {
-    if (href === '/aprobacion') {
-      return pathname === '/aprobacion';
-    }
     return pathname === href || pathname.startsWith(href + '/');
   };
 
@@ -275,10 +272,10 @@ export default function Sidebar({ userName, userRole, userEmail, children }: Sid
       {role === 'admin' && (
         <div className="px-3 pt-2 pb-1">
           <Link
-            href="/aprobacion"
+            href="/admin/aprobacion"
             onClick={closeMobile}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold
-              bg-gradient-to-r from-amber-500 to-orange-600
+              bg-linear-to-r from-amber-500 to-orange-600
               hover:from-amber-600 hover:to-orange-700
               text-white shadow-md hover:shadow-lg
               transition-all duration-150 group"

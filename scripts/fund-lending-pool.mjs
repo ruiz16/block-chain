@@ -20,7 +20,7 @@ async function main() {
   const poolAddr = process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT;
   if (!copmAddr || !poolAddr) throw new Error('Faltan COPM o LENDING_POOL en .env.local');
 
-  const amount = process.env.LENDING_POOL_FUND_AMOUNT ?? '100000';
+  const amount = process.env.LENDING_POOL_FUND_AMOUNT ?? '1000000';
   const amountWei = hre.ethers.parseUnits(amount, 18);
 
   const copm = await hre.ethers.getContractAt(

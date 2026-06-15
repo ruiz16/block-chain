@@ -3,36 +3,20 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { useParticipante } from '@/components/auth/ParticipanteProvider';
 
 export default function Home() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { participante, isLoading: participanteLoading } = useParticipante();
 
   useEffect(() => {
-    if (authLoading || participanteLoading) return;
+    if (authLoading) return;
 
     if (!user) {
       router.replace('/login');
-      return;
-    }
-
-    if (!participante) {
-      router.replace('/onboarding');
-      return;
-    }
-
-    if (participante.rol === 'usuario') {
-      if (!participante.gacc_id) {
-        router.replace('/gacc');
-      } else {
-        router.replace('/mis-creditos');
-      }
     } else {
-      router.replace('/aprobacion');
+      router.replace('/admin/dashboard');
     }
-  }, [authLoading, participanteLoading, user, participante, router]);
+  }, [authLoading, user, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen" role="status">

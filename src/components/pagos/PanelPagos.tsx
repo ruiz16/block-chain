@@ -76,6 +76,39 @@ function formatCop(value: string): string {
 }
 
 // =============================================================================
+// Helper: esperar a que el allowance se refleje on-chain
+//
+// El flujo de pago al pool son 2 transacciones: approve(pool, monto) y luego
+// repay(creditId, monto). Las wallets que simulan transacciones (Rabby,
+// MetaMask) simulan el repay contra el ÚLTIMO estado on-chain; si el approve
+// aún no se propagó al nodo, la simulación predice allowance 0, falla la
+// simulación y tumba la transacción. Hacemos polling del allowance hasta que
+// sea >= al monto requerido ANTES de enviar el repay para eliminar ese race.
+// =============================================================================
+
+async function waitForAllowance(
+  publicClient: ReturnType<typeof createPublicClient>,
+  token: `0x${string}`,
+  owner: `0x${string}`,
+  spender: `0x${string}`,
+  required: bigint,
+  tries = 15,
+  delayMs = 1500,
+): Promise<void> {
+  for (let i = 0; i < tries; i++) {
+    const allowance = (await publicClient.readContract({
+      address: token,
+      abi: ERC20_ABI,
+      functionName: 'allowance',
+      args: [owner, spender],
+    })) as bigint;
+    if (allowance >= required) return;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error('El permiso (allowance) no se reflejó a tiempo. Reintenta el pago.');
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -210,17 +243,40 @@ export default function PanelPagos() {
         // Pool: approve(pool, amount) → repay(creditId, amount)  (2 transacciones)
         const poolAddress = getLendingPoolAddress();
         const creditId = creditIdHash(cuota.credito_id);
+        const publicClient = createPublicClient({ chain: celoSepolia, transport: http() });
 
-        const approveTx = await walletClient.writeContract({
+        // 5a. Aprobar solo si el allowance actual no alcanza. Evita una tx
+        //     innecesaria cuando ya hay permiso suficiente.
+        const currentAllowance = (await publicClient.readContract({
           address: copmAddress,
           abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [poolAddress, amountWei],
-          account: userAddress,
-        });
+          functionName: 'allowance',
+          args: [userAddress, poolAddress],
+        })) as bigint;
 
-        const publicClient = createPublicClient({ chain: celoSepolia, transport: http() });
-        await publicClient.waitForTransactionReceipt({ hash: approveTx, timeout: 60_000 });
+        if (currentAllowance < amountWei) {
+          const approveTx = await walletClient.writeContract({
+            address: copmAddress,
+            abi: ERC20_ABI,
+            functionName: 'approve',
+            args: [poolAddress, amountWei],
+            account: userAddress,
+          });
+
+          // waitForTransactionReceipt NO lanza si la tx revirtió: devuelve el
+          // recibo con status 'reverted'. Hay que verificarlo explícitamente.
+          const approveReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approveTx,
+            timeout: 60_000,
+          });
+          if (approveReceipt.status !== 'success') {
+            throw new Error('La aprobación de COPm falló en la blockchain. Reintenta el pago.');
+          }
+
+          // Esperar a que el allowance sea visible on-chain ANTES del repay,
+          // para que la simulación de la wallet no lo tumbe (race fix).
+          await waitForAllowance(publicClient, copmAddress, userAddress, poolAddress, amountWei);
+        }
 
         txHash = await walletClient.writeContract({
           address: poolAddress,

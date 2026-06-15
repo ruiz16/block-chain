@@ -33,7 +33,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const redirectTo = searchParams?.get('redirect') ?? '/mis-creditos';
+  const redirectTo = searchParams?.get('redirect') ?? '/admin/dashboard';
   const reason = searchParams?.get('reason');
 
   // --------------------------------------------------------------------------

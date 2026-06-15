@@ -19,6 +19,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { requireReviewer } from '@/lib/auth-guards';
 import { DesembolsoSchema } from '@/lib/validations/desembolso';
 import { desembolsarCredito, BlockchainError } from '@/lib/blockchain/desembolsar';
+import { parseTokenAmount } from '@/config/celo';
 import { registrarAuditLog } from '@/lib/audit/logger';
 import { scoreEfectivo } from '@/lib/score/calculator';
 import type { Address, Wei } from '@/types/database';
@@ -183,7 +184,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 7. Execute blockchain transfer (COPm on Celo)
     // ------------------------------------------------------------------
-    const montoWei = BigInt(typedCredito.monto);
+    // typedCredito.monto está guardado en COPm human-readable (ej. "100000").
+    // COPm es un ERC-20 de 18 decimales, así que en el límite con la blockchain
+    // hay que convertir a unidades base: 100000 → 100000 * 10^18.
+    const montoWei = parseTokenAmount(typedCredito.monto);
 
     let txHash: string;
 

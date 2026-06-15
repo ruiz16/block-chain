@@ -42,16 +42,6 @@ export function getCopmContractAddress(): `0x${string}` {
 }
 
 /**
- * Returns the COPm testnet contract address for Celo Sepolia.
- * Falls back to the known testnet address if env var is not set.
- */
-export function getCopmTestnetAddress(): `0x${string}` {
-  const address = process.env.NEXT_PUBLIC_CELO_COPM_TESTNET;
-  if (address) return address as `0x${string}`;
-  return '0x5F8d55c3627d2dc0a2B4afa798f877242F382F67' as `0x${string}`;
-}
-
-/**
  * Returns the configured LendingPool contract address.
  * Throws if NEXT_PUBLIC_LENDING_POOL_CONTRACT is not set.
  */
