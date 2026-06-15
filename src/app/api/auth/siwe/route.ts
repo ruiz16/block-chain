@@ -98,7 +98,7 @@ function parseEIP4361Message(message: string): ParsedEIP4361 {
   //   "${domain} wants you to sign in with your Ethereum account:"
   // -------------------------------------------------------------------------
   const headerMatch = lines[0]?.match(
-    /^(?:([a-zA-Z][a-zA-Z0-9+.-]*):\/\/)?(.+?) wants you to sign in with your Ethereum account:$/,
+    /^(?:([a-zA-Z][a-zA-Z0-9+.-]*):\/\/)?(.+?) solicita tu firma:$/,
   );
 
   if (!headerMatch) {

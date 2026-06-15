@@ -36,6 +36,7 @@ export interface EnrichedCuota {
   credito_estado: string;
   credito_repayment_mode: string;
   credito_descripcion: string | null;
+  credito_referadora_nombre: string | null;
   numero_cuota: number;
   total_cuotas: number;
   monto_capital: string;  // COPm wei
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: creditos } = await supabase
       .from('creditos')
-      .select('id, monto, estado, descripcion, numero_cuotas, repayment_mode')
+      .select('id, monto, estado, descripcion, numero_cuotas, repayment_mode, referadora_id')
       .eq('prestatario_id', typedParticipante.id)
       .order('fecha_solicitud', { ascending: false });
 
@@ -98,6 +99,23 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const creditoIds = creditos.map((c: any) => c.id);
     const creditoMap = new Map(creditos.map((c: any) => [c.id, c]));
+
+    // ------------------------------------------------------------------
+    // 3b. Resolver nombre de la referadora (una vez por crédito)
+    // ------------------------------------------------------------------
+    const referadoraIds = [
+      ...new Set(creditos.map((c: any) => c.referadora_id).filter(Boolean)),
+    ] as string[];
+    const referadoraMap = new Map<string, string>();
+    if (referadoraIds.length > 0) {
+      const { data: referadoras } = await supabase
+        .from('participantes')
+        .select('id, nombre')
+        .in('id', referadoraIds);
+      for (const r of referadoras ?? []) {
+        referadoraMap.set((r as any).id, (r as any).nombre);
+      }
+    }
 
     // ------------------------------------------------------------------
     // 4. Fetch all cuotas for those credits
@@ -128,6 +146,9 @@ export async function GET(request: NextRequest): Promise<Response> {
         credito_estado: credito?.estado ?? 'desconocido',
         credito_repayment_mode: credito?.repayment_mode ?? 'direct',
         credito_descripcion: credito?.descripcion ?? null,
+        credito_referadora_nombre: credito?.referadora_id
+          ? referadoraMap.get(credito.referadora_id) ?? null
+          : null,
         numero_cuota: cuota.numero_cuota,
         total_cuotas: credito?.numero_cuotas ?? 1,
         monto_capital: cuota.monto_capital,
