@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 // =============================================================================
@@ -87,7 +88,7 @@ function formatCop(value: string): string {
 // =============================================================================
 
 async function waitForAllowance(
-  publicClient: ReturnType<typeof createPublicClient>,
+  publicClient: any,
   token: `0x${string}`,
   owner: `0x${string}`,
   spender: `0x${string}`,
