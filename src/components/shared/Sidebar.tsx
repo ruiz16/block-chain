@@ -135,7 +135,7 @@ const NAV_SECTIONS: { title: string; items: NavItemDef[] }[] = [
       { label: 'Créditos', href: '/admin/creditos', icon: Icons.list, roles: ['admin'] },
       { label: 'Desembolsos', href: '/admin/desembolsos', icon: Icons.money, roles: ['admin'] },
       { label: 'Cuotas', href: '/admin/cuotas', icon: Icons.chart, roles: ['admin'] },
-      { label: 'Pagos', href: '/pagos', icon: Icons.money, roles: ['admin'] },
+      { label: 'Pagos', href: '/admin/pagos', icon: Icons.money, roles: ['admin'] },
     ],
   },
   {
