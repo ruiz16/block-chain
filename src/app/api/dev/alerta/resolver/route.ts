@@ -19,6 +19,7 @@ import { getServerUser } from '@/lib/supabase/auth-server';
 import { getBearerUser } from '@/lib/supabase/auth-bearer';
 import { recalcularScoreGacc } from '@/lib/gacc/semaforo';
 import { z } from 'zod';
+import type { DbEstadoCuota } from '@/types/supabase';
 
 const ResolverSchema = z.object({
   cuota_id: z.string().uuid('cuota_id debe ser un UUID válido'),
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     await supabase
       .from('cuotas')
       .update({
-        estado: estado_anterior,
+        estado: estado_anterior as DbEstadoCuota,
         fecha_vencimiento: fecha_vencimiento_anterior,
       })
       .eq('id', cuota_id);
