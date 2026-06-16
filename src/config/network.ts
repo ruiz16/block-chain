@@ -46,24 +46,75 @@ function requireEnv(name: string): string {
   return value;
 }
 
-/** Igual que requireEnv pero rechaza la dirección cero (placeholder inválido). */
-function requireAddress(name: string): `0x${string}` {
-  const value = requireEnv(name);
+/**
+ * Devuelve el nombre de variable correcto según la red activa.
+ * mainnet → `${base}_MAINNET`; sepolia → `${base}` (nombre plano).
+ *
+ * SOLO para variables SERVER-ONLY. Las NEXT_PUBLIC_* NO pueden resolverse así:
+ * Next.js inlinea en el bundle del navegador únicamente las referencias
+ * LITERALES (`process.env.NEXT_PUBLIC_X`). Un acceso dinámico `process.env[name]`
+ * es invisible para su análisis estático y devuelve `undefined` en el cliente.
+ * Por eso las NEXT_PUBLIC_* usan mapas con referencias literales (ver abajo).
+ */
+function envName(base: string): string {
+  return ACTIVE_NETWORK === 'mainnet' ? `${base}_MAINNET` : base;
+}
+
+// -----------------------------------------------------------------------------
+// Mapas LITERALES para variables NEXT_PUBLIC_* (cliente-safe).
+//
+// Cada entrada es una referencia literal `process.env.NEXT_PUBLIC_*` para que
+// Next.js la inline en el bundle del navegador. NO reemplazar por accesos
+// dinámicos: rompería el fail-fast en el cliente (devolverían undefined).
+// -----------------------------------------------------------------------------
+
+const PUBLIC_ENV = {
+  copmContract: {
+    mainnet: process.env.NEXT_PUBLIC_COPM_CONTRACT_MAINNET,
+    sepolia: process.env.NEXT_PUBLIC_COPM_CONTRACT,
+  },
+  lendingPoolContract: {
+    mainnet: process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT_MAINNET,
+    sepolia: process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT,
+  },
+  celoScanBaseUrl: {
+    mainnet: process.env.NEXT_PUBLIC_CELOSCAN_BASE_URL_MAINNET,
+    sepolia: process.env.NEXT_PUBLIC_CELOSCAN_BASE_URL,
+  },
+} satisfies Record<string, Record<CeloNetwork, string | undefined>>;
+
+/** Nombre humano de la variable según la red activa (para mensajes de error). */
+function publicVarName(base: string): string {
+  return ACTIVE_NETWORK === 'mainnet' ? `${base}_MAINNET` : base;
+}
+
+/** Lee una NEXT_PUBLIC_* de la red activa desde el mapa literal. Fail-fast. */
+function requirePublicEnv(
+  group: keyof typeof PUBLIC_ENV,
+  base: string,
+): string {
+  const value = PUBLIC_ENV[group][ACTIVE_NETWORK];
+  if (!value || value.length === 0) {
+    throw new Error(
+      `Falta ${publicVarName(base)} en las variables de entorno. Revisá .env.example.`,
+    );
+  }
+  return value;
+}
+
+/** Igual que requirePublicEnv pero rechaza la dirección cero. */
+function requirePublicAddress(
+  group: keyof typeof PUBLIC_ENV,
+  base: string,
+): `0x${string}` {
+  const value = requirePublicEnv(group, base);
   if (value.toLowerCase() === ZERO_ADDRESS) {
     throw new Error(
-      `La dirección en ${name} es la dirección cero (placeholder sin desplegar). ` +
+      `La dirección en ${publicVarName(base)} es la dirección cero (placeholder sin desplegar). ` +
         'Desplegá el contrato y pegá la dirección real.',
     );
   }
   return value as `0x${string}`;
-}
-
-/**
- * Devuelve el nombre de variable correcto según la red activa.
- * mainnet → `${base}_MAINNET`; sepolia → `${base}` (nombre plano).
- */
-function envName(base: string): string {
-  return ACTIVE_NETWORK === 'mainnet' ? `${base}_MAINNET` : base;
 }
 
 // -----------------------------------------------------------------------------
@@ -97,14 +148,14 @@ export function getActiveChain(): Chain {
   return CHAINS[ACTIVE_NETWORK];
 }
 
-/** Dirección COPm de la red activa. NEXT_PUBLIC_* → cliente-safe. */
+/** Dirección COPm de la red activa. NEXT_PUBLIC_* → cliente-safe (mapa literal). */
 export function getCopmAddress(): `0x${string}` {
-  return requireAddress(envName('NEXT_PUBLIC_COPM_CONTRACT'));
+  return requirePublicAddress('copmContract', 'NEXT_PUBLIC_COPM_CONTRACT');
 }
 
-/** Dirección LendingPool de la red activa. NEXT_PUBLIC_* → cliente-safe. */
+/** Dirección LendingPool de la red activa. NEXT_PUBLIC_* → cliente-safe (mapa literal). */
 export function getLendingPoolAddr(): `0x${string}` {
-  return requireAddress(envName('NEXT_PUBLIC_LENDING_POOL_CONTRACT'));
+  return requirePublicAddress('lendingPoolContract', 'NEXT_PUBLIC_LENDING_POOL_CONTRACT');
 }
 
 /** RPC de la red activa. Variable SERVER-ONLY → llamar solo desde el servidor. */
@@ -112,9 +163,9 @@ export function getRpcUrl(): string {
   return requireEnv(envName('CELO_RPC_URL'));
 }
 
-/** Base URL del explorer de la red activa. NEXT_PUBLIC_* → cliente-safe. */
+/** Base URL del explorer de la red activa. NEXT_PUBLIC_* → cliente-safe (mapa literal). */
 export function getCeloScanBaseUrl(): string {
-  return requireEnv(envName('NEXT_PUBLIC_CELOSCAN_BASE_URL'));
+  return requirePublicEnv('celoScanBaseUrl', 'NEXT_PUBLIC_CELOSCAN_BASE_URL');
 }
 
 /** Private key de la red activa. SECRETO server-only → nunca exponer al cliente. */
