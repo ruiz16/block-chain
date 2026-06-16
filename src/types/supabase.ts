@@ -66,6 +66,7 @@ export interface Database {
           validado_gacc: boolean;
           telefono: string;
           email: string;
+          onboarding_completado: boolean;
         };
         Insert: {
           id?: string; // gen_random_uuid()
@@ -83,6 +84,7 @@ export interface Database {
           validado_gacc?: boolean; // default false
           telefono?: string; // default ''
           email?: string; // default ''
+          onboarding_completado?: boolean; // default false
         };
         Update: {
           id?: string;
@@ -100,6 +102,7 @@ export interface Database {
           validado_gacc?: boolean;
           telefono?: string;
           email?: string;
+          onboarding_completado?: boolean;
         };
         Relationships: [];
       };

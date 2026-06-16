@@ -143,7 +143,9 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const updateData: Partial<Database['public']['Tables']['participantes']['Update']> = {};
     if (nombre !== undefined) updateData.nombre = nombre;
-    if (wallet_address !== undefined) updateData.wallet_address = wallet_address;
+    // wallet_address ya viene normalizado a minúsculas por el schema Zod,
+    // pero lo forzamos acá también para que la invariante sea explícita.
+    if (wallet_address !== undefined) updateData.wallet_address = wallet_address.toLowerCase();
     if (telefono !== undefined) updateData.telefono = telefono;
 
     // ------------------------------------------------------------------

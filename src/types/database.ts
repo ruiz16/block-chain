@@ -100,6 +100,7 @@ export interface ParticipanteRow {
   validado_gacc?: boolean;       // Validado por el GACC — added in migration 010
   telefono: string;              // Número de celular — added in migration 018
   email: string;                 // Correo real del usuario — added in migration 019
+  onboarding_completado?: boolean; // Onboarding terminado — fuente de verdad para profile_completed
 }
 
 /** SIWE nonce row — matches supabase/migrations/007_siwe.sql */

@@ -39,6 +39,7 @@ import type { PagoResponse } from '@/types/database';
 // ---------------------------------------------------------------------------
 interface ParticipanteRow {
   id: string;
+  rol: string;
 }
 
 interface CuotaConCredito {
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const { data: participante, error: participanteError } = await supabase
       .from('participantes')
-      .select('id')
+      .select('id, rol')
       .eq('user_id', authedUser.id)
       .single();
 
@@ -160,18 +161,25 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { data: creditoOwner } = await supabase
-      .from('creditos')
-      .select('prestatario_id')
-      .eq('id', creditoData.id)
-      .eq('prestatario_id', typedParticipante.id)
-      .single();
+    // Un admin (p. ej. el dashboard pagando desde la wallet owner) puede registrar
+    // el pago de CUALQUIER crédito. La verificación on-chain (paso 8) sigue
+    // garantizando que el pago realmente ocurrió para este crédito y monto.
+    const esAdmin = typedParticipante.rol === 'admin';
 
-    if (!creditoOwner) {
-      return NextResponse.json(
-        { error: 'CUOTA_NO_ENCONTRADA', detail: 'Este crédito no te pertenece' },
-        { status: 404 },
-      );
+    if (!esAdmin) {
+      const { data: creditoOwner } = await supabase
+        .from('creditos')
+        .select('prestatario_id')
+        .eq('id', creditoData.id)
+        .eq('prestatario_id', typedParticipante.id)
+        .single();
+
+      if (!creditoOwner) {
+        return NextResponse.json(
+          { error: 'CUOTA_NO_ENCONTRADA', detail: 'Este crédito no te pertenece' },
+          { status: 404 },
+        );
+      }
     }
 
     // ------------------------------------------------------------------
@@ -302,6 +310,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
+    // El score y el semáforo SIEMPRE corresponden al PRESTATARIO dueño del crédito,
+    // no a quien registra el pago (que puede ser un admin desde el dashboard).
+    const { data: creditoPrestatario } = await supabase
+      .from('creditos')
+      .select('prestatario_id')
+      .eq('id', creditoData.id)
+      .single();
+    const prestatarioId = creditoPrestatario?.prestatario_id ?? typedParticipante.id;
+
     // ------------------------------------------------------------------
     // 9b. Recalcular score (pago puntual o atrasado)
     // ------------------------------------------------------------------
@@ -310,7 +327,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const esPuntual = ahora <= fechaVencimiento;
 
     recalcularScore({
-      participanteId: typedParticipante.id,
+      participanteId: prestatarioId,
       tipo: esPuntual ? 'pago_puntual' : 'pago_atrasado',
       referenciaTipo: 'cuota',
       referenciaId: typedCuota.id,
@@ -321,11 +338,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 9c. Recalcular score de red + verificar semáforo comunitario
     // ------------------------------------------------------------------
-    recalcularScoreRed(typedParticipante.id).catch((err) => {
+    recalcularScoreRed(prestatarioId).catch((err) => {
       console.warn('[pago] Error al recalcular score de red:', err);
     });
 
-    verificarAtrasosRed(typedParticipante.id).catch((err) => {
+    verificarAtrasosRed(prestatarioId).catch((err) => {
       console.warn('[pago] Error al verificar atrasos de red:', err);
     });
 

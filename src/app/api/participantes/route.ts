@@ -97,6 +97,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           oficio,
           telefono: telefono || undefined,
           email: email || '',
+          onboarding_completado: true, // El usuario completó el onboarding
         })
         .eq('id', existing.id);
 
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           activo: true,
           score_reputacion: 50,  // Default starting score
           telefono: telefono || '',
+          onboarding_completado: true, // El usuario completó el onboarding
         })
       .select()
       .single();

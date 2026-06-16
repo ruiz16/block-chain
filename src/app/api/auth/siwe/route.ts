@@ -648,17 +648,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine if the participante has a REAL profile (not auto-generated "Wallet 0x...")
+    // Fuente de verdad real: la columna onboarding_completado (no inferir por el nombre).
     let profileCompleted = false;
     if (userId) {
       const { data: profileCheck } = await admin
         .from('participantes')
-        .select('nombre')
+        .select('onboarding_completado')
         .eq('user_id', userId)
         .maybeSingle();
-      if (profileCheck?.nombre && !profileCheck.nombre.startsWith('Wallet ')) {
-        profileCompleted = true;
-      }
+      profileCompleted = profileCheck?.onboarding_completado ?? false;
     }
 
     // Create response WITH tokens for mobile clients

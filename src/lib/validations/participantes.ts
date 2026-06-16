@@ -34,6 +34,9 @@ export const CrearParticipanteSchema = z.object({
   wallet_address: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida. Debe ser una dirección Ethereum (0x...)')
+    // Canonicalize a minúsculas: el índice único y todas las búsquedas SIWE
+    // comparan en minúsculas. Guardar checksummed rompía el lookup. Ver siwe/route.ts.
+    .transform((v) => v.toLowerCase())
     .optional()
     .or(z.literal('')),
   rol: z.enum(['usuario'], {
@@ -106,6 +109,8 @@ export const ActualizarParticipanteSchema = z.object({
   wallet_address: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, 'La dirección de wallet no es válida')
+    // Canonicalize a minúsculas (ver nota en CrearParticipanteSchema).
+    .transform((v) => v.toLowerCase())
     .optional()
     .or(z.literal('')),
   telefono: z

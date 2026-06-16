@@ -655,12 +655,8 @@ export default function PanelPagos() {
                                 className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
                                 aria-label={`Pagar cuota ${cuota.numero_cuota}`}
                               >
-                                <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 35 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                  <rect width="35" height="32" rx="4" fill="#F6851B"/>
-                                  <path d="M27.538 16.333l-9.415 12.678L8.708 16.333l9.415-6.867 9.415 6.867z" fill="white" fillOpacity="0.6"/>
-                                  <path d="M18.123 9.466L8.708 16.333l9.415 6.867 9.415-6.867-9.415-6.867z" fill="white"/>
-                                </svg>
-                                MetaMask
+                                <i className="fa fa-wallet text-2xl text-white mr-1.5" />
+                                Pagar Cuota 
                               </button>
                               <button
                                 onClick={() => setShowManualInput(cuota.id)}
