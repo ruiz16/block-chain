@@ -7,16 +7,19 @@
 //
 // Las direcciones/RPC por red viven en config/network.ts (fuente de verdad).
 // Required vars (see .env.example):
-//   NEXT_PUBLIC_CELO_NETWORK            — 'mainnet' | 'sepolia'
-//   CELO_MAINNET_RPC / CELO_SEPOLIA_RPC — Celo RPC endpoint (server-only)
-//   NEXT_PUBLIC_COPM_{MAINNET,SEPOLIA}  — COPm token contract address (Mento Colombian Peso)
-//   NEXT_PUBLIC_LENDING_POOL_{MAINNET,SEPOLIA} — LendingPool contract address
+//   NEXT_PUBLIC_CELO_NETWORK            — 'mainnet' | 'sepolia' (elige la red)
+//
+//   Por red: mainnet usa el sufijo _MAINNET; sepolia usa el nombre plano.
+//   CELO_RPC_URL[_MAINNET]              — Celo RPC endpoint (server-only)
+//   CELO_PRIVATE_KEY[_MAINNET]          — Signer key (server-only secret)
+//   NEXT_PUBLIC_COPM_CONTRACT[_MAINNET] — COPm token contract (Mento Colombian Peso)
+//   NEXT_PUBLIC_LENDING_POOL_CONTRACT[_MAINNET] — LendingPool contract address
+//   NEXT_PUBLIC_CELOSCAN_BASE_URL[_MAINNET]     — Block explorer base URL
 //   NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS — Platform wallet (receives payments)
-//   NEXT_PUBLIC_CELOSCAN_BASE_URL       — Block explorer base URL
 // =============================================================================
 
 import type { Address, TxHash, Wei } from '@/types/database';
-import { getRpcUrl, getCopmAddress, getLendingPoolAddr } from '@/config/network';
+import { getRpcUrl, getCopmAddress, getLendingPoolAddr, getCeloScanBaseUrl as getCeloScanBaseUrlForNetwork } from '@/config/network';
 
 /**
  * Returns the RPC URL for the ACTIVE network. SERVER-ONLY.
@@ -63,13 +66,7 @@ export function getPlatformWalletAddressPublic(): `0x${string}` {
  * Throws if NEXT_PUBLIC_CELOSCAN_BASE_URL is not set.
  */
 export function getCeloScanBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_CELOSCAN_BASE_URL;
-  if (!url) {
-    throw new Error(
-      'Falta NEXT_PUBLIC_CELOSCAN_BASE_URL en las variables de entorno',
-    );
-  }
-  return url;
+  return getCeloScanBaseUrlForNetwork();
 }
 
 /**

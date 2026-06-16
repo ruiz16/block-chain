@@ -7,14 +7,15 @@
 // verifica que el chainId real del RPC coincide con la red esperada — falla
 // cerrado si no coinciden (evita firmar en la red equivocada con fondos reales).
 //
-// The private key (CELO_PRIVATE_KEY) is loaded from environment variables
+// The private key (CELO_PRIVATE_KEY_MAINNET / CELO_PRIVATE_KEY) is loaded per
+// network from environment variables (vía getCeloPrivateKey en config/network.ts)
 // and is NEVER logged, stringified, or exposed outside this module.
 // =============================================================================
 
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import { getCeloRpcUrl } from '@/config/celo';
-import { getActiveChain } from '@/config/network';
+import { getActiveChain, getCeloPrivateKey } from '@/config/network';
 
 type PublicClientType = ReturnType<typeof createPublicClient>;
 type WalletClientType = ReturnType<typeof createWalletClient>;
@@ -60,7 +61,7 @@ export async function assertActiveChain(): Promise<void> {
     throw new Error(
       `Mismatch de red: NEXT_PUBLIC_CELO_NETWORK espera ${expected.name} ` +
         `(chainId ${expected.id}) pero el RPC reporta chainId ${actual}. ` +
-        'Revisá CELO_MAINNET_RPC / CELO_SEPOLIA_RPC. NO se firmará ninguna transacción.',
+        'Revisá CELO_RPC_URL_MAINNET / CELO_RPC_URL. NO se firmará ninguna transacción.',
     );
   }
 
@@ -69,21 +70,14 @@ export async function assertActiveChain(): Promise<void> {
 
 /**
  * Returns a singleton wallet (write-capable) viem client for the ACTIVE network.
- * The private key is derived from CELO_PRIVATE_KEY env var.
+ * The private key is derived per-network (CELO_PRIVATE_KEY_MAINNET / CELO_PRIVATE_KEY).
  *
- * Throws if CELO_PRIVATE_KEY is not set.
+ * Throws if the private key for the active network is not set.
  */
 export function getWalletClient(): WalletClientType {
   if (walletClient) return walletClient;
 
-  const rawKey = process.env.CELO_PRIVATE_KEY;
-
-  if (!rawKey) {
-    throw new Error(
-      'Falta CELO_PRIVATE_KEY en las variables de entorno. ' +
-        'Configúrala en .env.local',
-    );
-  }
+  const rawKey = getCeloPrivateKey();
 
   // Normalize: add 0x prefix if missing (MetaMask exports without it)
   const privateKey = rawKey.startsWith('0x') ? (rawKey as `0x${string}`) : (`0x${rawKey}` as `0x${string}`);
