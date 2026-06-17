@@ -1,7 +1,8 @@
 // =============================================================================
 // Check: is our deployer key the owner of MockCopm?
 // =============================================================================
-import { ethers } from 'hardhat';
+import hre from 'hardhat';
+const { ethers } = hre;
 
 async function main() {
   const [deployer] = await ethers.getSigners();

@@ -239,6 +239,11 @@ export default function PanelPagos() {
       const amountWei = parseTokenAmount(cuota.monto_cuota) as bigint;
       let txHash: `0x${string}`;
 
+      // Fee abstraction: en MAINNET (chainId 42220) el COPm oficial es fee currency,
+      // así el gas se paga en COPm (clave para MiniPay). En testnet el Mock NO es fee
+      // currency → omitir feeCurrency (gas en CELO); incluirlo haría rechazar la tx.
+      const feeField = activeChain.id === 42220 ? { feeCurrency: copmAddress } : {};
+
       setState('submitting');
 
       if (cuota.repayment_mode === 'pool') {
@@ -263,6 +268,7 @@ export default function PanelPagos() {
             functionName: 'approve',
             args: [poolAddress, amountWei],
             account: userAddress,
+            ...feeField,
           });
 
           // waitForTransactionReceipt NO lanza si la tx revirtió: devuelve el
@@ -286,6 +292,7 @@ export default function PanelPagos() {
           functionName: 'repay',
           args: [creditId, amountWei],
           account: userAddress,
+          ...feeField,
         });
       } else {
         // Legacy: transfer directo a la platform wallet (1 transacción)
@@ -296,6 +303,7 @@ export default function PanelPagos() {
           functionName: 'transfer',
           args: [platformWallet, amountWei],
           account: userAddress,
+          ...feeField,
         });
       }
 

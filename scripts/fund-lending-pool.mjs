@@ -1,54 +1,83 @@
 // =============================================================================
-// Fund LendingPool — Celo Sepolia (testnet)
-// =============================================================================
-// Mintea COPm al deployer (owner del MockCopm), aprueba el pool y llama fund().
+// Fondear el LendingPool con COPm — network-aware (testnet | mainnet)
+// -----------------------------------------------------------------------------
+// La red la define hardhat (--network). Según la red, lee las variables
+// correctas de .env.local:
+//   mainnet (--network celo)        → NEXT_PUBLIC_*_MAINNET
+//   testnet (--network celoSepolia) → NEXT_PUBLIC_* (nombre plano)
 //
-// Usage:
+// Monto: por defecto 50.000 COPm. Override con FUND_AMOUNT.
+//
+// Uso:
 //   npx hardhat run scripts/fund-lending-pool.mjs --network celoSepolia
-//
-// Env (.env.local):
-//   NEXT_PUBLIC_COPM_CONTRACT
-//   NEXT_PUBLIC_LENDING_POOL_CONTRACT
-//   LENDING_POOL_FUND_AMOUNT  — COPm decimal a fondear. Default: 100000
+//   FUND_AMOUNT=25000 npx hardhat run scripts/fund-lending-pool.mjs --network celo
 // =============================================================================
+import hre from "hardhat";
 
-import hre from 'hardhat';
+function reqEnv(name) {
+  const v = process.env[name];
+  if (!v || !v.trim()) throw new Error(`❌ Falta ${name} en .env.local`);
+  return v.trim();
+}
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  const copmAddr = process.env.NEXT_PUBLIC_COPM_CONTRACT;
-  const poolAddr = process.env.NEXT_PUBLIC_LENDING_POOL_CONTRACT;
-  if (!copmAddr || !poolAddr) throw new Error('Faltan COPM o LENDING_POOL en .env.local');
 
-  const amount = '1000000'; //1Millon
-  const amountWei = hre.ethers.parseUnits(amount, 18);
+  const isMainnet = hre.network.name === 'celo';
+  const suffix = isMainnet ? '_MAINNET' : '';
+
+  const copmAddress = hre.ethers.getAddress(reqEnv(`NEXT_PUBLIC_COPM_CONTRACT${suffix}`));
+  const poolAddress = hre.ethers.getAddress(reqEnv(`NEXT_PUBLIC_LENDING_POOL_CONTRACT${suffix}`));
+  const amountStr = (process.env.FUND_AMOUNT || '50000').trim();
+
+  console.log('==================================================');
+  console.log(`🌐 Red          : ${hre.network.name} ${isMainnet ? '(MAINNET)' : '(testnet)'}`);
+  console.log(`💳 Fondeadora   : ${deployer.address}`);
+  console.log(`🪙 COPm         : ${copmAddress}`);
+  console.log(`🏦 LendingPool  : ${poolAddress}`);
+  console.log(`💵 Monto        : ${amountStr} COPm`);
+  console.log('==================================================\n');
 
   const copm = await hre.ethers.getContractAt(
     [
-      'function mint(address,uint256) external',
-      'function approve(address,uint256) external returns (bool)',
-      'function balanceOf(address) view returns (uint256)',
+      "function balanceOf(address) view returns (uint256)",
+      "function approve(address, uint256) returns (bool)",
+      "function symbol() view returns (string)",
     ],
-    copmAddr,
-    deployer,
+    copmAddress,
   );
-  const pool = await hre.ethers.getContractAt(
-    ['function fund(uint256) external'],
-    poolAddr,
-    deployer,
+  const lendingPool = await hre.ethers.getContractAt(
+    ["function fund(uint256) external"],
+    poolAddress,
   );
 
-  console.log(`Minting ${amount} COPm to deployer…`);
-  await (await copm.mint(deployer.address, amountWei)).wait();
+  const amountToFund = hre.ethers.parseUnits(amountStr, 18);
 
-  console.log('Approving pool…');
-  await (await copm.approve(poolAddr, amountWei)).wait();
+  // 1. Validar saldo
+  const balance = await copm.balanceOf(deployer.address);
+  console.log(`💰 Saldo COPm de la fondeadora: ${hre.ethers.formatUnits(balance, 18)}`);
+  if (balance < amountToFund) {
+    throw new Error(`❌ Saldo insuficiente: necesitás ${amountStr} COPm y tenés ${hre.ethers.formatUnits(balance, 18)}.`);
+  }
 
-  console.log('Funding pool…');
-  await (await pool.fund(amountWei)).wait();
+  // 2. Approve
+  console.log("⏳ Aprobando al LendingPool para transferir COPm...");
+  const approveTx = await copm.approve(poolAddress, amountToFund);
+  await approveTx.wait();
+  console.log("✅ Approve confirmado.");
 
-  const bal = await copm.balanceOf(poolAddr);
-  console.log(`✅ Pool balance: ${hre.ethers.formatUnits(bal, 18)} COPm`);
+  // 3. fund()
+  console.log(`⏳ Depositando ${amountStr} COPm en el pool...`);
+  const fundTx = await lendingPool.fund(amountToFund);
+  await fundTx.wait();
+
+  console.log("\n🎉 ¡Pool fondeado con éxito!");
+  console.log(`   Tx: ${fundTx.hash}`);
 }
 
-main().then(() => process.exit(0)).catch((err) => { console.error('❌', err); process.exit(1); });
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("\n❌ Error en el fondeo:", error.message || error);
+    process.exit(1);
+  });

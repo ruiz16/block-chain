@@ -6,7 +6,12 @@
 - **Docker** y **Docker Compose** (para deploy con Docker)
 - **Cuenta de Vercel** con proyecto creado (para deploy en la nube)
 - **Proyecto Supabase** en producción
-- **Wallet con fondos de testnet cUSD** en Celo Alfajores
+- **Wallet con fondos de COPm** en la red elegida:
+  - Testnet: **Celo Sepolia** (MockCopm `0x6C732d…577f`, gas en CELO del faucet)
+  - Mainnet: **Celo** (COPm oficial `0x8A567e…`, comprado vía Mento; gas en COPm)
+
+> La red se elige con `NEXT_PUBLIC_CELO_NETWORK` (`sepolia` | `mainnet`). Ver
+> `src/config/network.ts`: las variables de mainnet llevan sufijo `_MAINNET`.
 
 ---
 
@@ -29,11 +34,18 @@ Completa cada valor en `.env.production`:
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase | Público |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave anónima de Supabase | Público (respeta RLS) |
 | `SUPABASE_SERVICE_KEY` | Clave de servicio Supabase (admin) | **Secreto** |
-| `CELO_RPC_URL` | URL del RPC de Celo Alfajores | Público |
-| `CELO_PRIVATE_KEY` | Clave privada del wallet de desembolsos | **Secreto** |
-| `CELO_CUSD_CONTRACT` | Dirección del contrato cUSD | Público |
-| `NEXT_PUBLIC_CELOSCAN_BASE_URL` | URL del explorador de bloques | Público |
+| `NEXT_PUBLIC_CELO_NETWORK` | Red activa: `sepolia` o `mainnet` | Público |
+| `CELO_RPC_URL[_MAINNET]` | URL del RPC de Celo (Sepolia o mainnet) | Público |
+| `CELO_PRIVATE_KEY[_MAINNET]` | Clave privada del wallet de desembolsos (FLD/Hot Wallet) | **Secreto** |
+| `NEXT_PUBLIC_COPM_CONTRACT[_MAINNET]` | Dirección del contrato COPm | Público |
+| `NEXT_PUBLIC_LENDING_POOL_CONTRACT[_MAINNET]` | Dirección del LendingPool | Público |
+| `NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS` | Wallet que recibe pagos (FLD) | Público |
+| `NEXT_PUBLIC_CELOSCAN_BASE_URL[_MAINNET]` | URL del explorador de bloques | Público |
 | `NEXT_PUBLIC_SITE_URL` | URL del sitio para redirects de Auth | Público |
+
+> El sufijo `_MAINNET` aplica cuando `NEXT_PUBLIC_CELO_NETWORK=mainnet`. En testnet se
+> usan los nombres planos. NO existe ya ninguna variable `CELO_CUSD_CONTRACT` (el
+> proyecto migró de cUSD a COPm).
 
 ### Desarrollo Local
 
@@ -99,13 +111,16 @@ Agrega estas variables en el dashboard de Vercel (Project → Settings → Envir
 | `NEXT_PUBLIC_SUPABASE_URL` | Production |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production |
 | `SUPABASE_SERVICE_KEY` | Production |
-| `CELO_RPC_URL` | Production |
-| `CELO_PRIVATE_KEY` | Production |
-| `CELO_CUSD_CONTRACT` | Production |
-| `NEXT_PUBLIC_CELOSCAN_BASE_URL` | Production |
+| `NEXT_PUBLIC_CELO_NETWORK` | Production |
+| `CELO_RPC_URL_MAINNET` | Production |
+| `CELO_PRIVATE_KEY_MAINNET` | Production |
+| `NEXT_PUBLIC_COPM_CONTRACT_MAINNET` | Production |
+| `NEXT_PUBLIC_LENDING_POOL_CONTRACT_MAINNET` | Production |
+| `NEXT_PUBLIC_PLATFORM_WALLET_ADDRESS` | Production |
+| `NEXT_PUBLIC_CELOSCAN_BASE_URL_MAINNET` | Production |
 | `NEXT_PUBLIC_SITE_URL` | Production |
 
-Marca las variables **secretas** (`SUPABASE_SERVICE_KEY`, `CELO_PRIVATE_KEY`) como encriptadas.
+Marca las variables **secretas** (`SUPABASE_SERVICE_KEY`, `CELO_PRIVATE_KEY_MAINNET`) como encriptadas.
 
 ---
 
@@ -140,7 +155,7 @@ En tu repositorio de GitHub, ve a **Settings → Secrets and variables → Actio
 1. Abre la URL de Vercel
 2. Confirma que la app carga sin errores 404 (App Router)
 3. Prueba la autenticación con Supabase
-4. Prueba la conexión al contrato cUSD (Celo Alfajores)
+4. Prueba la conexión al contrato COPm de la red activa (Celo Sepolia o Mainnet)
 5. Revisa los logs de Vercel (Dashboard → Deployments → Latest → Functions)
 
 ---
@@ -152,5 +167,7 @@ En tu repositorio de GitHub, ve a **Settings → Secrets and variables → Actio
 | Vercel Dashboard | https://vercel.com |
 | Vercel CLI Docs | https://vercel.com/docs/cli |
 | Supabase Dashboard | https://supabase.com |
-| Celo Alfajores Faucet | https://faucet.celo.org/alfajores |
-| CeloScan (Alfajores) | https://alfajores.celoscan.io |
+| Celo Sepolia Faucet | https://faucet.celo.org/celo-sepolia |
+| Blockscout (Sepolia) | https://celo-sepolia.blockscout.com |
+| CeloScan (Mainnet) | https://celoscan.io |
+| Comprar COPm (Mento) | https://app.mento.org |
