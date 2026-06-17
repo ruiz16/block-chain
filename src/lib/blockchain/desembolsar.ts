@@ -14,7 +14,23 @@ import { getPublicClient, getWalletClient, assertActiveChain } from '@/lib/block
 import { getLendingPoolAddress } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { creditIdHash } from '@/lib/blockchain/credit-id';
+import { ACTIVE_NETWORK } from '@/config/network';
 import type { Address, TxHash, Wei } from '@/types/database';
+import { parseUnits, encodeFunctionData } from 'viem';
+
+// ABI mínimo de ERC20 para poder hacer la transferencia del token de subsidio
+const ERC20_ABI = [
+  {
+    type: 'function',
+    name: 'transfer',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ type: 'bool' }],
+  },
+] as const;
 
 export class BlockchainError extends Error {
   public readonly code: string;
@@ -48,6 +64,18 @@ export async function desembolsarCredito(
   const poolAddress = getLendingPoolAddress();
   const creditId = creditIdHash(creditoId);
 
+  // 0. Determinar feeCurrency según red para Fee Abstraction
+  // En mainnet, se usa COPm oficial. En testnet, se usa cUSD.
+  const chainId = await publicClient.getChainId();
+  let feeCurrencyAddress: Address | undefined = undefined;
+
+  if (ACTIVE_NETWORK === 'mainnet') {
+    feeCurrencyAddress = process.env.NEXT_PUBLIC_COPM_CONTRACT_MAINNET as Address;
+  } else {
+    // cUSD de Alfajores para testnet (Fee Abstraction whitelisted)
+    feeCurrencyAddress = '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1' as Address;
+  }
+
   // 1. Simular (pre-flight). NO atrapamos el error: el route lo necesita.
   const { request } = await publicClient.simulateContract({
     address: poolAddress,
@@ -55,12 +83,39 @@ export async function desembolsarCredito(
     functionName: 'disburse',
     args: [creditId, to as `0x${string}`, monto as bigint],
     account: walletClient.account!,
+    ...(feeCurrencyAddress ? { feeCurrency: feeCurrencyAddress } : {}),
   });
 
-  // 2. Ejecutar
+  // 2. Ejecutar desembolso
   const txHash = await walletClient.writeContract(request);
 
-  // 3. Esperar recibo
+  // 3. (OPCIONAL) Enviar cUSD/COPm para gas a la wallet del prestatario
+  // Esto asegura que puedan pagar sus cuotas si no tienen fondos para el fee
+  if (feeCurrencyAddress) {
+    try {
+      const dataTransfer = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [to, parseUnits('0.05', 18)], // Subsidio de 0.05 tokens
+      });
+
+      // Viem sendTransaction expects chain to be provided when using custom fields like feeCurrency,
+      // or we can just let it infer standard fields and cast the extra ones.
+      const transferTx = await walletClient.sendTransaction({
+        to: feeCurrencyAddress,
+        data: dataTransfer,
+        account: walletClient.account!,
+        chain: publicClient.chain, // <--- Prop faltante
+        feeCurrency: feeCurrencyAddress,
+      } as any); // Usamos as any temporalmente para evitar problemas con la extension Celo en TS
+      console.log(`[desembolsar] Subsidio de gas enviado al prestatario: ${transferTx}`);
+    } catch (gasErr) {
+      console.warn('[desembolsar] No se pudo enviar subsidio de gas al prestatario:', gasErr);
+      // No lanzamos error para no revertir el desembolso si el envío de gas falla
+    }
+  }
+
+  // 4. Esperar recibo del desembolso
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: txHash,
     timeout: 60_000,
