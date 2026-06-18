@@ -11,26 +11,17 @@
 // =============================================================================
 
 import { getPublicClient, getWalletClient, assertActiveChain } from '@/lib/blockchain/client';
-import { getLendingPoolAddress } from '@/config/celo';
+import { getLendingPoolAddress, getCopmContractAddress } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { creditIdHash } from '@/lib/blockchain/credit-id';
 import { ACTIVE_NETWORK } from '@/config/network';
 import type { Address, TxHash, Wei } from '@/types/database';
-import { parseUnits, encodeFunctionData } from 'viem';
+import { parseEther } from 'viem';
 
-// ABI mínimo de ERC20 para poder hacer la transferencia del token de subsidio
-const ERC20_ABI = [
-  {
-    type: 'function',
-    name: 'transfer',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ type: 'bool' }],
-  },
-] as const;
+// Subsidio de gas (CELO nativo) que se envía al prestatario en testnet para
+// que pueda pagar el gas de sus cuotas. El COPm mock NO está whitelisteado como
+// fee currency, así que sin esto un prestatario sin CELO quedaría atrapado.
+const GAS_SUBSIDY_CELO = '0.01';
 
 export class BlockchainError extends Error {
   public readonly code: string;
@@ -64,17 +55,14 @@ export async function desembolsarCredito(
   const poolAddress = getLendingPoolAddress();
   const creditId = creditIdHash(creditoId);
 
-  // 0. Determinar feeCurrency según red para Fee Abstraction
-  // En mainnet, se usa COPm oficial. En testnet, se usa cUSD.
-  const chainId = await publicClient.getChainId();
-  let feeCurrencyAddress: Address | undefined = undefined;
-
-  if (ACTIVE_NETWORK === 'mainnet') {
-    feeCurrencyAddress = process.env.NEXT_PUBLIC_COPM_CONTRACT_MAINNET as Address;
-  } else {
-    // cUSD de Alfajores para testnet (Fee Abstraction whitelisted)
-    feeCurrencyAddress = '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1' as Address;
-  }
+  // 0. feeCurrency para el PROPIO disburse: cómo paga gas LA WALLET DE PLATAFORMA.
+  //    Mainnet: COPm oficial (sí whitelisteado como fee currency).
+  //    Testnet: OMITIR → gas en CELO nativo. El COPm mock no es fee currency, e
+  //    incluir un fee currency no whitelisteado haría rechazar la tx (ver PanelPagos).
+  const disburseFeeField =
+    ACTIVE_NETWORK === 'mainnet'
+      ? { feeCurrency: getCopmContractAddress() }
+      : {};
 
   // 1. Simular (pre-flight). NO atrapamos el error: el route lo necesita.
   const { request } = await publicClient.simulateContract({
@@ -83,39 +71,13 @@ export async function desembolsarCredito(
     functionName: 'disburse',
     args: [creditId, to as `0x${string}`, monto as bigint],
     account: walletClient.account!,
-    ...(feeCurrencyAddress ? { feeCurrency: feeCurrencyAddress } : {}),
+    ...disburseFeeField,
   });
 
   // 2. Ejecutar desembolso
   const txHash = await walletClient.writeContract(request);
 
-  // 3. (OPCIONAL) Enviar cUSD/COPm para gas a la wallet del prestatario
-  // Esto asegura que puedan pagar sus cuotas si no tienen fondos para el fee
-  if (feeCurrencyAddress) {
-    try {
-      const dataTransfer = encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [to, parseUnits('0.05', 18)], // Subsidio de 0.05 tokens
-      });
-
-      // Viem sendTransaction expects chain to be provided when using custom fields like feeCurrency,
-      // or we can just let it infer standard fields and cast the extra ones.
-      const transferTx = await walletClient.sendTransaction({
-        to: feeCurrencyAddress,
-        data: dataTransfer,
-        account: walletClient.account!,
-        chain: publicClient.chain, // <--- Prop faltante
-        feeCurrency: feeCurrencyAddress,
-      } as any); // Usamos as any temporalmente para evitar problemas con la extension Celo en TS
-      console.log(`[desembolsar] Subsidio de gas enviado al prestatario: ${transferTx}`);
-    } catch (gasErr) {
-      console.warn('[desembolsar] No se pudo enviar subsidio de gas al prestatario:', gasErr);
-      // No lanzamos error para no revertir el desembolso si el envío de gas falla
-    }
-  }
-
-  // 4. Esperar recibo del desembolso
+  // 3. Esperar recibo del desembolso
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: txHash,
     timeout: 60_000,
@@ -127,6 +89,27 @@ export async function desembolsarCredito(
       'TX_REVERTED',
       `La transacción ${txHash} fue revertida en la blockchain`,
     );
+  }
+
+  // 5. Subsidio de gas (SOLO testnet, y SOLO si el desembolso fue exitoso).
+  //    Enviamos CELO nativo para que el prestatario pueda pagar el gas de sus
+  //    cuotas (approve + repay). En mainnet no hace falta: el COPm oficial ya es
+  //    fee currency, así que paga el gas con su propio saldo. Va DESPUÉS del
+  //    recibo para no gastar el subsidio si el desembolso revierte, y para evitar
+  //    colisión de nonce con dos txs en vuelo desde la misma wallet.
+  if (ACTIVE_NETWORK !== 'mainnet') {
+    try {
+      const gasTx = await walletClient.sendTransaction({
+        to,
+        value: parseEther(GAS_SUBSIDY_CELO),
+        account: walletClient.account!,
+        chain: publicClient.chain,
+      });
+      console.log(`[desembolsar] Subsidio de gas (CELO nativo) enviado al prestatario: ${gasTx}`);
+    } catch (gasErr) {
+      // No lanzamos: el desembolso ya está confirmado; el subsidio es best-effort.
+      console.warn('[desembolsar] No se pudo enviar subsidio de gas al prestatario:', gasErr);
+    }
   }
 
   return txHash as TxHash;
