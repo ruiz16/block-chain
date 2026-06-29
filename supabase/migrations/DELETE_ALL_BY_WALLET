@@ -1,0 +1,97 @@
+BEGIN;
+
+DO $$
+DECLARE
+  v_wallet text := '0xWALLET_DEL_PARTICIPANTE';
+  v_participante_id public.participantes.id%TYPE;
+  v_count integer;
+BEGIN
+  SELECT COUNT(*)
+  INTO v_count
+  FROM public.participantes
+  WHERE wallet_address = v_wallet;
+
+  IF v_count = 0 THEN
+    RAISE EXCEPTION 'No existe un participante con wallet_address = %', v_wallet;
+  END IF;
+
+  IF v_count > 1 THEN
+    RAISE EXCEPTION 'Hay % participantes con wallet_address = %. La wallet no es única.', v_count, v_wallet;
+  END IF;
+
+  SELECT id
+  INTO v_participante_id
+  FROM public.participantes
+  WHERE wallet_address = v_wallet;
+
+  DELETE FROM public.audit_log
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.eventos_score
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.notificaciones
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.progreso_educacion
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.push_subscriptions
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.red_miembros
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.referidos
+  WHERE referido_id = v_participante_id
+     OR referidor_id = v_participante_id;
+
+  DELETE FROM public.siwe_nonces
+  WHERE wallet_address = v_wallet;
+
+  UPDATE public.gacc_miembros
+  SET validado_por = NULL
+  WHERE validado_por = v_participante_id;
+
+  UPDATE public.grupos_gacc
+  SET lider_id = NULL
+  WHERE lider_id = v_participante_id;
+
+  UPDATE public.grupos_gacc
+  SET creador_id = NULL
+  WHERE creador_id = v_participante_id;
+
+  UPDATE public.creditos
+  SET referadora_id = NULL
+  WHERE referadora_id = v_participante_id
+    AND prestatario_id <> v_participante_id;
+
+  DELETE FROM public.avales
+  WHERE aval_id = v_participante_id
+     OR prestatario_id = v_participante_id
+     OR credito_id IN (
+       SELECT c.id
+       FROM public.creditos c
+       WHERE c.prestatario_id = v_participante_id
+     );
+
+  DELETE FROM public.cuotas
+  WHERE credito_id IN (
+    SELECT c.id
+    FROM public.creditos c
+    WHERE c.prestatario_id = v_participante_id
+  );
+
+  DELETE FROM public.creditos
+  WHERE prestatario_id = v_participante_id;
+
+  DELETE FROM public.gacc_miembros
+  WHERE participante_id = v_participante_id;
+
+  DELETE FROM public.participantes
+  WHERE id = v_participante_id;
+
+  RAISE NOTICE 'Participante % con wallet % eliminado correctamente.', v_participante_id, v_wallet;
+END $$;
+
+COMMIT;
