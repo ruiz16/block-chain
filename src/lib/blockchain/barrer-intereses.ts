@@ -17,10 +17,11 @@
 // =============================================================================
 
 import { getPublicClient, getWalletClient, getAccount, assertActiveChain } from '@/lib/blockchain/client';
-import { getLendingPoolAddress, parseTokenAmount } from '@/config/celo';
+import { getLendingPoolAddress, parseTokenAmount, getCopmContractAddress } from '@/config/celo';
 import { LENDING_POOL_ABI } from '@/lib/blockchain/abis/lendingPool';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { registrarAuditLog } from '@/lib/audit/logger';
+import { ACTIVE_NETWORK } from '@/config/network';
 
 /**
  * Barra los intereses acumulados de un crédito desde el LendingPool
@@ -83,12 +84,19 @@ export async function barrerInteresesACuentaRaiz(
     // La wallet conectada es CELO_PRIVATE_KEY = 0x6C84 = owner del pool
     const rootAddress = getAccount().address;
 
+    // feeCurrency del barrido: igual que el desembolso, la wallet de plataforma
+    // paga gas en COPm en mainnet (sin necesitar CELO). En testnet se omite
+    // (el Mock no es fee currency) → gas en CELO, aceptable solo en pruebas.
+    const sweepFeeField =
+      ACTIVE_NETWORK === 'mainnet' ? { feeCurrency: getCopmContractAddress() } : {};
+
     const { request } = await publicClient.simulateContract({
       address: poolAddress,
       abi: LENDING_POOL_ABI,
       functionName: 'withdraw',
       args: [rootAddress, totalInteresWei as bigint],
       account: walletClient.account!,
+      ...sweepFeeField,
     });
 
     const txHash = await walletClient.writeContract(request);
