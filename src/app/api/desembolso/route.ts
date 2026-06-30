@@ -259,8 +259,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     const numCuotas = typedCredito.numero_cuotas ?? 1;
     const montoBig = BigInt(typedCredito.monto);
-    const interesPct = BigInt(typedCredito.interes_porcentaje ?? 0);
-    const totalInteres = (montoBig * interesPct) / 100n;
+    // interes_porcentaje es NUMERIC(5,2): puede llegar como "5.50" o 5.5.
+    // BigInt() rompe con decimales (y truncaría 5.5 → 5). Convertimos a basis
+    // points (×100) para preservar los centésimos: 5.5% → 550 bps.
+    const pctRaw = Number(typedCredito.interes_porcentaje ?? 0);
+    const interesBps = BigInt(Math.round((Number.isFinite(pctRaw) ? pctRaw : 0) * 100));
+    const totalInteres = (montoBig * interesBps) / 10_000n;
     const plazoDias = typedCredito.plazo_dias ?? 30;
     const periodoDias = Math.ceil(plazoDias / numCuotas); // days per cuota
 
