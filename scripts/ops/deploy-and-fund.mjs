@@ -1,9 +1,50 @@
 import hre from 'hardhat';
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs';
+import { resolve } from 'path';
+
+// Upsert seguro de una env var en un .env.local. SIEMPRE hace backup primero.
+// - Si la clave existe, reemplaza solo esa línea. Si no, la agrega al final.
+// - No toca ninguna otra variable.
+function writeEnv(filePath, key, value, label) {
+  if (!existsSync(filePath)) {
+    console.log(`  ⚠️ ${label}: no encontré ${filePath}`);
+    console.log(`     Seteá manualmente: ${key}=${value}`);
+    return;
+  }
+  const raw = readFileSync(filePath, 'utf8');
+
+  // 1. BACKUP timestamped ANTES de tocar nada.
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const backup = `${filePath}.bak-${ts}`;
+  copyFileSync(filePath, backup);
+
+  // 2. Upsert preservando el resto del archivo (y el estilo de fin de línea).
+  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+  const lines = raw.split(/\r?\n/);
+  const re = new RegExp(`^\\s*${key}\\s*=`);
+  let found = false;
+  let oldLine = null;
+  const out = lines.map((l) => {
+    if (re.test(l)) { found = true; oldLine = l; return `${key}=${value}`; }
+    return l;
+  });
+  if (!found) {
+    if (out.length && out[out.length - 1].trim() === '') out[out.length - 1] = `${key}=${value}`;
+    else out.push(`${key}=${value}`);
+  }
+  writeFileSync(filePath, out.join(eol));
+
+  console.log(`  ✅ ${label}: ${filePath}`);
+  console.log(`     backup → ${backup}`);
+  if (found) console.log(`     ${oldLine.trim()}  →  ${key}=${value}`);
+  else console.log(`     + ${key}=${value} (agregada)`);
+}
 
 // =============================================================================
 // 💥 DEPLOY AND BOOM — Despliega LendingPool v2 + lo fondea en UN comando.
 // -----------------------------------------------------------------------------
-// Encadena: deploy → fund → imprime las env vars listas para pegar.
+// Encadena: deploy → fund → escribe la dirección del pool en los .env.local
+// (backend + móvil), haciendo BACKUP timestamped de cada uno antes de tocarlo.
 // Evita el baile manual (deploy → copiar address → setear env → fund).
 //
 //   TESTNET (default):
@@ -76,17 +117,24 @@ async function main() {
   await fundTx.wait();
   console.log(`✅ Fondeado con ${fundHuman} COPm\n`);
 
-  // --- 3. Imprimir env vars listas para pegar ---
+  // --- 3. Backup + auto-write env vars (upsert seguro en ambos .env.local) ---
   const suf = isMainnet ? '_MAINNET' : '';
   const viteSuf = isMainnet ? '_MAINNET' : '_SEPOLIA';
+  const backendKey = `NEXT_PUBLIC_LENDING_POOL_CONTRACT${suf}`;
+  const mobileKey = `VITE_LENDING_POOL${viteSuf}`;
+
+  // cwd = mangle-app (hardhat corre desde ahí). mangle-mobile es hermano.
+  const backendEnv = resolve(process.cwd(), '.env.local');
+  const mobileEnv = resolve(process.cwd(), '../mangle-mobile/.env.local');
+
   console.log('==================================================');
-  console.log('🎯 [3/3] BOOM. Pegá estas variables:');
-  console.log('\n--- mangle-app/.env.local (backend) ---');
-  console.log(`NEXT_PUBLIC_LENDING_POOL_CONTRACT${suf}=${poolAddress}`);
-  console.log('\n--- mangle-mobile/.env.local (móvil) ---');
-  console.log(`VITE_LENDING_POOL${viteSuf}=${poolAddress}`);
-  console.log('\n⚠️ Backend y móvil DEBEN tener la MISMA dirección (el móvil toma el pool del backend vía pago-config).');
-  console.log('Luego: reiniciá el backend (y rebuild del móvil si aplica) para que tomen el ABI v2 + la nueva dirección.');
+  console.log('🎯 [3/3] BOOM. Actualizando .env.local (backup primero):\n');
+  writeEnv(backendEnv, backendKey, poolAddress, 'backend');
+  writeEnv(mobileEnv, mobileKey, poolAddress, 'móvil');
+
+  console.log('\n⚠️ Backend y móvil quedaron con la MISMA dirección del pool.');
+  console.log('   Reiniciá el backend (y rebuild del móvil si aplica) para tomar el ABI v2.');
+  console.log('   Si algo salió mal, restaurá desde el archivo .bak-<timestamp> que se creó.');
   console.log('==================================================');
 }
 
