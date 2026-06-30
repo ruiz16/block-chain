@@ -54,7 +54,8 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
         NONE,      // no existe
         ACTIVE,    // desembolsado, en repago
         REPAID,    // totalDue alcanzado
-        DEFAULTED  // marcado en mora (sigue aceptando recuperaciones)
+        DEFAULTED, // marcado en mora (sigue aceptando recuperaciones)
+        VOIDED     // anulado por error de desembolso (no acepta repagos)
     }
 
     /// @dev Empaquetado en 3 slots. uint128 sobra para montos COP (1 000M COP ≈ 1e27 < 3.4e38).
@@ -99,6 +100,7 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
     );
     event CreditFullyRepaid(bytes32 indexed creditId);
     event CreditDefaulted(bytes32 indexed creditId, uint256 outstandingPrincipal);
+    event CreditVoided(bytes32 indexed creditId);
     event InterestSwept(address indexed to, uint256 amount);
     event DisburserChanged(address indexed previous, address indexed current);
     event TreasuryChanged(address indexed previous, address indexed current);
@@ -118,6 +120,8 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
     error InsufficientLiquidity();
     error NothingToSweep();
     error InvalidLoanTerms();
+    error CannotVoidWithRepayments();
+    error CreditIsVoided();
 
     // ──────────────────────────── Modifiers ──────────────────────────
     modifier onlyDisburser() {
@@ -257,6 +261,7 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
         Credit storage c = credits[creditId];
         Status s = c.status;
         if (s == Status.NONE) revert CreditNotFound();
+        if (s == Status.VOIDED) revert CreditIsVoided(); // un crédito anulado no acepta repagos
 
         uint256 due = c.totalDue;
         uint256 repaid = c.totalRepaid;
@@ -324,6 +329,22 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
         uint256 outstandingPrincipal = principal - paidPrincipal;
 
         emit CreditDefaulted(creditId, outstandingPrincipal);
+    }
+
+    /// @notice Anula un crédito creado por error de desembolso. Solo si NADIE pagó.
+    /// @dev    NO recupera fondos: el capital ya se transfirió al borrower en disburse().
+    ///         Solo limpia la contabilidad on-chain (estado + activeCredits) y bloquea
+    ///         repagos futuros (ver guard en repay). totalDisbursed NO se decrementa: el
+    ///         capital realmente salió del pool (honestidad contable).
+    function voidCredit(bytes32 creditId) external onlyDisburserOrOwner {
+        Credit storage c = credits[creditId];
+        if (c.status != Status.ACTIVE) revert CreditNotActive();
+        if (c.totalRepaid != 0) revert CannotVoidWithRepayments();
+
+        c.status = Status.VOIDED;
+        activeCredits -= 1;
+
+        emit CreditVoided(creditId);
     }
 
     // ════════════════════════ Administración ═════════════════════════

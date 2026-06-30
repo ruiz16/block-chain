@@ -237,6 +237,59 @@ describe('LendingPool v2', () => {
     expect(await pool.owner()).to.equal(attacker.address);
   });
 
+  // ──────────────────────────── voidCredit ───────────────────────────
+  it('voidCredit: anula un crédito ACTIVE sin repagos (limpia contabilidad)', async () => {
+    const { pool, disburser, borrower } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    expect(await pool.activeCredits()).to.equal(1n);
+
+    await expect(pool.connect(disburser).voidCredit(CREDIT_ID))
+      .to.emit(pool, 'CreditVoided')
+      .withArgs(CREDIT_ID);
+
+    expect((await pool.getCredit(CREDIT_ID)).status).to.equal(4n); // VOIDED
+    expect(await pool.activeCredits()).to.equal(0n);
+  });
+
+  it('voidCredit: revierte si ya hubo un repago', async () => {
+    const { token, pool, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await fundPayer(token, pool, payer, 10n * ONE);
+    await pool.connect(payer).repay(CREDIT_ID, 10n * ONE);
+
+    await expect(
+      pool.connect(disburser).voidCredit(CREDIT_ID),
+    ).to.be.revertedWithCustomError(pool, 'CannotVoidWithRepayments');
+  });
+
+  it('voidCredit: revierte si el crédito no está ACTIVE', async () => {
+    const { pool, disburser, borrower } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 0n, 0);
+    await pool.connect(disburser).voidCredit(CREDIT_ID);
+    // segundo intento: ya está VOIDED, no ACTIVE
+    await expect(
+      pool.connect(disburser).voidCredit(CREDIT_ID),
+    ).to.be.revertedWithCustomError(pool, 'CreditNotActive');
+  });
+
+  it('voidCredit: revierte si lo llama un tercero (no disburser ni owner)', async () => {
+    const { pool, disburser, borrower, attacker } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 0n, 0);
+    await expect(
+      pool.connect(attacker).voidCredit(CREDIT_ID),
+    ).to.be.revertedWithCustomError(pool, 'NotAuthorized');
+  });
+
+  it('un crédito VOIDED rechaza repay', async () => {
+    const { token, pool, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await pool.connect(disburser).voidCredit(CREDIT_ID);
+    await fundPayer(token, pool, payer, 10n * ONE);
+    await expect(
+      pool.connect(payer).repay(CREDIT_ID, 10n * ONE),
+    ).to.be.revertedWithCustomError(pool, 'CreditIsVoided');
+  });
+
   it('emergencyWithdraw: reverts on zero, emits on success', async () => {
     const { token, pool, owner, borrower } = await deployFixture();
     await expect(

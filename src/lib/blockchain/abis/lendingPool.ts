@@ -55,6 +55,13 @@ export const LENDING_POOL_ABI = [
   },
   {
     type: 'function',
+    name: 'voidCredit',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'creditId', type: 'bytes32' }],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'pendingInterest',
     stateMutability: 'view',
     inputs: [],
@@ -114,6 +121,12 @@ export const LENDING_POOL_ABI = [
       { indexed: false, name: 'amount', type: 'uint256' },
     ],
   },
+  {
+    type: 'event',
+    name: 'CreditVoided',
+    anonymous: false,
+    inputs: [{ indexed: true, name: 'creditId', type: 'bytes32' }],
+  },
   // Errores custom (para que viem decodifique reverts en simulateContract)
   { type: 'error', name: 'NotDisburser', inputs: [] },
   { type: 'error', name: 'CreditAlreadyExists', inputs: [] },
@@ -125,6 +138,9 @@ export const LENDING_POOL_ABI = [
   { type: 'error', name: 'InsufficientLiquidity', inputs: [] },
   { type: 'error', name: 'NothingToSweep', inputs: [] },
   { type: 'error', name: 'InvalidLoanTerms', inputs: [] },
+  { type: 'error', name: 'CannotVoidWithRepayments', inputs: [] },
+  { type: 'error', name: 'CreditIsVoided', inputs: [] },
+  { type: 'error', name: 'CreditNotActive', inputs: [] },
 ] as const;
 
 /** keccak256("Repaid(bytes32,address,uint256,uint256,uint256,uint256)") — topic0 v2 */
