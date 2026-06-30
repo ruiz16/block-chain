@@ -54,15 +54,15 @@ git checkout feat/mainnet-deploy-config
    npx hardhat run scripts/deploy/deploy-lending-pool.mjs --network celo
    ```
    → **Copiá la dirección** que imprime. La vas a usar en Fase 3 y 4.
-   (Constructor: owner=disburser=tu wallet, `maxDisbursement = 1.000.000 COPm`.
+   (Constructor v2: owner=disburser=treasury=tu wallet, `maxDisbursement = 1.000.000 COPm`.
    Si querés otro cap, editá `maxDisbursement` en el script antes de desplegar.)
 
 2. [ ] **(Opcional) Verificar en Celoscan** — necesitás `CELOSCAN_API_KEY` en `.env.local`:
    ```bash
    npx hardhat verify --network celo <POOL_ADDRESS> \
-     0x8A567e2aE79CA692Bd748aB832081C45de4041eA <TU_WALLET> <TU_WALLET> 1000000000000000000000000
+     0x8A567e2aE79CA692Bd748aB832081C45de4041eA <TU_WALLET> <TU_WALLET> <TU_WALLET> 1000000000000000000000000
    ```
-   (args = COPm, owner, disburser, maxDisbursement en wei. Ajustá si cambiaste el cap.)
+   (args v2 = COPm, owner, disburser, treasury, maxDisbursement en wei. Ajustá si cambiaste el cap.)
 
 3. [ ] **Fondeo inicial PEQUEÑO** (validá el flujo antes de meter capital en serio):
    ```bash
