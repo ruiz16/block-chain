@@ -130,7 +130,18 @@ export async function verificarRepago(
   // ------------------------------------------------------------------
   // 5-6. Decode Repaid event → verify creditId & amount
   // ------------------------------------------------------------------
-  let decoded: { args: { creditId: `0x${string}`; payer: `0x${string}`; amount: bigint; totalRepaid: bigint } };
+  // Evento v2: Repaid(creditId, payer, accepted, principalPart, interestPart, totalRepaid).
+  // El monto efectivamente repagado es `accepted` (el contrato topa al saldo, nunca sobrepaga).
+  let decoded: {
+    args: {
+      creditId: `0x${string}`;
+      payer: `0x${string}`;
+      accepted: bigint;
+      principalPart: bigint;
+      interestPart: bigint;
+      totalRepaid: bigint;
+    };
+  };
 
   try {
     const result = decodeEventLog({
@@ -149,8 +160,8 @@ export async function verificarRepago(
     return failure('TX_BENEFICIARIO_INVALIDO');
   }
 
-  // Verify amount >= expected
-  if (decoded.args.amount < montoEsperado) {
+  // Verify accepted >= expected
+  if (decoded.args.accepted < montoEsperado) {
     return failure('TX_MONTO_INSUFICIENTE');
   }
 

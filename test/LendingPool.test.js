@@ -5,8 +5,13 @@ const ONE = 10n ** 18n;
 const CREDIT_ID = ethers.id('credit-uuid-001'); // keccak256 de un string
 const MAX = 1000n * ONE;
 
+// Helper: disburse v2 (creditId, borrower, principal, interest, dueDate)
+function disb(pool, signer, id, borrower, principal, interest, dueDate = 0) {
+  return pool.connect(signer).disburse(id, borrower, principal, interest, dueDate);
+}
+
 async function deployFixture() {
-  const [owner, disburser, borrower, payer, attacker] = await ethers.getSigners();
+  const [owner, disburser, treasury, borrower, payer, attacker] = await ethers.getSigners();
 
   const Token = await ethers.getContractFactory('MockCopm');
   const token = await Token.deploy('Moneda Local de Confianza', 'COPm');
@@ -17,6 +22,7 @@ async function deployFixture() {
     await token.getAddress(),
     owner.address,
     disburser.address,
+    treasury.address,
     MAX,
   );
   await pool.waitForDeployment();
@@ -26,100 +32,218 @@ async function deployFixture() {
   await token.connect(owner).approve(await pool.getAddress(), 10000n * ONE);
   await pool.connect(owner).fund(5000n * ONE);
 
-  return { token, pool, owner, disburser, borrower, payer, attacker };
+  return { token, pool, owner, disburser, treasury, borrower, payer, attacker };
 }
 
-describe('LendingPool', () => {
-  it('disburses to borrower and records the credit', async () => {
+// Deja a `payer` con saldo y allowance para repagar `amount`.
+async function fundPayer(token, pool, payer, amount) {
+  await token.mint(payer.address, amount);
+  await token.connect(payer).approve(await pool.getAddress(), amount);
+}
+
+describe('LendingPool v2', () => {
+  // ───────────────────────────── Disburse ─────────────────────────────
+  it('disburses to borrower fixing interest (totalDue = principal + interest)', async () => {
     const { token, pool, disburser, borrower } = await deployFixture();
-    await expect(pool.connect(disburser).disburse(CREDIT_ID, borrower.address, 100n * ONE))
+    await expect(disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0))
       .to.emit(pool, 'Disbursed')
-      .withArgs(CREDIT_ID, borrower.address, 100n * ONE);
+      .withArgs(CREDIT_ID, borrower.address, 100n * ONE, 120n * ONE, 0);
+
     expect(await token.balanceOf(borrower.address)).to.equal(100n * ONE);
-    const c = await pool.credits(CREDIT_ID);
-    expect(c.exists).to.equal(true);
-    expect(c.amount).to.equal(100n * ONE);
+    const c = await pool.getCredit(CREDIT_ID);
+    expect(c.principal).to.equal(100n * ONE);
+    expect(c.totalDue).to.equal(120n * ONE);
+    expect(c.totalRepaid).to.equal(0n);
+    expect(c.borrower).to.equal(borrower.address);
+    expect(c.status).to.equal(1n); // ACTIVE
+    expect(await pool.activeCredits()).to.equal(1n);
+    expect(await pool.creditCount()).to.equal(1n);
   });
 
   it('reverts disburse from non-disburser', async () => {
     const { pool, attacker, borrower } = await deployFixture();
     await expect(
-      pool.connect(attacker).disburse(CREDIT_ID, borrower.address, 100n * ONE),
+      disb(pool, attacker, CREDIT_ID, borrower.address, 100n * ONE, 0n, 0),
     ).to.be.revertedWithCustomError(pool, 'NotDisburser');
   });
 
   it('reverts disburse above the cap', async () => {
     const { pool, disburser, borrower } = await deployFixture();
     await expect(
-      pool.connect(disburser).disburse(CREDIT_ID, borrower.address, MAX + 1n),
+      disb(pool, disburser, CREDIT_ID, borrower.address, MAX + 1n, 0n, 0),
     ).to.be.revertedWithCustomError(pool, 'AmountExceedsCap');
   });
 
   it('reverts duplicate disburse for same creditId', async () => {
     const { pool, disburser, borrower } = await deployFixture();
-    await pool.connect(disburser).disburse(CREDIT_ID, borrower.address, 100n * ONE);
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 10n * ONE, 0);
     await expect(
-      pool.connect(disburser).disburse(CREDIT_ID, borrower.address, 50n * ONE),
+      disb(pool, disburser, CREDIT_ID, borrower.address, 50n * ONE, 0n, 0),
     ).to.be.revertedWithCustomError(pool, 'CreditAlreadyExists');
   });
 
-  it('repays a credit and emits Repaid with running total', async () => {
-    const { token, pool, disburser, borrower, payer } = await deployFixture();
-    await pool.connect(disburser).disburse(CREDIT_ID, borrower.address, 100n * ONE);
-    await token.mint(payer.address, 100n * ONE);
-    await token.connect(payer).approve(await pool.getAddress(), 100n * ONE);
+  it('reverts disburse without enough liquidity (availableLiquidity excludes interest)', async () => {
+    const { token, owner, disburser, treasury, borrower } = await deployFixture();
+    // Pool nuevo fondeado con poco
+    const Pool = await ethers.getContractFactory('LendingPool');
+    const poolLow = await Pool.deploy(
+      await token.getAddress(), owner.address, disburser.address, treasury.address, MAX,
+    );
+    await poolLow.waitForDeployment();
+    await token.connect(owner).approve(await poolLow.getAddress(), 50n * ONE);
+    await poolLow.connect(owner).fund(50n * ONE);
 
-    await expect(pool.connect(payer).repay(CREDIT_ID, 40n * ONE))
-      .to.emit(pool, 'Repaid')
-      .withArgs(CREDIT_ID, payer.address, 40n * ONE, 40n * ONE);
-
-    const c1 = await pool.credits(CREDIT_ID);
-    expect(c1.totalRepaid).to.equal(40n * ONE);
-
-    await pool.connect(payer).repay(CREDIT_ID, 60n * ONE);
-    const c2 = await pool.credits(CREDIT_ID);
-    expect(c2.totalRepaid).to.equal(100n * ONE);
+    await expect(
+      poolLow.connect(disburser).disburse(CREDIT_ID, borrower.address, 100n * ONE, 0n, 0),
+    ).to.be.revertedWithCustomError(poolLow, 'InsufficientLiquidity');
   });
 
-  it('allows repaying ABOVE the principal (interest) — totalRepaid exceeds amount', async () => {
-    const { token, pool, disburser, borrower, payer } = await deployFixture();
-    await pool.connect(disburser).disburse(CREDIT_ID, borrower.address, 100n * ONE);
-    await token.mint(payer.address, 130n * ONE);
-    await token.connect(payer).approve(await pool.getAddress(), 130n * ONE);
+  // ───────────────────────────── Repay ────────────────────────────────
+  it('repays capital-first; interest accrues to pendingInterest; caps at totalDue (no overpay)', async () => {
+    const { token, pool, disburser, treasury, borrower, payer } = await deployFixture();
+    // principal 100, interés 20 → totalDue 120
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await fundPayer(token, pool, payer, 200n * ONE);
 
-    await pool.connect(payer).repay(CREDIT_ID, 100n * ONE);
-    await expect(pool.connect(payer).repay(CREDIT_ID, 30n * ONE))
+    // Pago 1: 40 → todo capital (principalPart 40, interestPart 0)
+    await expect(pool.connect(payer).repay(CREDIT_ID, 40n * ONE))
       .to.emit(pool, 'Repaid')
-      .withArgs(CREDIT_ID, payer.address, 30n * ONE, 130n * ONE);
+      .withArgs(CREDIT_ID, payer.address, 40n * ONE, 40n * ONE, 0n, 40n * ONE);
+    expect(await pool.pendingInterest()).to.equal(0n);
 
-    const c = await pool.credits(CREDIT_ID);
-    expect(c.totalRepaid).to.equal(130n * ONE);
+    // Pago 2: 70 → 60 capital + 10 interés (capital llega a 100)
+    await expect(pool.connect(payer).repay(CREDIT_ID, 70n * ONE))
+      .to.emit(pool, 'Repaid')
+      .withArgs(CREDIT_ID, payer.address, 70n * ONE, 60n * ONE, 10n * ONE, 110n * ONE);
+    expect(await pool.pendingInterest()).to.equal(10n * ONE);
+
+    // Pago 3: intento 50 pero solo quedan 10 → accepted 10 (todo interés), REPAID
+    await expect(pool.connect(payer).repay(CREDIT_ID, 50n * ONE))
+      .to.emit(pool, 'Repaid')
+      .withArgs(CREDIT_ID, payer.address, 10n * ONE, 0n, 10n * ONE, 120n * ONE)
+      .and.to.emit(pool, 'CreditFullyRepaid')
+      .withArgs(CREDIT_ID);
+
+    const c = await pool.getCredit(CREDIT_ID);
+    expect(c.totalRepaid).to.equal(120n * ONE);
+    expect(c.status).to.equal(2n); // REPAID
+    expect(await pool.pendingInterest()).to.equal(20n * ONE);
+    expect(await pool.activeCredits()).to.equal(0n);
+
+    // Pago 4: ya saldado → revierte
+    await expect(
+      pool.connect(payer).repay(CREDIT_ID, 1n * ONE),
+    ).to.be.revertedWithCustomError(pool, 'CreditAlreadyRepaid');
+
+    // Invariante de liquidez: balance - pendingInterest
+    const bal = await token.balanceOf(await pool.getAddress());
+    expect(await pool.availableLiquidity()).to.equal(bal - 20n * ONE);
+    void treasury;
   });
 
   it('reverts repay for unknown credit', async () => {
     const { token, pool, payer } = await deployFixture();
-    await token.mint(payer.address, 10n * ONE);
-    await token.connect(payer).approve(await pool.getAddress(), 10n * ONE);
+    await fundPayer(token, pool, payer, 10n * ONE);
     await expect(
       pool.connect(payer).repay(ethers.id('does-not-exist'), 10n * ONE),
     ).to.be.revertedWithCustomError(pool, 'CreditNotFound');
   });
 
-  it('only owner can set disburser and cap', async () => {
+  // ─────────────────────────── sweepInterest ──────────────────────────
+  it('sweepInterest moves all pendingInterest to treasury; permissionless; NothingToSweep when 0', async () => {
+    const { token, pool, disburser, treasury, borrower, payer, attacker } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await fundPayer(token, pool, payer, 120n * ONE);
+    await pool.connect(payer).repay(CREDIT_ID, 120n * ONE); // pendingInterest = 20
+
+    const treBefore = await token.balanceOf(treasury.address);
+    // Lo dispara `attacker` (cualquiera) — destino fijo, sin riesgo de fuga.
+    await expect(pool.connect(attacker).sweepInterest())
+      .to.emit(pool, 'InterestSwept')
+      .withArgs(treasury.address, 20n * ONE);
+
+    expect(await token.balanceOf(treasury.address)).to.equal(treBefore + 20n * ONE);
+    expect(await pool.pendingInterest()).to.equal(0n);
+    expect(await pool.totalInterestSwept()).to.equal(20n * ONE);
+
+    // Segundo barrido sin interés pendiente → revierte
+    await expect(pool.connect(attacker).sweepInterest())
+      .to.be.revertedWithCustomError(pool, 'NothingToSweep');
+  });
+
+  // ──────────────────────────── markDefaulted ─────────────────────────
+  it('markDefaulted: ACTIVE→DEFAULTED, sigue aceptando recuperaciones hasta REPAID', async () => {
+    const { token, pool, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+
+    await expect(pool.connect(disburser).markDefaulted(CREDIT_ID))
+      .to.emit(pool, 'CreditDefaulted')
+      .withArgs(CREDIT_ID, 100n * ONE); // capital vivo
+    expect((await pool.getCredit(CREDIT_ID)).status).to.equal(3n); // DEFAULTED
+    expect(await pool.activeCredits()).to.equal(0n);
+
+    // No se puede re-marcar (ya no está ACTIVE)
+    await expect(
+      pool.connect(disburser).markDefaulted(CREDIT_ID),
+    ).to.be.revertedWithCustomError(pool, 'CreditNotActive');
+
+    // Pero un DEFAULTED sí puede repagar hasta REPAID (recuperación)
+    await fundPayer(token, pool, payer, 120n * ONE);
+    await expect(pool.connect(payer).repay(CREDIT_ID, 120n * ONE))
+      .to.emit(pool, 'CreditFullyRepaid')
+      .withArgs(CREDIT_ID);
+    expect((await pool.getCredit(CREDIT_ID)).status).to.equal(2n); // REPAID
+  });
+
+  // ───────────────────────────── Pausable ─────────────────────────────
+  it('pause stops new disbursements; repays still work; unpause restores', async () => {
+    const { token, pool, owner, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 0n, 0);
+
+    await pool.connect(owner).pause();
+    await expect(
+      disb(pool, disburser, ethers.id('credit-2'), borrower.address, 50n * ONE, 0n, 0),
+    ).to.be.revertedWithCustomError(pool, 'EnforcedPause');
+
+    // Repago sigue funcionando aunque esté pausado
+    await fundPayer(token, pool, payer, 100n * ONE);
+    await pool.connect(payer).repay(CREDIT_ID, 100n * ONE);
+
+    await pool.connect(owner).unpause();
+    await expect(
+      disb(pool, disburser, ethers.id('credit-2'), borrower.address, 50n * ONE, 0n, 0),
+    ).to.emit(pool, 'Disbursed');
+  });
+
+  // ──────────────────────────── Administración ────────────────────────
+  it('admin: only owner sets disburser/treasury/cap', async () => {
     const { pool, owner, attacker, payer } = await deployFixture();
     await expect(pool.connect(attacker).setDisburser(payer.address))
       .to.be.revertedWithCustomError(pool, 'OwnableUnauthorizedAccount');
+    await expect(pool.connect(owner).setTreasury(payer.address))
+      .to.emit(pool, 'TreasuryChanged');
     await expect(pool.connect(owner).setMaxDisbursement(2000n * ONE))
       .to.emit(pool, 'MaxDisbursementChanged');
+    expect(await pool.treasury()).to.equal(payer.address);
   });
 
-  it('withdraw reverts on zero amount and emits Withdrawn on success', async () => {
+  it('Ownable2Step: ownership transfers only after acceptance', async () => {
+    const { pool, owner, attacker } = await deployFixture();
+    await pool.connect(owner).transferOwnership(attacker.address);
+    // Aún no transferida hasta que el nuevo dueño acepte
+    expect(await pool.owner()).to.equal(owner.address);
+    expect(await pool.pendingOwner()).to.equal(attacker.address);
+    await pool.connect(attacker).acceptOwnership();
+    expect(await pool.owner()).to.equal(attacker.address);
+  });
+
+  it('emergencyWithdraw: reverts on zero, emits on success', async () => {
     const { token, pool, owner, borrower } = await deployFixture();
     await expect(
-      pool.connect(owner).withdraw(borrower.address, 0n),
+      pool.connect(owner).emergencyWithdraw(borrower.address, 0n),
     ).to.be.revertedWithCustomError(pool, 'ZeroAmount');
-    await expect(pool.connect(owner).withdraw(borrower.address, 10n * ONE))
-      .to.emit(pool, 'Withdrawn')
+    await expect(pool.connect(owner).emergencyWithdraw(borrower.address, 10n * ONE))
+      .to.emit(pool, 'EmergencyWithdrawn')
       .withArgs(borrower.address, 10n * ONE);
     expect(await token.balanceOf(borrower.address)).to.equal(10n * ONE);
   });

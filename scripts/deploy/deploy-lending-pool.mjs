@@ -19,20 +19,25 @@ async function main() {
   console.log(`🌐 Red: ${hre.network.name}${isMainnet ? ' (MAINNET — COPm real)' : ''}`);
   console.log(`🔗 Token COPm (${copmEnvVar}): ${cleanCopmAddress}`);
 
-  // 2. Configurar los parámetros del constructor
+  // 2. Configurar los parámetros del constructor (v2: 5 args)
+  //    Para el piloto: owner = disburser = treasury = la wallet deployer.
+  //    (Migrar owner a multisig y/o separar treasury es post-piloto, opcional.)
   const ownerAddress = deployer.address;
   const disburserAddress = deployer.address;
+  const treasuryAddress = deployer.address;
   // Límite de 1 millón de COPm por desembolso (ajustable después)
-  const maxDisbursement = hre.ethers.parseUnits("1000000", 18); 
+  const maxDisbursement = hre.ethers.parseUnits("1000000", 18);
 
-  console.log('⏳ Enviando transacción con 4 parámetros al constructor...');
+  console.log(`👤 owner/disburser/treasury: ${deployer.address}`);
+  console.log('⏳ Enviando transacción con 5 parámetros al constructor (v2)...');
 
-  // 3. Desplegar pasando los 4 argumentos exactos que pide tu Solidity
+  // 3. Desplegar v2: (copm, owner, disburser, treasury, maxDisbursement)
   const LendingPoolFactory = await hre.ethers.getContractFactory('LendingPool');
   const lendingPool = await LendingPoolFactory.deploy(
     cleanCopmAddress,
     ownerAddress,
     disburserAddress,
+    treasuryAddress,
     maxDisbursement
   );
   
