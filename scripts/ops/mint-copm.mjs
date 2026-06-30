@@ -11,9 +11,15 @@ import hre from 'hardhat';
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
-  const MOCK_COPM     = process.env.MOCK_COPM;
-  const TARGET_WALLET = '0xC37B88e18B769Bdf0Ac8086741a2c522520634a2';
-  const AMOUNT_COPM   = 200000; // 200.000 COPm
+  // Parametrizable por env (con defaults sensatos):
+  //   MOCK_COPM   → dirección del Mock COPm (default: NEXT_PUBLIC_COPM_CONTRACT)
+  //   MINT_TO     → destino (default: el owner = la wallet deployer)
+  //   MINT_AMOUNT → monto en COPm human (default: 300000)
+  const MOCK_COPM     = process.env.MOCK_COPM || process.env.NEXT_PUBLIC_COPM_CONTRACT;
+  const TARGET_WALLET = process.env.MINT_TO || deployer.address;
+  const AMOUNT_COPM   = Number(process.env.MINT_AMOUNT || 300000);
+
+  if (!MOCK_COPM) throw new Error('❌ Falta MOCK_COPM o NEXT_PUBLIC_COPM_CONTRACT en .env.local');
 
   const contract = await hre.ethers.getContractAt(
     ['function mint(address to, uint256 amount) external', 'function balanceOf(address) view returns (uint256)', 'function symbol() view returns (string)'],
