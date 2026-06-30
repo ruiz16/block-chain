@@ -189,10 +189,22 @@ export async function POST(request: NextRequest): Promise<Response> {
     // hay que convertir a unidades base: 100000 → 100000 * 10^18.
     const montoWei = parseTokenAmount(typedCredito.monto);
 
+    // Interés FIJO del crédito — se computa ACÁ (antes del desembolso) porque el
+    // contrato v2 lo fija on-chain en disburse: totalDue = principal + interés.
+    // DEBE ser el MISMO valor que se usa para generar las cuotas abajo, o la
+    // suma de cuotas no cuadraría con totalDue y el repago final no cerraría.
+    // interes_porcentaje es NUMERIC(5,2) → basis points para no perder decimales.
+    const numCuotas = typedCredito.numero_cuotas ?? 1;
+    const montoBig = BigInt(typedCredito.monto);
+    const pctRaw = Number(typedCredito.interes_porcentaje ?? 0);
+    const interesBps = BigInt(Math.round((Number.isFinite(pctRaw) ? pctRaw : 0) * 100));
+    const totalInteres = (montoBig * interesBps) / 10_000n;
+    const interesWei = parseTokenAmount(totalInteres.toString());
+
     let txHash: string;
 
     try {
-      txHash = await desembolsarCredito(typedCredito.id, walletAddress as Address, montoWei as Wei);
+      txHash = await desembolsarCredito(typedCredito.id, walletAddress as Address, montoWei as Wei, interesWei as Wei);
     } catch (blockchainErr) {
       // Record audit log for failed disbursement
       await registrarAuditLog({
@@ -257,14 +269,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ------------------------------------------------------------------
     // 9. Generate cuotas (split capital + interest across N periods)
     // ------------------------------------------------------------------
-    const numCuotas = typedCredito.numero_cuotas ?? 1;
-    const montoBig = BigInt(typedCredito.monto);
-    // interes_porcentaje es NUMERIC(5,2): puede llegar como "5.50" o 5.5.
-    // BigInt() rompe con decimales (y truncaría 5.5 → 5). Convertimos a basis
-    // points (×100) para preservar los centésimos: 5.5% → 550 bps.
-    const pctRaw = Number(typedCredito.interes_porcentaje ?? 0);
-    const interesBps = BigInt(Math.round((Number.isFinite(pctRaw) ? pctRaw : 0) * 100));
-    const totalInteres = (montoBig * interesBps) / 10_000n;
+    // numCuotas, montoBig y totalInteres ya se computaron arriba (antes del
+    // desembolso) — se reutilizan para que las cuotas cuadren con totalDue on-chain.
     const plazoDias = typedCredito.plazo_dias ?? 30;
     const periodoDias = Math.ceil(plazoDias / numCuotas); // days per cuota
 

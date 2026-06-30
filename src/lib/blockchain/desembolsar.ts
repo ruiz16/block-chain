@@ -46,6 +46,7 @@ export async function desembolsarCredito(
   creditoId: string,
   to: Address,
   monto: Wei,
+  interes: Wei,
 ): Promise<TxHash> {
   // GUARD: aborta si el RPC no está en la red esperada (antes de firmar fondos).
   await assertActiveChain();
@@ -65,11 +66,14 @@ export async function desembolsarCredito(
       : {};
 
   // 1. Simular (pre-flight). NO atrapamos el error: el route lo necesita.
+  //    disburse v2: (creditId, borrower, principal, interest, dueDate).
+  //    dueDate = 0 → el cronograma de cuotas vive en la DB. El interés se FIJA
+  //    aquí on-chain: totalDue = principal + interest.
   const { request } = await publicClient.simulateContract({
     address: poolAddress,
     abi: LENDING_POOL_ABI,
     functionName: 'disburse',
-    args: [creditId, to as `0x${string}`, monto as bigint],
+    args: [creditId, to as `0x${string}`, monto as bigint, interes as bigint, 0n],
     account: walletClient.account!,
     ...disburseFeeField,
   });

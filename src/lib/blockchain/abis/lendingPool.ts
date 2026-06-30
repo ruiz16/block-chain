@@ -1,8 +1,21 @@
 // =============================================================================
-// LendingPool ABI — mínimo para disburse / repay / lectura del evento Repaid
+// LendingPool ABI (v2) — disburse / repay / sweepInterest / fund + eventos
+// =============================================================================
+// Sincronizado con contracts/LendingPool.sol v2:
+//  - disburse(creditId, borrower, principal, interest, dueDate)
+//  - repay(creditId, amount) returns (accepted)
+//  - sweepInterest() returns (amount)   [reemplaza el viejo withdraw para el barrido]
+//  - evento Repaid(creditId, payer, accepted, principalPart, interestPart, totalRepaid)
 // =============================================================================
 
 export const LENDING_POOL_ABI = [
+  {
+    type: 'function',
+    name: 'fund',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
   {
     type: 'function',
     name: 'disburse',
@@ -10,7 +23,9 @@ export const LENDING_POOL_ABI = [
     inputs: [
       { name: 'creditId', type: 'bytes32' },
       { name: 'borrower', type: 'address' },
-      { name: 'amount', type: 'uint256' },
+      { name: 'principal', type: 'uint256' },
+      { name: 'interest', type: 'uint256' },
+      { name: 'dueDate', type: 'uint64' },
     ],
     outputs: [],
   },
@@ -22,17 +37,61 @@ export const LENDING_POOL_ABI = [
       { name: 'creditId', type: 'bytes32' },
       { name: 'amount', type: 'uint256' },
     ],
+    outputs: [{ name: 'accepted', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'sweepInterest',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [{ name: 'amount', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'markDefaulted',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'creditId', type: 'bytes32' }],
     outputs: [],
   },
   {
     type: 'function',
-    name: 'withdraw',
+    name: 'voidCredit',
     stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
+    inputs: [{ name: 'creditId', type: 'bytes32' }],
     outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'pendingInterest',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'availableLiquidity',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'remainingDue',
+    stateMutability: 'view',
+    inputs: [{ name: 'creditId', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'event',
+    name: 'Disbursed',
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'creditId', type: 'bytes32' },
+      { indexed: true, name: 'borrower', type: 'address' },
+      { indexed: false, name: 'principal', type: 'uint256' },
+      { indexed: false, name: 'totalDue', type: 'uint256' },
+      { indexed: false, name: 'dueDate', type: 'uint64' },
+    ],
   },
   {
     type: 'event',
@@ -41,12 +100,49 @@ export const LENDING_POOL_ABI = [
     inputs: [
       { indexed: true, name: 'creditId', type: 'bytes32' },
       { indexed: true, name: 'payer', type: 'address' },
-      { indexed: false, name: 'amount', type: 'uint256' },
+      { indexed: false, name: 'accepted', type: 'uint256' },
+      { indexed: false, name: 'principalPart', type: 'uint256' },
+      { indexed: false, name: 'interestPart', type: 'uint256' },
       { indexed: false, name: 'totalRepaid', type: 'uint256' },
     ],
   },
+  {
+    type: 'event',
+    name: 'CreditFullyRepaid',
+    anonymous: false,
+    inputs: [{ indexed: true, name: 'creditId', type: 'bytes32' }],
+  },
+  {
+    type: 'event',
+    name: 'InterestSwept',
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'to', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'event',
+    name: 'CreditVoided',
+    anonymous: false,
+    inputs: [{ indexed: true, name: 'creditId', type: 'bytes32' }],
+  },
+  // Errores custom (para que viem decodifique reverts en simulateContract)
+  { type: 'error', name: 'NotDisburser', inputs: [] },
+  { type: 'error', name: 'CreditAlreadyExists', inputs: [] },
+  { type: 'error', name: 'CreditNotFound', inputs: [] },
+  { type: 'error', name: 'CreditAlreadyRepaid', inputs: [] },
+  { type: 'error', name: 'ZeroAmount', inputs: [] },
+  { type: 'error', name: 'ZeroAddress', inputs: [] },
+  { type: 'error', name: 'AmountExceedsCap', inputs: [] },
+  { type: 'error', name: 'InsufficientLiquidity', inputs: [] },
+  { type: 'error', name: 'NothingToSweep', inputs: [] },
+  { type: 'error', name: 'InvalidLoanTerms', inputs: [] },
+  { type: 'error', name: 'CannotVoidWithRepayments', inputs: [] },
+  { type: 'error', name: 'CreditIsVoided', inputs: [] },
+  { type: 'error', name: 'CreditNotActive', inputs: [] },
 ] as const;
 
-/** keccak256("Repaid(bytes32,address,uint256,uint256)") — topic0 del evento */
+/** keccak256("Repaid(bytes32,address,uint256,uint256,uint256,uint256)") — topic0 v2 */
 export const REPAID_EVENT_SIGNATURE =
-  '0x01e7ee7e76483485fd1d9e5b1c6a72af05e18dac7fc43f767d6897ef153bef86' as `0x${string}`;
+  '0xaa28c4652d4b3d47b4f1987a0647ccf2b36cbba5468761b6520b20e4c501c198' as `0x${string}`;
