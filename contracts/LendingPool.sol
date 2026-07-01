@@ -101,6 +101,7 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
     event CreditFullyRepaid(bytes32 indexed creditId);
     event CreditDefaulted(bytes32 indexed creditId, uint256 outstandingPrincipal);
     event CreditVoided(bytes32 indexed creditId);
+    event CreditForgiven(bytes32 indexed creditId, uint256 amount, uint256 newTotalDue);
     event InterestSwept(address indexed to, uint256 amount);
     event DisburserChanged(address indexed previous, address indexed current);
     event TreasuryChanged(address indexed previous, address indexed current);
@@ -122,6 +123,7 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
     error InvalidLoanTerms();
     error CannotVoidWithRepayments();
     error CreditIsVoided();
+    error CannotForgiveMoreThanRemaining();
 
     // ──────────────────────────── Modifiers ──────────────────────────
     modifier onlyDisburser() {
@@ -345,6 +347,39 @@ contract LendingPool is Ownable2Step, ReentrancyGuard, Pausable {
         activeCredits -= 1;
 
         emit CreditVoided(creditId);
+    }
+
+    /// @notice Condona (perdona) parte o todo el saldo pendiente de un crédito.
+    /// @dev    NO mueve fondos: solo reduce `totalDue` en `amount` (la fundación
+    ///         renuncia a cobrar esa parte). Amount-based a propósito: el contrato
+    ///         no conoce cuotas, así que off-chain se decide QUÉ cuota condonar y
+    ///         acá solo se informa el MONTO. Si con la condonación el saldo queda
+    ///         cubierto por lo ya repagado, el crédito pasa a REPAID.
+    ///         Vale para créditos ACTIVE y DEFAULTED.
+    function forgive(bytes32 creditId, uint256 amount) external onlyDisburserOrOwner {
+        if (amount == 0) revert ZeroAmount();
+        Credit storage c = credits[creditId];
+        Status s = c.status;
+        if (s == Status.NONE) revert CreditNotFound();
+        if (s == Status.VOIDED) revert CreditIsVoided();
+        if (s == Status.REPAID) revert CreditAlreadyRepaid();
+
+        uint256 remaining = uint256(c.totalDue) - uint256(c.totalRepaid);
+        if (amount > remaining) revert CannotForgiveMoreThanRemaining();
+
+        uint256 newDue = uint256(c.totalDue) - amount;
+        c.totalDue = uint128(newDue);
+
+        // Si lo ya repagado cubre el nuevo total, el crédito queda saldado.
+        if (uint256(c.totalRepaid) == newDue) {
+            c.status = Status.REPAID;
+            if (s == Status.ACTIVE) {
+                activeCredits -= 1;
+            }
+            emit CreditFullyRepaid(creditId);
+        }
+
+        emit CreditForgiven(creditId, amount, newDue);
     }
 
     // ════════════════════════ Administración ═════════════════════════

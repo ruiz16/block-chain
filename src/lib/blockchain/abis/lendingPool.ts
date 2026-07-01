@@ -62,6 +62,16 @@ export const LENDING_POOL_ABI = [
   },
   {
     type: 'function',
+    name: 'forgive',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'creditId', type: 'bytes32' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'pendingInterest',
     stateMutability: 'view',
     inputs: [],
@@ -127,6 +137,16 @@ export const LENDING_POOL_ABI = [
     anonymous: false,
     inputs: [{ indexed: true, name: 'creditId', type: 'bytes32' }],
   },
+  {
+    type: 'event',
+    name: 'CreditForgiven',
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'creditId', type: 'bytes32' },
+      { indexed: false, name: 'amount', type: 'uint256' },
+      { indexed: false, name: 'newTotalDue', type: 'uint256' },
+    ],
+  },
   // Errores custom (para que viem decodifique reverts en simulateContract)
   { type: 'error', name: 'NotDisburser', inputs: [] },
   { type: 'error', name: 'CreditAlreadyExists', inputs: [] },
@@ -141,6 +161,7 @@ export const LENDING_POOL_ABI = [
   { type: 'error', name: 'CannotVoidWithRepayments', inputs: [] },
   { type: 'error', name: 'CreditIsVoided', inputs: [] },
   { type: 'error', name: 'CreditNotActive', inputs: [] },
+  { type: 'error', name: 'CannotForgiveMoreThanRemaining', inputs: [] },
 ] as const;
 
 /** keccak256("Repaid(bytes32,address,uint256,uint256,uint256,uint256)") — topic0 v2 */
