@@ -75,7 +75,9 @@ async function main() {
   if (!copmEnv) throw new Error(`❌ Falta ${copmEnvVar} en .env.local`);
   const copm = hre.ethers.getAddress(copmEnv.trim());
 
-  const fundHuman = process.env.FUND_AMOUNT ?? (isMainnet ? null : '10000');
+  // .trim() defensivo: en PowerShell/CMD es fácil que se cuele un espacio final.
+  const fundRaw = process.env.FUND_AMOUNT?.trim();
+  const fundHuman = fundRaw || (isMainnet ? null : '10000');
   if (!fundHuman) throw new Error('❌ En mainnet definí FUND_AMOUNT explícitamente (ej. FUND_AMOUNT=25000).');
   const fundWei = hre.ethers.parseUnits(String(fundHuman), 18);
   const maxDisbursement = hre.ethers.parseUnits('1000000', 18);
