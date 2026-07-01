@@ -290,6 +290,69 @@ describe('LendingPool v2', () => {
     ).to.be.revertedWithCustomError(pool, 'CreditIsVoided');
   });
 
+  // ───────────────────────────── forgive ─────────────────────────────
+  it('forgive parcial: reduce totalDue, el crédito sigue ACTIVE', async () => {
+    const { pool, disburser, borrower } = await deployFixture();
+    // principal 100, interés 20 → totalDue 120
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+
+    // Condona una "cuota" de 30
+    await expect(pool.connect(disburser).forgive(CREDIT_ID, 30n * ONE))
+      .to.emit(pool, 'CreditForgiven')
+      .withArgs(CREDIT_ID, 30n * ONE, 90n * ONE);
+
+    const c = await pool.getCredit(CREDIT_ID);
+    expect(c.totalDue).to.equal(90n * ONE);
+    expect(c.status).to.equal(1n); // sigue ACTIVE
+    expect(await pool.activeCredits()).to.equal(1n);
+  });
+
+  it('forgive del saldo restante: cierra el crédito (REPAID)', async () => {
+    const { token, pool, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await fundPayer(token, pool, payer, 90n * ONE);
+    await pool.connect(payer).repay(CREDIT_ID, 90n * ONE); // repaid 90, remaining 30
+
+    // Condona los 30 que faltan → repaid(90) == newDue(90) → REPAID
+    await expect(pool.connect(disburser).forgive(CREDIT_ID, 30n * ONE))
+      .to.emit(pool, 'CreditForgiven')
+      .withArgs(CREDIT_ID, 30n * ONE, 90n * ONE)
+      .and.to.emit(pool, 'CreditFullyRepaid')
+      .withArgs(CREDIT_ID);
+
+    const c = await pool.getCredit(CREDIT_ID);
+    expect(c.status).to.equal(2n); // REPAID
+    expect(await pool.activeCredits()).to.equal(0n);
+  });
+
+  it('forgive parcial y luego el prestatario paga el resto → cierra al nuevo total', async () => {
+    const { token, pool, disburser, borrower, payer } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await pool.connect(disburser).forgive(CREDIT_ID, 20n * ONE); // totalDue 120 → 100
+    await fundPayer(token, pool, payer, 100n * ONE);
+
+    await expect(pool.connect(payer).repay(CREDIT_ID, 100n * ONE))
+      .to.emit(pool, 'CreditFullyRepaid')
+      .withArgs(CREDIT_ID);
+    expect((await pool.getCredit(CREDIT_ID)).status).to.equal(2n); // REPAID
+  });
+
+  it('forgive revierte si el monto supera el saldo pendiente', async () => {
+    const { pool, disburser, borrower } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await expect(
+      pool.connect(disburser).forgive(CREDIT_ID, 121n * ONE),
+    ).to.be.revertedWithCustomError(pool, 'CannotForgiveMoreThanRemaining');
+  });
+
+  it('forgive revierte si lo llama un tercero', async () => {
+    const { pool, disburser, borrower, attacker } = await deployFixture();
+    await disb(pool, disburser, CREDIT_ID, borrower.address, 100n * ONE, 20n * ONE, 0);
+    await expect(
+      pool.connect(attacker).forgive(CREDIT_ID, 10n * ONE),
+    ).to.be.revertedWithCustomError(pool, 'NotAuthorized');
+  });
+
   it('emergencyWithdraw: reverts on zero, emits on success', async () => {
     const { token, pool, owner, borrower } = await deployFixture();
     await expect(
